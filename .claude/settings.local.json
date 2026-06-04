@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__af692760-8e89-4192-933b-563b956b7565__outlook_email_search",
+      "Bash(npm install *)",
+      "Bash(node 01_msa.js)",
+      "Bash(node 02_sow.js)",
+      "Bash(node 05_dpa.js)",
+      "Bash(HOMEBREW_NO_AUTO_UPDATE=1 brew install --cask libreoffice)",
+      "Bash(/Applications/LibreOffice.app/Contents/MacOS/soffice --headless --convert-to pdf 02_Statement_of_Work.docx 05_Data_Processing_Agreement.docx)",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__get_me",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__get_teams",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__search_objects",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__create_tasks",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__update_tasks",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__get_project",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__delete_task",
+      "Bash(npm --workspace mams-server run test)",
+      "Bash(npm --workspace mams-server run typecheck)",
+      "Bash(npm run *)",
+      "Bash(/Applications/LibreOffice.app/Contents/MacOS/soffice --headless --convert-to pdf development-scope.docx)",
+      "Bash(rm -f /tmp/mams-handoff-2026-04-30.zip)",
+      "Bash(bash scripts/package-handoff.sh /tmp/mams-handoff-2026-04-30-final.zip)",
+      "Bash(unzip -p /tmp/mams-handoff-2026-04-30-final.zip mams-handoff/DEVELOPER-HANDOFF.md)",
+      "mcp__58327f1e-8558-42d2-b6b9-12a86c56d936__add_comment",
+      "Bash(npm --workspace mams-web run typecheck)",
+      "Bash(npm --workspace mams-web run build)",
+      "Bash(rm -f /tmp/mams-handoff-2026-05-11-frontend-complete.zip)",
+      "Bash(bash scripts/package-handoff.sh /tmp/mams-handoff-2026-05-11-frontend-complete.zip)",
+      "Bash(unzip -l /tmp/mams-handoff-2026-05-11-frontend-complete.zip)"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.pdf
+preview*.jpg
+preview*.png
+_unpacked/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Generated DOCX in legal-docs (keep only source; compiled files live in final-docs/)
+legal-docs/*.docx

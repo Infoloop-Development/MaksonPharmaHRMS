@@ -1,0 +1,84 @@
+# Cursor / GitHub Copilot — Project Rules for MAMS
+
+You are working on the Makson Attendance Management System (MAMS). This is a compliance-critical
+on-prem MERN application for an Indian pharmaceutical manufacturer. Generic Express/React patterns
+will fail review here — read the rules below carefully.
+
+## ARCHITECTURAL CONSTANTS
+
+- Stack: MongoDB 7 + Express + Mongoose + TypeScript (strict) + React + Vite + Node 22
+- Monorepo: mams-server, mams-web, mams-shared
+- Timezone: Asia/Kolkata everywhere (store UTC, display IST, use date-fns-tz)
+- Auth: JWT with bcrypt(12) password hashing, 8h access token + 30d refresh
+- Deployment: Makson on-prem server (no cloud services at runtime — no S3, no Cloudinary, no SaaS)
+- Internal comms: Microsoft Teams (no Slack)
+
+## COMPLIANCE CONSTRAINTS — DO NOT VIOLATE
+
+### Hours are source of truth, not days
+- Standard divisor: 9.5 hrs/day
+- equivalentDays = compliantHours / 9.5 (computed at query time, never stored)
+- Never let day-based logic drive a calculation
+
+### Original biometric records are immutable
+- Mongoose schemas for RawPunch and Attendance must NOT expose updateOne, deleteOne, findOneAndUpdate, or findOneAndDelete
+- Corrections create new AttendanceCorrection records that reference (do not mutate) the original
+- If user asks to "fix" or "edit" a punch, build it as a new correction, not a mutation
+
+### Sensitive fields masked by default
+Fields: aadhaar, pan, bankAccount, ifsc, pfNumber, esiNumber
+- Mask format: keep last 4 chars, replace rest with X
+- Centralised middleware at response-serialisation layer — impossible to bypass per-route
+- Unmasking gated on: authorised role + explicit user action + audit-log row written BEFORE plaintext returned (atomic)
+- NEVER write console.log(employee), console.log(attendance), console.log(req.body) — leaks unmasked PII
+- Aadhaar typed manually by HR; no OCR, no UIDAI API, no checksum validation in Phase 1
+
+### Smart Anchor v2 is deterministic
+- Same (employeeId, YYYY-MM-DD, rawPunch) -> same compliantPunch, FOREVER, across processes/restarts/deployments
+- Park-Miller LCG seeded by hash of employeeId + ':' + 'YYYY-MM-DD'
+- NEVER use Math.random(), Date.now(), crypto.randomBytes() in Smart Anchor or PRNG code paths
+- Property-based test (fast-check) is mandatory — 1000 random pairs, run twice, assert identical sequences
+
+### Dual-credential view at query layer
+- ONE attendance table
+- Auth middleware tags req.user.viewMode = 'real' | 'compliant'
+- Same UI, same endpoints, different payload based on viewMode
+- Two seed users: hr.admin (real), hr.compliance (compliant)
+
+### No deemed acceptance
+- Every milestone needs explicit written sign-off
+- No time-based auto-approval ANYWHERE in the system (e.g., adjustments don't auto-approve after N days)
+
+### Visual spec is locked
+- Mockup: https://makson-payroll-mockup.netlify.app
+- Approved 30 Apr 2026
+- Any UI deviation = Change Request (don't suggest visual variations during implementation)
+
+## CODING RULES
+
+- Default: write NO comments. Only when the WHY is non-obvious.
+- No fallbacks, retries, validation for impossible scenarios. Trust framework guarantees.
+- Prefer editing existing files over creating new ones.
+- Don't add features beyond the task's acceptance criteria.
+- TypeScript strict mode — no `any`, no implicit return types on exported functions.
+
+## TESTS REQUIRED
+
+- Compliance-critical paths use fast-check property-based tests, not just example tests:
+  - Smart Anchor determinism (1000 random pairs, run twice, identical)
+  - Masking no-leakage (1000 random objects, no sensitive-digit run in JSON output)
+- Every endpoint touching sensitive data asserts AuditLog.count() incremented in test setup
+- CI must pass before merge
+
+## OUT OF SCOPE — DO NOT IMPLEMENT EVEN IF SUGGESTED
+
+- Aadhaar UIDAI checksum/format validation
+- Letterhead PDF with compliance header (only plain print-to-PDF in Phase 1)
+- DD/MM/YYYY date standardisation across exports (Phase 2)
+- In-app brand asset upload UI (deployment-time config only)
+- Payroll, PF/ESI/PT returns, TDS, Form 16
+- Leave management
+- Mobile apps
+- SMS/WhatsApp/email notifications
+- Multi-language UI
+- Cloud services at runtime (S3, Cloudinary, Auth0, etc.)

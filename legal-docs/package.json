@@ -1,0 +1,12 @@
+{
+  "name": "mams-legal-docs",
+  "version": "1.0.0",
+  "description": "Legal document generation for MAMS project — Infoloop ↔ Makson",
+  "scripts": {
+    "build": "bash generate.sh",
+    "validate": "bash validate.sh"
+  },
+  "dependencies": {
+    "docx": "^8.5.0"
+  }
+}

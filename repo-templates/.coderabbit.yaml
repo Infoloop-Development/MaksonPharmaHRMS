@@ -1,0 +1,113 @@
+# CodeRabbit configuration for MAMS — Makson Attendance Management System
+# Path-based rules enforce compliance constraints that AI-generated code commonly violates.
+
+language: en
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/node_modules/**"
+    - "!**/coverage/**"
+
+  # Compliance-critical paths — flag for human review, never auto-approve
+  path_instructions:
+    - path: "mams-server/src/integrations/essl/**"
+      instructions: |
+        eSSL biometric device integration. Original raw punches MUST be immutable.
+        REJECT: any use of Mongoose updateOne, deleteOne, findOneAndUpdate, findOneAndDelete on RawPunch documents.
+        REJECT: any code path that modifies a RawPunch after creation.
+        FLAG: this PR for human review. Do not auto-approve compliance-path code.
+
+    - path: "mams-server/src/middleware/audit-log.ts"
+      instructions: |
+        Audit log is append-only and compliance-critical.
+        REJECT: any code that exposes update or delete methods on AuditLog collection.
+        REJECT: any handler that returns to the client BEFORE the audit-log row is written (must be atomic).
+        REJECT: any TTL index on AuditLog (audit logs are permanent).
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/middleware/mask.ts"
+      instructions: |
+        Centralised masking middleware. All API responses pass through it.
+        REJECT: any code that bypasses or conditionally skips masking based on path or environment.
+        REJECT: any "skip masking in dev/test" toggle.
+        REQUIRE: mask format keeps only last 4 chars, replacing rest with X.
+        REQUIRE: property-based test (fast-check) covering 1000+ random objects with no leakage.
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/lib/rand.ts"
+      instructions: |
+        Smart Anchor PRNG — must be deterministic forever.
+        REJECT: any use of Math.random(), Date.now(), crypto.randomBytes() in this file.
+        REJECT: any non-pure function.
+        REQUIRE: Park-Miller LCG (modulus 2^31-1, multiplier 16807).
+        REQUIRE: property-based test asserting same seed produces same sequence across two instances.
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/lib/smart-anchor*"
+      instructions: |
+        Smart Anchor algorithm — must be deterministic.
+        REJECT: any use of Math.random(), Date.now(), or non-deterministic source.
+        REQUIRE: property-based test (fast-check) — 1000 random (employeeId, date) pairs, run twice, identical CompliantPunch outputs.
+        REQUIRE: explicit handling of edge cases (midnight rollover, weekly off, late punch, night shift, missing exit punch).
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/routes/unmask*"
+      instructions: |
+        Unmask endpoint — compliance-critical contract.
+        REQUIRE: audit-log row written BEFORE plaintext is returned (atomic write).
+        REQUIRE: role-permission gate.
+        REQUIRE: rate limit (100 unmasks per user per hour).
+        REQUIRE: integration test simulating audit-write failure asserts plaintext NOT returned.
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/models/RawPunch.ts"
+      instructions: |
+        Raw biometric punch records. Strict immutability.
+        REJECT: schema.method updateOne/deleteOne/findOneAndUpdate/findOneAndDelete.
+        REJECT: any pre-save hook that mutates an existing document.
+        ALLOW: only insertOne / create / save-new operations.
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/models/Attendance.ts"
+      instructions: |
+        Attendance documents. Original record never mutated.
+        REJECT: any code that updates compliantPunches, grossHrs, netHrs, compHrs, otHrs after initial computation.
+        Corrections must create new AttendanceCorrection records, not modify Attendance.
+        FLAG: this PR for human review.
+
+    - path: "mams-server/src/models/AuditLog.ts"
+      instructions: |
+        Append-only audit log.
+        REJECT: any update or delete method exposed.
+        REJECT: any TTL index.
+        FLAG: this PR for human review.
+
+  # Generic anti-patterns we want to catch project-wide
+  tools:
+    eslint:
+      enabled: true
+    typescript:
+      enabled: true
+
+chat:
+  auto_reply: false
+
+# Project-wide review hints
+knowledge_base:
+  opt_out: false

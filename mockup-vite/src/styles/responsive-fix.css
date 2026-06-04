@@ -1,0 +1,166 @@
+/**
+ * Responsive overlay for the mockup port.
+ *
+ * The base mockup.css already has @media breakpoints for ≤1100px, ≤768px, ≤400px,
+ * but it leaves a handful of mobile gaps where the React code uses inline pixel
+ * widths that override the responsive classes. This file is the targeted fix
+ * layer that closes those gaps WITHOUT editing the original CSS (so it stays
+ * a faithful copy of the approved mockup).
+ *
+ * Load AFTER mockup.css so it wins on equal specificity.
+ *
+ * Related Asana ticket: "Mobile Responsive Issue - Makson HRMS"
+ *   https://app.asana.com/1/1209462166057632/project/1214413615913479/task/1214334865253656
+ */
+
+@media (max-width: 768px) {
+  /* ────────────────────────────────────────────────────────────────
+   * Inline-width inputs/selects: force responsive at mobile.
+   * The mockup React code has many `style={{width: 160}}` style props
+   * that override the breakpoint rules. We override the overrides.
+   * ──────────────────────────────────────────────────────────────── */
+  .table-filters input,
+  .table-filters select,
+  .table-filters .btn,
+  .table-header input,
+  .table-header select {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+  }
+  .table-filters {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .table-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  /* Settings page: inline-width company-name + tz selects */
+  .settings-card .setting-row input,
+  .settings-card .setting-row select {
+    width: 100% !important;
+    max-width: none !important;
+    flex: 1 1 100% !important;
+  }
+
+  /* Device page search input (line 1265, width:280 inline) */
+  .device-grid + * input[placeholder*="device" i],
+  input[placeholder*="device name" i] {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+   * Touch-friendly tap targets - WCAG/iOS min 44px height.
+   * ──────────────────────────────────────────────────────────────── */
+  .btn,
+  .btn-sm,
+  .nav-item,
+  .hamburger,
+  .toggle {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  .btn-sm {
+    /* keep the visual look small but the hit area large */
+    min-height: 36px;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+   * Prevent horizontal page overflow on mobile.
+   * mockup.css sets `table{min-width:700px}` so unwrapped tables
+   * overflow the viewport. We belt-and-braces this at the container.
+   * ──────────────────────────────────────────────────────────────── */
+  body,
+  .app-layout,
+  .main-area,
+  .content {
+    overflow-x: hidden;
+  }
+  table {
+    /* The .tbl-scroll wrapper handles horizontal scroll; outside the
+     * wrapper, tables should shrink to viewport rather than overflow. */
+    max-width: 100%;
+  }
+  /* Within the scroll wrapper, restore the wider min-width so the
+   * table content stays readable when scrolled. */
+  .tbl-scroll table {
+    min-width: 700px;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+   * Modals: full-bleed on small screens.
+   * ──────────────────────────────────────────────────────────────── */
+  .modal {
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 8px !important;
+    border-radius: 12px !important;
+  }
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+   * Form rows in modals and settings - stack vertically.
+   * ──────────────────────────────────────────────────────────────── */
+  .form-row {
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100%;
+  }
+  .form-row > * {
+    width: 100%;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+   * Sidebar elevation - make sure the open sidebar sits above the
+   * sticky top-bar on mobile. mockup.css has z-index:100 on .sidebar
+   * inside the media query, but Safari sometimes mis-stacks against
+   * `position: sticky` ancestors. Force a new stacking context.
+   * ──────────────────────────────────────────────────────────────── */
+  .sidebar.open {
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.25);
+    will-change: transform;
+  }
+
+  /* Hide click-hint helpers that take space on small screens */
+  .click-hint {
+    display: none !important;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Very small screens: tighter padding, smaller modal margins */
+  .content {
+    padding: 12px !important;
+  }
+  .modal {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    min-height: 100vh;
+  }
+  .modal-overlay {
+    padding: 0;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * Accessibility: respect reduced-motion preference.
+ * The mockup animates a lot (slide-up cards, donut hover, pulse).
+ * Users with vestibular sensitivities should be able to opt out.
+ * ──────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

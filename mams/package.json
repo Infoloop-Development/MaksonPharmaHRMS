@@ -1,0 +1,25 @@
+{
+  "name": "mams",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Makson Attendance Management System - MERN monorepo",
+  "workspaces": [
+    "shared/types",
+    "mams-server",
+    "mams-web"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace mams-server run dev",
+    "dev:web": "npm --workspace mams-web run dev",
+    "seed": "npm --workspace mams-server run seed",
+    "build": "npm --workspaces --if-present run build",
+    "test": "npm --workspace mams-server run test",
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "lint": "npm --workspaces --if-present run lint",
+    "validate": "npm run typecheck && npm run lint && npm run test"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
