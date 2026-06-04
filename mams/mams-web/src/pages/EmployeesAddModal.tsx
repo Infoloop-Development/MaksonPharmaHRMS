@@ -13,6 +13,7 @@ import { SelectField } from '../components/ui/SelectField';
 import { StatusToggle } from '../components/ui/StatusToggle';
 import { DateField } from '../components/ui/DateField';
 import { useToast } from '../components/ui/Toast';
+import { ACTIVITY_QUERY_KEY } from '../api/activity';
 
 const WEEKDAYS = WeekdaySchema.options;
 
@@ -158,6 +159,7 @@ export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
       toast('Employee created', 'success');
       qc.invalidateQueries({ queryKey: ['employees'] });
       qc.invalidateQueries({ queryKey: ['employees', 'next-code'] });
+      qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
       onClose();
     } catch (e: unknown) {
       if (e instanceof ApiError) {

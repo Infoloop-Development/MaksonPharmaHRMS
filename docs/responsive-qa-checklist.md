@@ -25,6 +25,13 @@ Manual verification after responsive layout changes. Use browser DevTools device
 | 14" | 1366×768 | | Employees table, Dashboard 2×2 stats |
 | 15" / desktop | 1920×1080 | | Full columns, sidebar always visible |
 
+## Dashboard
+
+- [ ] Chart.js bar + pie load after `npm run seed` (non-zero data)
+- [ ] Charts stack below `lg`; side by side at `lg+`
+- [ ] Pie color legend readable at 375px width
+- [ ] Bar chart: total employees vs present for last 5 IST dates
+
 ## Global shell
 
 - [ ] Hamburger visible below `lg`; opens/closes sidebar overlay
@@ -56,7 +63,13 @@ Manual verification after responsive layout changes. Use browser DevTools device
 ### Reports
 - [ ] Tab buttons wrap
 - [ ] Filter bar stacks (`FilterBar` grid)
-- [ ] Daily/monthly tables use `.tbl-scroll`; fewer columns below `xl`
+- [ ] Daily / Monthly / Department: cards below `md`, table from `md`
+- [ ] Location tab: card grid (unchanged)
+- [ ] Daily print from mobile: table visible (`print:block`), cards hidden (`print:hidden`)
+- [ ] Daily/monthly tables use `.tbl-scroll`; fewer columns below `xl` on desktop
+
+### Settings
+- [ ] Activity log: cards below `md`, table from `md`
 
 ### Adjustments
 - [ ] Status stat grid 2×2 then 4 columns

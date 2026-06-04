@@ -26,6 +26,24 @@ export function fmtIstTime(d: Date | string | null): string {
   }).format(date);
 }
 
+/** Date + time with milliseconds in IST (Activity log). */
+export function fmtIstDateTimeMs(d: Date | string | null): string {
+  if (!d) return '-';
+  const date = typeof d === 'string' ? new Date(d) : d;
+  const base = new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(date);
+  const ms = String(date.getMilliseconds()).padStart(3, '0');
+  return `${base}.${ms}`;
+}
+
 export function fmtDate(yyyymmdd: string): string {
   // 'YYYY-MM-DD' -> 'DD/MM/YYYY' for Indian display convention.
   if (!yyyymmdd) return '-';

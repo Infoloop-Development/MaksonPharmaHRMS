@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { attendanceApi } from '../api/attendance';
 import { fmtIstTime, fmtDate } from '../lib/format';
 import { PunchCardList } from '../components/attendance/PunchCardList';
+import { useActivityLog } from '../hooks/useActivityLog';
 
 type PunchTypeFilter = 'all' | 'IN' | 'OUT' | 'OTHER';
 
 export function AttendanceLog() {
+  const { logFilter, logFilterDebounced } = useActivityLog();
+  const searchDebounceSkip = useRef(true);
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('');
   const [punchType, setPunchType] = useState<PunchTypeFilter>('all');
@@ -49,6 +52,35 @@ export function AttendanceLog() {
     setPage(1);
   };
 
+  useEffect(() => {
+    if (searchDebounceSkip.current) {
+      searchDebounceSkip.current = false;
+      return;
+    }
+    if (!search.trim() && !date && punchType === 'all') return;
+    logFilterDebounced('attendance', 'filter', {
+      search: search.trim() || undefined,
+      date: date || undefined,
+      punchType: punchType === 'all' ? undefined : punchType,
+    });
+  }, [search, logFilterDebounced]);
+
+  const logAttendanceFilter = (patch: { search?: string; date?: string; punchType?: string }) => {
+    const payload = {
+      search: (patch.search ?? search).trim() || undefined,
+      date: patch.date !== undefined ? patch.date || undefined : date || undefined,
+      punchType:
+        patch.punchType !== undefined
+          ? patch.punchType === 'all'
+            ? undefined
+            : patch.punchType
+          : punchType === 'all'
+            ? undefined
+            : punchType,
+    };
+    logFilter('attendance', 'filter', payload);
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
@@ -85,8 +117,10 @@ export function AttendanceLog() {
           className="input w-full sm:w-auto"
           value={date}
           onChange={(e) => {
-            setDate(e.target.value);
+            const v = e.target.value;
+            setDate(v);
             setPage(1);
+            logAttendanceFilter({ date: v });
           }}
           aria-label="Filter by date"
         />
@@ -94,8 +128,10 @@ export function AttendanceLog() {
           className="input w-full sm:w-auto"
           value={punchType}
           onChange={(e) => {
-            setPunchType(e.target.value as PunchTypeFilter);
+            const v = e.target.value as PunchTypeFilter;
+            setPunchType(v);
             setPage(1);
+            logAttendanceFilter({ punchType: v });
           }}
           aria-label="Punch type"
         >
