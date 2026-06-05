@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
@@ -11,8 +11,11 @@ import { fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 import { EmployeeCardList } from '../components/employees/EmployeeCardList';
+import { useActivityLog } from '../hooks/useActivityLog';
+import { ACTIVITY_QUERY_KEY } from '../api/activity';
 
 export function Employees() {
+  const { logSearch } = useActivityLog();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
@@ -25,6 +28,10 @@ export function Employees() {
     queryKey: ['employees', { search, page }],
     queryFn: () => employeesApi.list({ search, page, pageSize }),
   });
+
+  useEffect(() => {
+    logSearch('employees', 'search', { search: search.trim() });
+  }, [search, logSearch]);
 
   return (
     <div>
@@ -153,6 +160,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ['employees'] });
       if (res.successCount > 0) {
         qc.invalidateQueries({ queryKey: ['employees', 'next-code'] });
+        qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
       }
     } catch (e: any) {
       toast(e?.message ?? 'Import failed', 'error');

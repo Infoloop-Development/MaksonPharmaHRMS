@@ -13,7 +13,23 @@ export interface WeekTrend {
   series: Record<string, { present: number; absent: number; weeklyOff: number }>;
 }
 
+export interface DashboardCharts {
+  asOfDate: string;
+  last5Days: {
+    dates: string[];
+    totalEmployees: number;
+    present: number[];
+  };
+  todayPunctuality: {
+    onTime: number;
+    delay: number;
+    onLeave: number;
+    totalActive: number;
+  };
+}
+
 export const dashboardApi = {
   stats: () => api.get<DashboardStats>('/dashboard/stats'),
   weekTrend: () => api.get<WeekTrend>('/dashboard/week-trend'),
+  charts: () => api.get<DashboardCharts>('/dashboard/charts'),
 };

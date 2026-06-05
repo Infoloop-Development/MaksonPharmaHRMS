@@ -12,6 +12,8 @@ import { fmtIstTime } from '../lib/format';
 import type { Permission, Role, UserPublic } from '@mams/types';
 import { PERMISSIONS_BY_ROLE, ROLE_PERMISSION_CAP } from '@mams/types';
 import { z } from 'zod';
+import { ActivityLogPanel } from '../components/activity/ActivityLogPanel';
+import { ACTIVITY_QUERY_KEY } from '../api/activity';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -101,8 +103,18 @@ export function Settings() {
         <ConfidentialityCard settings={data} canManage={canManage} />
         {canManageUsers && <UsersCard />}
       </div>
+
+      <div className="mt-6">
+        <SectionCard title="Activity">
+          <ActivityLogPanel />
+        </SectionCard>
+      </div>
     </div>
   );
+}
+
+function invalidateActivity(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
 }
 
 function SectionCard({
@@ -152,21 +164,33 @@ function useDirtyForm<T>(initial: T): [T, (patch: Partial<T>) => void, () => voi
   return [draft, set, reset, dirty];
 }
 
+function pickChanged<T extends object>(initial: T, draft: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const key of Object.keys(draft) as (keyof T)[]) {
+    if (JSON.stringify(initial[key]) !== JSON.stringify(draft[key])) {
+      out[key] = draft[key];
+    }
+  }
+  return out;
+}
+
 function CompanyInfoCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, set, reset, dirty] = useDirtyForm({
+  const initial = {
     companyName: settings.companyName,
     registeredAddress: settings.registeredAddress,
     signatoryName: settings.signatoryName,
     signatoryDesignation: settings.signatoryDesignation,
-  });
+  };
+  const [draft, set, reset, dirty] = useDirtyForm(initial);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => settingsApi.patch(draft),
+    mutationFn: () => settingsApi.patch(pickChanged(initial, draft)),
     onSuccess: () => {
       toast('Company info updated', 'success');
       qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
       setIsEditing(false);
     },
     onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
@@ -228,20 +252,22 @@ function CompanyInfoCard({ settings, canManage }: { settings: SettingsT; canMana
 
 function ComplianceCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, set, reset, dirty] = useDirtyForm({
+  const initial = {
     cin: settings.cin,
     gstin: settings.gstin,
     pfRegistrationNumber: settings.pfRegistrationNumber,
     esiRegistrationNumber: settings.esiRegistrationNumber,
     factoryLicenceNumber: settings.factoryLicenceNumber,
-  });
+  };
+  const [draft, set, reset, dirty] = useDirtyForm(initial);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => settingsApi.patch(draft),
+    mutationFn: () => settingsApi.patch(pickChanged(initial, draft)),
     onSuccess: () => {
       toast('Compliance info updated', 'success');
       qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
       setIsEditing(false);
     },
     onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
@@ -349,6 +375,7 @@ function SmartAnchorCard({ settings, canManage }: { settings: SettingsT; canMana
     onSuccess: () => {
       toast('Smart Anchor setting updated', 'success');
       qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
     },
     onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
   });
@@ -380,17 +407,19 @@ function SmartAnchorCard({ settings, canManage }: { settings: SettingsT; canMana
 }
 
 function ConfidentialityCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
-  const [draft, set, reset, dirty] = useDirtyForm({
+  const initial = {
     confidentialityNoticeEnabled: settings.confidentialityNoticeEnabled,
     confidentialityNoticeText: settings.confidentialityNoticeText,
-  });
+  };
+  const [draft, set, reset, dirty] = useDirtyForm(initial);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => settingsApi.patch(draft),
+    mutationFn: () => settingsApi.patch(pickChanged(initial, draft)),
     onSuccess: () => {
       toast('Confidentiality notice updated', 'success');
       qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
     },
     onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
   });
@@ -564,6 +593,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
         toast('User created. They must change password on first login.', 'success');
       }
       qc.invalidateQueries({ queryKey: ['users'] });
+      invalidateActivity(qc);
       onClose();
     },
     onError: (e: unknown) => {
@@ -727,6 +757,7 @@ function EditUserModal({
         'success'
       );
       qc.invalidateQueries({ queryKey: ['users'] });
+      invalidateActivity(qc);
       onClose();
     },
     onError: (e: unknown) => {

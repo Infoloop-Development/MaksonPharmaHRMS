@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { SettingsModel } from '../models/Settings.js';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
+import { diffSettingsValues, settingsSectionFromChangedFields } from '../services/activity.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -48,21 +49,31 @@ router.patch('/', requirePermission('manage.settings'), async (req, res, next) =
     let doc = await SettingsModel.findOne();
     if (!doc) doc = await SettingsModel.create({});
 
-    const before: Record<string, unknown> = {};
-    const after: Record<string, unknown> = {};
+    const docBefore = doc.toObject() as Record<string, unknown>;
+    const { before, after, changedFields } = diffSettingsValues(docBefore, patch as Record<string, unknown>);
+
     for (const [key, value] of Object.entries(patch)) {
       if (value === undefined) continue;
-      before[key] = (doc as any)[key];
-      after[key] = value;
       (doc as any)[key] = value;
     }
     await doc.save();
 
-    await audit(
-      'settings_changed',
-      { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
-      { entityType: 'settings', entityId: doc._id, payload: { before, after, changedFields: Object.keys(after) } }
-    );
+    if (changedFields.length > 0) {
+      await audit(
+        'settings_changed',
+        { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
+        {
+          entityType: 'settings',
+          entityId: doc._id,
+          payload: {
+            before,
+            after,
+            changedFields,
+            section: settingsSectionFromChangedFields(changedFields),
+          },
+        }
+      );
+    }
 
     res.json(doc);
   } catch (err) {
