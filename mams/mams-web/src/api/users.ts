@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Permission, Role, UserPublic, UserUpdateBody } from '@mams/types';
+import type { Permission, Role, SensitiveUnmaskField, UserPublic, UserUpdateBody } from '@mams/types';
 
 export interface UserSummary {
   _id: string;
@@ -8,6 +8,7 @@ export interface UserSummary {
   role: Role;
   viewMode: 'real' | 'compliant';
   permissions: Permission[];
+  unmaskFieldGrants?: SensitiveUnmaskField[];
   isActive: boolean;
   mustChangePassword?: boolean;
   lastLoginAt: string | null;
@@ -25,7 +26,12 @@ export type UserPatchResponse =
 
 export const usersApi = {
   list: () => api.get<{ items: UserSummary[] }>('/users'),
-  create: (body: { email: string; name: string; role: Role; password: string }) =>
-    api.post<UserCreateResponse>('/users', body),
+  create: (body: {
+    email: string;
+    name: string;
+    role: Role;
+    password: string;
+    unmaskFieldGrants?: SensitiveUnmaskField[];
+  }) => api.post<UserCreateResponse>('/users', body),
   patch: (id: string, body: UserUpdateBody) => api.patch<UserPatchResponse>(`/users/${id}`, body),
 };

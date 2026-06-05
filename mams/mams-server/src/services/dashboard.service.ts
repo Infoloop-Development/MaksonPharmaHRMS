@@ -7,12 +7,13 @@ const NIGHT_LATE_FROM_MINUTES = 20 * 60; // 20:00 IST
 
 export interface DashboardChartsPayload {
   asOfDate: string;
-  last5Days: {
+  weekRange: { start: string; end: string };
+  last7Days: {
     dates: string[];
     totalEmployees: number;
     present: number[];
   };
-  todayPunctuality: {
+  weekPunctuality: {
     onTime: number;
     delay: number;
     onLeave: number;
@@ -44,7 +45,7 @@ export function isLateEntry(realEntryAt: Date, timeShift: 'Day' | 'Night'): bool
 
 export async function getDashboardCharts(): Promise<DashboardChartsPayload> {
   const asOfDate = utcToIstDateString(new Date());
-  const dates = lastNIstDates(5);
+  const dates = lastNIstDates(7);
 
   const totalActive = await EmployeeModel.countDocuments({
     status: 'Active',
@@ -59,14 +60,14 @@ export async function getDashboardCharts(): Promise<DashboardChartsPayload> {
   const present = dates.map((d) => presentByDate.get(d) ?? 0);
 
   const onLeave = await AttendanceDerivedModel.countDocuments({
-    date: asOfDate,
+    date: { $in: dates },
     status: { $in: ['Absent', 'Weekly Off', 'Half Day'] },
   });
 
-  const presentToday = await AttendanceDerivedModel.aggregate([
+  const presentWeek = await AttendanceDerivedModel.aggregate([
     {
       $match: {
-        date: asOfDate,
+        date: { $in: dates },
         status: 'Present',
       },
     },
@@ -89,7 +90,7 @@ export async function getDashboardCharts(): Promise<DashboardChartsPayload> {
 
   let delay = 0;
   let onTime = 0;
-  for (const row of presentToday) {
+  for (const row of presentWeek) {
     const entry = row.realEntryAt as Date | null;
     const shift = row.timeShift as 'Day' | 'Night';
     if (entry && isLateEntry(entry, shift)) delay += 1;
@@ -98,12 +99,13 @@ export async function getDashboardCharts(): Promise<DashboardChartsPayload> {
 
   return {
     asOfDate,
-    last5Days: {
+    weekRange: { start: dates[0]!, end: dates[dates.length - 1]! },
+    last7Days: {
       dates,
       totalEmployees: totalActive,
       present,
     },
-    todayPunctuality: {
+    weekPunctuality: {
       onTime,
       delay,
       onLeave,

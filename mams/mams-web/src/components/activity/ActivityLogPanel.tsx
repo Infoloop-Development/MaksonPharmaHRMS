@@ -1,22 +1,31 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { activityApi, ACTIVITY_QUERY_KEY } from '../../api/activity';
+import { activityApi, activityQueryKey, ACTIVITY_QUERY_PREFIX } from '../../api/activity';
+import { useAuth } from '../../store/auth';
 import { fmtIstDateTimeMs } from '../../lib/format';
-import { activityPageBadge, formatActivityDescription } from '../../lib/activityLabels';
+import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityCardList } from './ActivityCardList';
+import { ActivityDescription } from './ActivityDescription';
 
 const PAGE_SIZE = 50;
 
 export function ActivityLogPanel() {
+  const user = useAuth((s) => s.user);
+  const userId = user?.id;
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
 
+  useEffect(() => {
+    setPage(1);
+  }, [userId]);
+
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: [...ACTIVITY_QUERY_KEY, page],
+    queryKey: activityQueryKey(userId, page),
     queryFn: () => activityApi.listMine({ page, pageSize: PAGE_SIZE }),
+    enabled: !!userId,
   });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+  const refresh = () => qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
 
   return (
     <div>
@@ -63,7 +72,9 @@ export function ActivityLogPanel() {
                       {activityPageBadge(row.eventType, row.payload)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-text">{formatActivityDescription(row)}</td>
+                  <td className="px-3 py-2 text-text">
+                    <ActivityDescription item={row} />
+                  </td>
                 </tr>
               ))}
             </tbody>

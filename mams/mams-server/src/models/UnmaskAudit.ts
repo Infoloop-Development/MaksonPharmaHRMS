@@ -13,7 +13,17 @@ const unmaskAuditSchema = new Schema(
     employeeId: { type: Schema.Types.ObjectId, ref: 'Employee', required: true, index: true },
     fieldName: {
       type: String,
-      enum: ['pan', 'aadhaar', 'bankAccountNumber', 'pfNumber', 'esiNumber'],
+      enum: [
+        'pan',
+        'aadhaar',
+        'bankAccountNumber',
+        'pfNumber',
+        'esiNumber',
+        'ifsc',
+        'bankName',
+        'accountHolderName',
+        'accountType',
+      ],
       required: true,
       index: true,
     },

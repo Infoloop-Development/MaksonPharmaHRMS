@@ -12,7 +12,7 @@ import { EmployeesAddModal } from './EmployeesAddModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 import { EmployeeCardList } from '../components/employees/EmployeeCardList';
 import { useActivityLog } from '../hooks/useActivityLog';
-import { ACTIVITY_QUERY_KEY } from '../api/activity';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
 export function Employees() {
   const { logSearch } = useActivityLog();
@@ -160,7 +160,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ['employees'] });
       if (res.successCount > 0) {
         qc.invalidateQueries({ queryKey: ['employees', 'next-code'] });
-        qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+        qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
       }
     } catch (e: any) {
       toast(e?.message ?? 'Import failed', 'error');

@@ -1,4 +1,5 @@
 import type { Permission, Role } from './user.js';
+import { dedupeUnmaskFieldGrants, type SensitiveUnmaskField } from './sensitiveUnmask.js';
 
 /** Default permission set assigned when creating a user for a role. */
 export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
@@ -64,4 +65,22 @@ export function validatePermissionsForRole(
 
 export function hasManageUsersPermission(permissions: Permission[]): boolean {
   return permissions.includes('manage.users');
+}
+
+/** Base role permissions with unmask.sensitive only when HR Admin has at least one field grant. */
+export function permissionsWithUnmaskGrants(
+  role: Role,
+  unmaskFieldGrants: SensitiveUnmaskField[]
+): Permission[] {
+  const base = [...PERMISSIONS_BY_ROLE[role]];
+  const grants = dedupeUnmaskFieldGrants(unmaskFieldGrants);
+  const without = base.filter((p) => p !== 'unmask.sensitive');
+  if (role === 'hr.admin' && grants.length > 0) {
+    return dedupePermissions([...without, 'unmask.sensitive']);
+  }
+  return without;
+}
+
+export function canRoleHaveUnmaskFieldGrants(role: Role): boolean {
+  return role === 'hr.admin';
 }

@@ -1,4 +1,5 @@
 export * from './user.js';
+export * from './sensitiveUnmask.js';
 export * from './rbac.js';
 export * from './employee.js';
 export * from './orgConstants.js';

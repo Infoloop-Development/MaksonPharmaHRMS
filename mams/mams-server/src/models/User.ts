@@ -7,6 +7,7 @@ const userSchema = new Schema(
     name: { type: String, required: true },
     role: { type: String, enum: ['hr.admin', 'hr.compliance', 'it.admin'], required: true, index: true },
     permissions: { type: [String], default: [] },
+    unmaskFieldGrants: { type: [String], default: [] },
     viewMode: { type: String, enum: ['real', 'compliant'], required: true },
     isActive: { type: Boolean, default: true },
     mustChangePassword: { type: Boolean, default: false },

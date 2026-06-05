@@ -8,6 +8,7 @@ import { audit } from './audit.service.js';
 import mongoose from 'mongoose';
 import type { Permission, Role } from '@mams/types';
 import { PasswordSchema } from '../utils/passwordPolicy.js';
+import { filterPermissionsForSession, isUnmaskEnabled } from '../config/featureFlags.js';
 
 export { PERMISSIONS_BY_ROLE } from '@mams/types';
 
@@ -41,11 +42,12 @@ export async function login(email: string, password: string, ctx: { ipAddress: s
   user.lastLoginAt = new Date();
   await user.save();
 
+  const sessionPerms = filterPermissionsForSession((user.permissions ?? []) as Permission[]);
   const accessToken = signAccessToken({
     sub: String(user._id),
     role: user.role as Role,
     viewMode: user.viewMode as 'real' | 'compliant',
-    permissions: (user.permissions ?? []) as Permission[],
+    permissions: sessionPerms,
   });
   const refreshToken = signRefreshToken(String(user._id));
   await RefreshTokenModel.create({
@@ -75,11 +77,12 @@ export async function rotateRefresh(token: string, ctx: { ipAddress: string | nu
     throw new ApiError(401, 'invalid_refresh_token', 'User no longer active');
   }
 
+  const sessionPerms = filterPermissionsForSession((user.permissions ?? []) as Permission[]);
   const accessToken = signAccessToken({
     sub: String(user._id),
     role: user.role as Role,
     viewMode: user.viewMode as 'real' | 'compliant',
-    permissions: (user.permissions ?? []) as Permission[],
+    permissions: sessionPerms,
   });
   const refreshToken = signRefreshToken(String(user._id));
   await RefreshTokenModel.create({
@@ -101,13 +104,15 @@ export async function logout(refreshToken: string): Promise<void> {
 }
 
 export function userPublic(user: UserDoc) {
+  const permissions = filterPermissionsForSession((user.permissions ?? []) as Permission[]);
   return {
     id: String(user._id),
     email: user.email,
     name: user.name,
     role: user.role,
     viewMode: user.viewMode,
-    permissions: user.permissions ?? [],
+    permissions,
+    unmaskFieldGrants: isUnmaskEnabled() ? (user.unmaskFieldGrants ?? []) : [],
     isActive: user.isActive ?? true,
     mustChangePassword: user.mustChangePassword ?? false,
     lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,

@@ -1,15 +1,38 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ALL_SENSITIVE_UNMASK_FIELDS,
+  SENSITIVE_UNMASK_FIELD_LABELS,
+  type SensitiveUnmaskField,
+} from '@mams/types';
 import { employeesApi } from '../api/employees';
+import { ApiError } from '../api/client';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { useAuth } from '../store/auth';
 import { fmtDate } from '../lib/format';
-
-const SENSITIVE_FIELDS = ['pan', 'aadhaar', 'bankAccountNumber', 'pfNumber', 'esiNumber'] as const;
-type SensitiveField = typeof SENSITIVE_FIELDS[number];
+import { UnmaskPasswordModal } from '../components/employees/UnmaskPasswordModal';
+import { isUnmaskEnabled } from '../config/featureFlags';
 
 export function EmployeeDetail() {
   const { id } = useParams();
-  const [unmasked, setUnmasked] = useState<Partial<Record<SensitiveField, string>>>({});
+  const user = useAuth((s) => s.user);
+  const unmaskFeatureOn = isUnmaskEnabled();
+  const [unmasked, setUnmasked] = useState<Partial<Record<SensitiveUnmaskField, string>>>({});
+  const [pendingField, setPendingField] = useState<SensitiveUnmaskField | null>(null);
+  const [unmaskLoading, setUnmaskLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const grants = user?.unmaskFieldGrants ?? [];
+  const hasLegacyUnmask =
+    (user?.permissions?.includes('unmask.sensitive') ?? false) && grants.length === 0;
+  const effectiveGrants: SensitiveUnmaskField[] = hasLegacyUnmask
+    ? [...ALL_SENSITIVE_UNMASK_FIELDS]
+    : grants;
+
+  const canUnmaskField = (field: SensitiveUnmaskField) =>
+    unmaskFeatureOn && effectiveGrants.includes(field);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['employee', id],
@@ -17,14 +40,29 @@ export function EmployeeDetail() {
     enabled: !!id,
   });
 
-  const onUnmask = async (field: SensitiveField) => {
-    if (!id) return;
-    const reason = window.prompt(`Reason for unmasking ${field}? (audit-logged)`) ?? undefined;
+  const handleUnmaskConfirm = async (password: string, reason?: string) => {
+    if (!id || !pendingField) return;
+    setPasswordError(null);
+    setUnmaskLoading(true);
     try {
-      const res = await employeesApi.unmask(id, field, reason);
-      setUnmasked((u) => ({ ...u, [field]: res.value }));
-    } catch (e: any) {
-      alert(e?.message ?? 'Unmask failed');
+      const res = await employeesApi.unmask(id, pendingField, { password, reason });
+      setUnmasked((u) => ({ ...u, [pendingField]: res.value }));
+      setPendingField(null);
+      setPasswordError(null);
+      void qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+    } catch (e: unknown) {
+      void qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+      if (e instanceof ApiError) {
+        if (e.code === 'invalid_credentials') {
+          setPasswordError('Incorrect password. Please try again.');
+          return;
+        }
+        setPasswordError(e.message || 'Unmask failed');
+        return;
+      }
+      setPasswordError('Unmask failed. Please try again.');
+    } finally {
+      setUnmaskLoading(false);
     }
   };
 
@@ -34,11 +72,15 @@ export function EmployeeDetail() {
   return (
     <div>
       <div className="mb-4">
-        <Link to="/employees" className="text-sm text-primary hover:underline">{'←'} Back to employees</Link>
+        <Link to="/employees" className="text-sm text-primary hover:underline">
+          {'←'} Back to employees
+        </Link>
       </div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">{data.name}</h1>
-        <div className="text-sm text-text-muted font-mono">{data.empCode} · {data.biometricId}</div>
+        <div className="text-sm text-text-muted font-mono">
+          {data.empCode} · {data.biometricId}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -55,29 +97,64 @@ export function EmployeeDetail() {
         </Section>
 
         <Section title="Sensitive (masked by default)">
-          <div className="text-xs text-text-muted mb-3">
-            Tap "unmask" to reveal a value. Every unmask is audit-logged with your user, IP, time, and field.
-          </div>
-          {SENSITIVE_FIELDS.map((f) => (
-            <div key={f} className="flex items-start justify-between py-2 border-b border-border last:border-0">
-              <div className="flex-1">
-                <div className="text-[10px] uppercase tracking-wider text-text-subtle">{f}</div>
-                <div className="font-mono text-sm">{unmasked[f] ?? (data as any)[f]}</div>
-              </div>
-              {!unmasked[f] && (
-                <button onClick={() => onUnmask(f)} className="btn-outline text-xs">Unmask</button>
-              )}
+          {unmaskFeatureOn && (
+            <div className="text-xs text-text-muted mb-3 leading-relaxed">
+              Unmask is only shown for fields your account is allowed to reveal. Enter your login password
+              in the dialog to confirm; every reveal is audit-logged.
             </div>
+          )}
+          {ALL_SENSITIVE_UNMASK_FIELDS.map((f) => (
+            <SensitiveRow
+              key={f}
+              label={SENSITIVE_UNMASK_FIELD_LABELS[f]}
+              value={unmasked[f] ?? String((data as Record<string, unknown>)[f] ?? '')}
+              showUnmask={canUnmaskField(f) && !unmasked[f]}
+              onUnmask={() => {
+                setPasswordError(null);
+                setPendingField(f);
+              }}
+            />
           ))}
-
-          <div className="mt-4 pt-4 border-t border-border space-y-1">
-            <Row label="IFSC" value={data.ifsc} />
-            <Row label="Bank" value={data.bankName} />
-            <Row label="Account Holder" value={data.accountHolderName} />
-            <Row label="Account Type" value={data.accountType} />
-          </div>
         </Section>
       </div>
+
+      {unmaskFeatureOn && pendingField !== null && (
+        <UnmaskPasswordModal
+          field={pendingField}
+          open
+          onClose={() => !unmaskLoading && setPendingField(null)}
+          onConfirm={handleUnmaskConfirm}
+          loading={unmaskLoading}
+          passwordError={passwordError}
+          onClearPasswordError={() => setPasswordError(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SensitiveRow({
+  label,
+  value,
+  showUnmask,
+  onUnmask,
+}: {
+  label: string;
+  value: string;
+  showUnmask: boolean;
+  onUnmask: () => void;
+}) {
+  return (
+    <div className="flex items-start justify-between py-2 border-b border-border last:border-0 gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] uppercase tracking-wider text-text-subtle">{label}</div>
+        <div className="font-mono text-sm break-all">{value}</div>
+      </div>
+      {showUnmask && (
+        <button type="button" onClick={onUnmask} className="btn-outline text-xs shrink-0">
+          Unmask
+        </button>
+      )}
     </div>
   );
 }
@@ -93,9 +170,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between py-1.5 text-sm">
-      <span className="text-text-muted">{label}</span>
-      <span className="font-medium text-right">{value}</span>
+    <div className="flex justify-between py-1.5 text-sm gap-4">
+      <span className="text-text-muted shrink-0">{label}</span>
+      <span className="font-medium text-right break-all">{value}</span>
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { Reports } from './pages/Reports';
 import { Adjustments } from './pages/Adjustments';
 import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
+import { isAutogenDemoEnabled } from './config/featureFlags';
+import { AutogenerationDemo } from './pages/AutogenerationDemo';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
@@ -54,6 +56,9 @@ export function App() {
         <Route path="employees/:id" element={<EmployeeDetail />} />
         <Route path="attendance" element={<AttendanceLog />} />
         <Route path="reports" element={<Reports />} />
+        {isAutogenDemoEnabled() && (
+          <Route path="autogeneration-demo" element={<AutogenerationDemo />} />
+        )}
         <Route path="adjustments" element={<Adjustments />} />
         <Route path="devices" element={<Devices />} />
         <Route path="settings" element={<Settings />} />
