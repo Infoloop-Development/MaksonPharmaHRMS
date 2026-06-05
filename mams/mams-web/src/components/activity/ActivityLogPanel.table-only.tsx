@@ -2,24 +2,31 @@
  * Table-only Activity log panel (branch 1: feature/activity-log).
  * Branch 2 replaces ActivityLogPanel.tsx with the hybrid card + table version.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { activityApi, ACTIVITY_QUERY_KEY } from '../../api/activity';
+import { activityApi, activityQueryKey, ACTIVITY_QUERY_PREFIX } from '../../api/activity';
+import { useAuth } from '../../store/auth';
 import { fmtIstDateTimeMs } from '../../lib/format';
 import { activityPageBadge, formatActivityDescription } from '../../lib/activityLabels';
 
 const PAGE_SIZE = 50;
 
 export function ActivityLogPanel() {
+  const userId = useAuth((s) => s.user?.id);
   const [page, setPage] = useState(1);
   const qc = useQueryClient();
 
+  useEffect(() => {
+    setPage(1);
+  }, [userId]);
+
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: [...ACTIVITY_QUERY_KEY, page],
+    queryKey: activityQueryKey(userId, page),
     queryFn: () => activityApi.listMine({ page, pageSize: PAGE_SIZE }),
+    enabled: !!userId,
   });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+  const refresh = () => qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
 
   return (
     <div>

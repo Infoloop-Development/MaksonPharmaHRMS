@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UnmaskFieldGrantsSchema } from './sensitiveUnmask.js';
 
 export const RoleSchema = z.enum(['hr.admin', 'hr.compliance', 'it.admin']);
 export type Role = z.infer<typeof RoleSchema>;
@@ -25,6 +26,7 @@ export const UserPublicSchema = z.object({
   role: RoleSchema,
   viewMode: ViewModeSchema,
   permissions: z.array(PermissionSchema),
+  unmaskFieldGrants: UnmaskFieldGrantsSchema.default([]),
   isActive: z.boolean(),
   mustChangePassword: z.boolean(),
   lastLoginAt: z.string().datetime().nullable(),
@@ -43,6 +45,7 @@ export const UserUpdateBodySchema = z
     email: z.string().trim().pipe(z.string().email()).transform((s) => s.toLowerCase()).optional(),
     role: RoleSchema.optional(),
     permissions: z.array(PermissionSchema).optional(),
+    unmaskFieldGrants: UnmaskFieldGrantsSchema.optional(),
     isActive: z.boolean().optional(),
   })
   .strict()

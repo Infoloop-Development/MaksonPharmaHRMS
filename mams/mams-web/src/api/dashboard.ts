@@ -15,12 +15,13 @@ export interface WeekTrend {
 
 export interface DashboardCharts {
   asOfDate: string;
-  last5Days: {
+  weekRange: { start: string; end: string };
+  last7Days: {
     dates: string[];
     totalEmployees: number;
     present: number[];
   };
-  todayPunctuality: {
+  weekPunctuality: {
     onTime: number;
     delay: number;
     onLeave: number;

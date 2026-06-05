@@ -70,6 +70,11 @@ Manual verification after responsive layout changes. Use browser DevTools device
 
 ### Settings
 - [ ] Activity log: cards below `md`, table from `md`
+- [ ] Add/Edit user: HR Admin unmask field toggles scroll on mobile; unmask password modal usable on small screens
+
+### Auto Genrated Shift Demo
+- [ ] Form fields stack on mobile; generated alternate in/out and two-employee table readable
+- [ ] HH:mm:ss.SSS monospace inputs; red late-in / on-time labels visible on small screens
 
 ### Adjustments
 - [ ] Status stat grid 2×2 then 4 columns

@@ -60,14 +60,25 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
   }
 );
 
-export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className="flex items-center gap-2 group"
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`flex items-center gap-2 group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <span
         className={`w-10 h-6 rounded-full relative transition ${checked ? 'bg-primary' : 'bg-border'}`}

@@ -3,11 +3,20 @@ import type { ActivityListQuery, UiActivityLogBody } from '@mams/types';
 import { AuditLogModel } from '../models/AuditLog.js';
 import { audit } from './audit.service.js';
 import { ApiError } from '../middleware/error.js';
+import { isUnmaskEnabled } from '../config/featureFlags.js';
 
 const MAX_PAYLOAD_BYTES = 4096;
 
 /** Event types hidden from self-service Activity (noise / security). */
 const HIDDEN_SELF_SERVICE = new Set(['login_failed', 'welcome_email_failed']);
+
+function hiddenEventTypes(): string[] {
+  const hidden = [...HIDDEN_SELF_SERVICE];
+  if (!isUnmaskEnabled()) {
+    hidden.push('unmask_succeeded', 'unmask_failed');
+  }
+  return hidden;
+}
 
 export function assertUiPayloadSize(payload: Record<string, unknown> | undefined): void {
   if (!payload) return;
@@ -35,7 +44,7 @@ export async function listMyActivity(userId: string, q: ActivityListQuery) {
   const uid = new Types.ObjectId(userId);
   const filter = {
     userId: uid,
-    eventType: { $nin: [...HIDDEN_SELF_SERVICE] },
+    eventType: { $nin: hiddenEventTypes() },
     $or: [
       { eventType: { $ne: 'csv_import' } },
       { eventType: 'csv_import', 'payload.successCount': { $gt: 0 } },

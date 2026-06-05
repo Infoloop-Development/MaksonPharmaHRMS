@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { useAuth } from '../store/auth';
 
 export function Login() {
@@ -9,6 +11,7 @@ export function Login() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setAuth = useAuth((s) => s.setAuth);
+  const qc = useQueryClient();
   const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
@@ -17,6 +20,7 @@ export function Login() {
     setErr(null);
     try {
       const data = await authApi.login({ email, password });
+      qc.removeQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
       setAuth(data);
       navigate(data.user.mustChangePassword ? '/change-password' : '/dashboard');
     } catch (e: any) {

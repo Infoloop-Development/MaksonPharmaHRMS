@@ -1,9 +1,12 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../store/auth';
 import { authApi } from '../api/auth';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { isAutogenDemoEnabled } from '../config/featureFlags';
 
-const NAV = [
+const BASE_NAV = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/employees', label: 'Employees' },
   { to: '/attendance', label: 'Attendance Log' },
@@ -11,12 +14,29 @@ const NAV = [
   { to: '/adjustments', label: 'Adjustments' },
   { to: '/devices', label: 'Devices' },
   { to: '/settings', label: 'Settings' },
-];
+] as const;
+
+const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo' } as const;
+
+function buildNav() {
+  if (!isAutogenDemoEnabled()) return [...BASE_NAV];
+  return [
+    BASE_NAV[0],
+    BASE_NAV[1],
+    BASE_NAV[2],
+    BASE_NAV[3],
+    AUTOGEN_NAV,
+    BASE_NAV[4],
+    BASE_NAV[5],
+    BASE_NAV[6],
+  ];
+}
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const user = useAuth((s) => s.user);
   const refreshToken = useAuth((s) => s.refreshToken);
   const clear = useAuth((s) => s.clear);
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -31,6 +51,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       // ignore
     } finally {
       clear();
+      qc.removeQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
       navigate('/login');
     }
   };
@@ -57,7 +78,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       </div>
       <nav className="flex-1 py-4 px-3 overflow-y-auto">
         <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Navigation</div>
-        {NAV.map((n) => (
+        {buildNav().map((n) => (
           <NavLink
             key={n.to}
             to={n.to}

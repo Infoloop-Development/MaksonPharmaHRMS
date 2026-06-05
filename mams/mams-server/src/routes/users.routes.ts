@@ -13,9 +13,16 @@ import type { Permission, Role } from '@mams/types';
 import {
   PERMISSIONS_BY_ROLE,
   RoleSchema,
+  UnmaskFieldGrantsSchema,
   UserUpdateBodySchema,
+  canRoleHaveUnmaskFieldGrants,
+  dedupeUnmaskFieldGrants,
+  permissionsWithUnmaskGrants,
   validatePermissionsForRole,
+  type SensitiveUnmaskField,
 } from '@mams/types';
+import { isUnmaskEnabled } from '../config/featureFlags.js';
+import { applyUnmaskSensitivePermission } from '../services/unmaskGrants.service.js';
 import { PasswordSchema } from '../utils/passwordPolicy.js';
 
 const router = Router();
@@ -69,7 +76,33 @@ const UserCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   role: RoleSchema,
   password: PasswordSchema,
+  unmaskFieldGrants: UnmaskFieldGrantsSchema.optional().default([]),
 });
+
+function rejectUnmaskGrantsWhenDisabled(grants: SensitiveUnmaskField[]): void {
+  if (!isUnmaskEnabled() && grants.length > 0) {
+    throw new ApiError(
+      400,
+      'feature_disabled',
+      'Sensitive field unmask configuration is not available.'
+    );
+  }
+}
+
+function normalizeUnmaskGrantsForRole(
+  role: Role,
+  grantsInput: SensitiveUnmaskField[] | undefined
+): SensitiveUnmaskField[] {
+  const grants = dedupeUnmaskFieldGrants(grantsInput ?? []);
+  rejectUnmaskGrantsWhenDisabled(grants);
+  if (!canRoleHaveUnmaskFieldGrants(role)) {
+    if (grants.length > 0) {
+      throw new ApiError(400, 'invalid_unmask_grants', 'Unmask field grants are only allowed for HR Admin users');
+    }
+    return [];
+  }
+  return grants;
+}
 
 router.post('/', requirePermission('manage.users'), async (req, res, next) => {
   try {
@@ -79,13 +112,20 @@ router.post('/', requirePermission('manage.users'), async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(body.password, 10);
     const viewMode = viewModeForRole(body.role);
+    const unmaskFieldGrants = isUnmaskEnabled()
+      ? normalizeUnmaskGrantsForRole(body.role, body.unmaskFieldGrants)
+      : [];
+    const permissions = isUnmaskEnabled()
+      ? permissionsWithUnmaskGrants(body.role, unmaskFieldGrants)
+      : permissionsWithUnmaskGrants(body.role, []);
     const created = await UserModel.create({
       email: body.email,
       passwordHash,
       name: body.name,
       role: body.role,
       viewMode,
-      permissions: [...PERMISSIONS_BY_ROLE[body.role]],
+      permissions,
+      unmaskFieldGrants,
       isActive: true,
       mustChangePassword: true,
     });
@@ -172,6 +212,10 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
     let nextRole: Role = body.role ?? prevRole;
     let nextPermissions: Permission[];
 
+    let nextUnmaskGrants = dedupeUnmaskFieldGrants(
+      (user.unmaskFieldGrants ?? []) as SensitiveUnmaskField[]
+    );
+
     if (body.role !== undefined && body.permissions !== undefined) {
       const validated = validatePermissionsForRole(body.role, body.permissions as Permission[]);
       if (!validated.ok) throw new ApiError(400, 'invalid_permissions', validated.message);
@@ -188,6 +232,28 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
       nextPermissions = [...prevPerms];
     }
 
+    if (body.unmaskFieldGrants !== undefined) {
+      if (!isUnmaskEnabled()) {
+        rejectUnmaskGrantsWhenDisabled(dedupeUnmaskFieldGrants(body.unmaskFieldGrants));
+      } else {
+        nextUnmaskGrants = normalizeUnmaskGrantsForRole(nextRole, body.unmaskFieldGrants);
+      }
+    } else if (body.role !== undefined && !canRoleHaveUnmaskFieldGrants(nextRole)) {
+      nextUnmaskGrants = [];
+    }
+
+    if (!isUnmaskEnabled()) {
+      nextUnmaskGrants = [];
+      nextPermissions = nextPermissions.filter((p) => p !== 'unmask.sensitive');
+    } else if (canRoleHaveUnmaskFieldGrants(nextRole)) {
+      nextPermissions = applyUnmaskSensitivePermission(nextPermissions, nextUnmaskGrants);
+      const validated = validatePermissionsForRole(nextRole, nextPermissions);
+      if (!validated.ok) throw new ApiError(400, 'invalid_permissions', validated.message);
+      nextPermissions = validated.permissions;
+    } else {
+      nextPermissions = nextPermissions.filter((p) => p !== 'unmask.sensitive');
+    }
+
     const nextActive = body.isActive !== undefined ? body.isActive : prevActive;
 
     await assertLeavingAtLeastOneOtherManageUser(targetIdStr, nextPermissions, nextActive);
@@ -202,6 +268,7 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
     user.role = nextRole;
     user.viewMode = viewModeForRole(nextRole);
     user.permissions = nextPermissions;
+    user.unmaskFieldGrants = nextUnmaskGrants;
     user.isActive = nextActive;
 
     await user.save();
