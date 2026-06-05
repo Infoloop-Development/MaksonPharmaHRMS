@@ -1,7 +1,7 @@
 /**
  * Seed script.
  * Creates: 2 seed users, 1 settings doc, 1,800 employees, 9 devices,
- * and 7 days of attendance using Smart Anchor v2 over generated punches.
+ * 7 days of attendance plus tomorrow (IST) for dashboard demo, using Smart Anchor v2 over generated punches.
  *
  * Idempotent on the master collections: drops & re-creates them.
  * Run: npm run seed
@@ -127,14 +127,15 @@ async function main() {
   await SettingsModel.updateOne({}, { $set: { employeeCodeSequence: 1800 } });
   logger.info('Set employeeCodeSequence to 1800 for next modal hire (MKS1801)');
 
-  // Attendance: last 7 days
+  // Attendance: last 7 days + tomorrow (IST) so dashboard bar/pie still work on the next demo day.
   // Use the same daily pattern as the mockup - weighted absent / late rates per weekday.
   const ABS_RATES = [0.09, 0.065, 0.055, 0.07, 0.11, 0.16, 0.22]; // Mon..Sun
   const LATE_RATES = [0.15, 0.10, 0.09, 0.11, 0.14, 0.07, 0.05];
 
   const today = new Date();
   const days: { date: string; weekdayIdx: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
+  // i: 6..0 = past week through today; -1 = tomorrow (IST calendar day)
+  for (const i of [6, 5, 4, 3, 2, 1, 0, -1]) {
     const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
     days.push({ date: utcToIstDateString(d), weekdayIdx: dayIdxIst(d) });
   }
@@ -201,7 +202,7 @@ async function main() {
       rawTotal += rawBatch.length;
     }
   }
-  logger.info(`Created ${rawTotal} raw attendance records (7 days)`);
+  logger.info(`Created ${rawTotal} raw attendance records (7 days + tomorrow)`);
 
   // Recompute derived for every (active emp, day) pair.
   // For a real seed at 1,800 employees * 7 days = 12,600 derived rows. Run in batches.
@@ -216,6 +217,21 @@ async function main() {
     }
   }
   logger.info(`Computed ${derivedCount} attendance_derived records via Smart Anchor v2`);
+
+  const last5 = days.slice(-5).map((d) => d.date);
+  for (const date of last5) {
+    const present = await AttendanceDerivedModel.countDocuments({ date, status: 'Present' });
+    logger.info('Dashboard seed snapshot', { date, present, activeEmployees: empIds.length });
+  }
+
+  const activeEmps = empDocs.filter((e) => e.status === 'Active');
+  const todayDate = utcToIstDateString(today);
+  const tomorrowDate = utcToIstDateString(new Date(today.getTime() + 24 * 60 * 60 * 1000));
+
+  for (const demoDate of [todayDate, tomorrowDate]) {
+    await applyDashboardPunctualityDemo(activeEmps, demoDate);
+  }
+
   logger.info('Seed done');
   await disconnectDb();
 }
@@ -228,6 +244,121 @@ function dayIdxIst(d: Date): number {
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
+}
+
+/**
+ * Force derived rows for a date into ~80% on-time / 10% delay / 10% on-leave for dashboard pie demo.
+ */
+async function applyDashboardPunctualityDemo(
+  activeEmps: Array<{ _id: Types.ObjectId; empCode: string; timeShift: 'Day' | 'Night' }>,
+  demoDate: string
+) {
+  const n = activeEmps.length;
+  if (n === 0) return;
+
+  const onLeaveCount = Math.round(n * 0.1);
+  const delayCount = Math.round(n * 0.1);
+
+  const sorted = [...activeEmps].sort((a, b) =>
+    `${demoDate}:${a.empCode}`.localeCompare(`${demoDate}:${b.empCode}`)
+  );
+  const onLeaveEmps = sorted.slice(0, onLeaveCount);
+  const delayEmps = sorted.slice(onLeaveCount, onLeaveCount + delayCount);
+  const onTimeEmps = sorted.slice(onLeaveCount + delayCount);
+
+  const absentFields = {
+    status: 'Absent',
+    dayType: 'Working',
+    realEntryAt: null,
+    realExitAt: null,
+    realGrossHours: 0,
+    realNetHours: 0,
+    breakMinutes: 0,
+    compliantEntryAt: null,
+    compliantExitAt: null,
+    compliantHours: 0,
+    otHours: 0,
+    rawRecordIds: [],
+  };
+
+  for (const emp of onLeaveEmps) {
+    await AttendanceDerivedModel.updateOne(
+      { employeeId: emp._id, date: demoDate },
+      { $set: absentFields }
+    );
+  }
+
+  for (const emp of delayEmps) {
+    const entryIst =
+      emp.timeShift === 'Day' ? `${demoDate}T10:30:00` : `${demoDate}T21:00:00`;
+    const exitIst =
+      emp.timeShift === 'Day' ? `${demoDate}T19:00:00` : `${demoDate}T06:00:00`;
+    const realEntryAt = fromZonedTime(entryIst, IST);
+    const realExitAt = fromZonedTime(exitIst, IST);
+    await AttendanceDerivedModel.updateOne(
+      { employeeId: emp._id, date: demoDate },
+      {
+        $set: {
+          status: 'Present',
+          dayType: 'Working',
+          realEntryAt,
+          realExitAt,
+          realGrossHours: 8,
+          realNetHours: 7.5,
+          breakMinutes: 30,
+          compliantHours: 8,
+          otHours: 0,
+        },
+      }
+    );
+  }
+
+  for (const emp of onTimeEmps) {
+    const entryIst =
+      emp.timeShift === 'Day' ? `${demoDate}T08:00:00` : `${demoDate}T18:30:00`;
+    const exitIst =
+      emp.timeShift === 'Day' ? `${demoDate}T17:30:00` : `${demoDate}T03:30:00`;
+    const realEntryAt = fromZonedTime(entryIst, IST);
+    const realExitAt = fromZonedTime(exitIst, IST);
+    await AttendanceDerivedModel.updateOne(
+      { employeeId: emp._id, date: demoDate },
+      {
+        $set: {
+          status: 'Present',
+          dayType: 'Working',
+          realEntryAt,
+          realExitAt,
+          realGrossHours: 8,
+          realNetHours: 7.5,
+          breakMinutes: 30,
+          compliantHours: 8,
+          otHours: 0,
+        },
+      }
+    );
+  }
+
+  const { isLateEntry } = await import('../src/services/dashboard.service.js');
+  let onTime = 0;
+  let delay = 0;
+  for (const emp of delayEmps) {
+    const row = await AttendanceDerivedModel.findOne({ employeeId: emp._id, date: demoDate }).lean();
+    if (row?.realEntryAt && isLateEntry(row.realEntryAt as Date, emp.timeShift)) delay += 1;
+  }
+  for (const emp of onTimeEmps) {
+    const row = await AttendanceDerivedModel.findOne({ employeeId: emp._id, date: demoDate }).lean();
+    if (row?.realEntryAt && !isLateEntry(row.realEntryAt as Date, emp.timeShift)) onTime += 1;
+  }
+
+  const present = await AttendanceDerivedModel.countDocuments({ date: demoDate, status: 'Present' });
+  logger.info('Dashboard punctuality demo', {
+    date: demoDate,
+    present,
+    onTime,
+    delay,
+    onLeave: onLeaveCount,
+    active: n,
+  });
 }
 
 main().catch((err) => {

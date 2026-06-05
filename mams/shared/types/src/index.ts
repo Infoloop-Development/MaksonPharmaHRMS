@@ -7,3 +7,4 @@ export * from './adjustment.js';
 export * from './device.js';
 export * from './punchEvent.js';
 export * from './settings.js';
+export * from './activity.js';

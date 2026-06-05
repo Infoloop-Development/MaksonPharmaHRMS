@@ -5,6 +5,7 @@ import { DeviceModel } from '../models/Device.js';
 import { AdjustmentModel } from '../models/Adjustment.js';
 import { requireAuth } from '../middleware/auth.js';
 import { utcToIstDateString } from '../utils/time.js';
+import { getDashboardCharts } from '../services/dashboard.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -36,6 +37,14 @@ router.get('/stats', async (_req, res, next) => {
       devices: { total: devices, online: devicesOnline },
       pendingAdjustments: pendingAdj,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/charts', async (_req, res, next) => {
+  try {
+    res.json(await getDashboardCharts());
   } catch (err) {
     next(err);
   }

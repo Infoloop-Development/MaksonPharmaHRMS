@@ -17,6 +17,8 @@ import {
   CONNECTION_STATE_LABELS,
   type DeviceConnectionState,
 } from './deviceConnectionState';
+import { useActivityLog } from '../../hooks/useActivityLog';
+import { ACTIVITY_QUERY_KEY } from '../../api/activity';
 
 export function DeviceManagementPanel({
   canManage,
@@ -41,6 +43,23 @@ export function DeviceManagementPanel({
 
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const { logFilter } = useActivityLog();
+
+  const logDeviceFilters = (patch: Partial<{
+    vendor: string;
+    department: string;
+    location: string;
+    network: string;
+    connection: string;
+  }>) => {
+    logFilter('devices', 'filter', {
+      vendor: patch.vendor ?? vendorFilter,
+      department: patch.department ?? deptFilter,
+      location: patch.location ?? locFilter,
+      network: patch.network ?? onlineFilter,
+      connection: patch.connection ?? connectionFilter,
+    });
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['devices'],
@@ -68,6 +87,7 @@ export function DeviceManagementPanel({
     onSuccess: (result) => {
       toast(`Sync finished for ${result.count} devices`, result.ok ? 'success' : 'error');
       qc.invalidateQueries({ queryKey: ['devices'] });
+      qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
     },
     onError: (e: unknown) => {
       const msg = e instanceof Error ? e.message : 'Sync All failed';
@@ -118,7 +138,7 @@ export function DeviceManagementPanel({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-wrap xl:items-end gap-3">
         <label className="text-xs text-text-muted min-w-0">
           Vendor
-          <select className="input block mt-1 text-sm" value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)}>
+          <select className="input block mt-1 text-sm" value={vendorFilter} onChange={(e) => { setVendorFilter(e.target.value); logDeviceFilters({ vendor: e.target.value }); }}>
             <option value="all">All</option>
             <option value="eSSL">eSSL</option>
             <option value="Hanvon">Hanvon</option>
@@ -126,7 +146,7 @@ export function DeviceManagementPanel({
         </label>
         <label className="text-xs text-text-muted">
           Department
-          <select className="input block mt-1 text-sm" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+          <select className="input block mt-1 text-sm" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); logDeviceFilters({ department: e.target.value }); }}>
             <option value="all">All</option>
             {MAKSON_DEPARTMENTS.map((d) => (
               <option key={d} value={d}>{d}</option>
@@ -135,7 +155,7 @@ export function DeviceManagementPanel({
         </label>
         <label className="text-xs text-text-muted">
           Location
-          <select className="input block mt-1 text-sm" value={locFilter} onChange={(e) => setLocFilter(e.target.value)}>
+          <select className="input block mt-1 text-sm" value={locFilter} onChange={(e) => { setLocFilter(e.target.value); logDeviceFilters({ location: e.target.value }); }}>
             <option value="all">All</option>
             {MAKSON_FACTORY_LOCATIONS.map((l) => (
               <option key={l} value={l}>{l}</option>
@@ -144,7 +164,7 @@ export function DeviceManagementPanel({
         </label>
         <label className="text-xs text-text-muted">
           Network
-          <select className="input block mt-1 text-sm" value={onlineFilter} onChange={(e) => setOnlineFilter(e.target.value)}>
+          <select className="input block mt-1 text-sm" value={onlineFilter} onChange={(e) => { setOnlineFilter(e.target.value); logDeviceFilters({ network: e.target.value }); }}>
             <option value="all">All</option>
             <option value="online">Online</option>
             <option value="offline">Offline</option>
@@ -155,7 +175,7 @@ export function DeviceManagementPanel({
           <select
             className="input block mt-1 text-sm"
             value={connectionFilter}
-            onChange={(e) => setConnectionFilter(e.target.value)}
+            onChange={(e) => { setConnectionFilter(e.target.value); logDeviceFilters({ connection: e.target.value }); }}
           >
             <option value="all">All</option>
             {(Object.keys(CONNECTION_STATE_LABELS) as DeviceConnectionState[]).map((key) => (
@@ -206,7 +226,13 @@ export function DeviceManagementPanel({
         />
       )}
       {postRegister && (
-        <DevicePostRegisterModal registered={postRegister} onClose={() => setPostRegister(null)} />
+        <DevicePostRegisterModal
+          registered={postRegister}
+          onClose={() => {
+            setPostRegister(null);
+            qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+          }}
+        />
       )}
       {editDevice && (
         <DeviceRegisterModal editDevice={editDevice} onClose={() => setEditDevice(null)} />

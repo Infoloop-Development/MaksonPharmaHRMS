@@ -1,10 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useActivityLog } from '../hooks/useActivityLog';
 import { reportsApi } from '../api/reports';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
 import { Field, Input, Select } from '../components/ui/Field';
+import { DailyReportCardList } from '../components/reports/DailyReportCardList';
+import { MonthlyReportCardList } from '../components/reports/MonthlyReportCardList';
+import { DepartmentReportCardList } from '../components/reports/DepartmentReportCardList';
 import { fmtDate, fmtIstTime, fmtHours, fmtNumber } from '../lib/format';
 
 type Tab = 'daily' | 'monthly' | 'department' | 'location';
@@ -14,6 +18,7 @@ const LOCATIONS = ['Surendranagar, GJ', 'Mandideep, MP', 'Gummadidala, TG', 'Mor
 
 export function Reports() {
   const [tab, setTab] = useState<Tab>('daily');
+  const { logReportsAction } = useActivityLog();
   const viewMode = useAuth((s) => s.user?.viewMode);
   const isCompliant = viewMode === 'compliant';
 
@@ -37,7 +42,11 @@ export function Reports() {
         ].map(([key, label]) => (
           <button
             key={key}
-            onClick={() => setTab(key as Tab)}
+            onClick={() => {
+              const next = key as Tab;
+              setTab(next);
+              logReportsAction('ui.reports.filter', { tab: next });
+            }}
             className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
               tab === key ? 'bg-primary text-white' : 'text-text-muted hover:bg-surface2'
             }`}
@@ -56,6 +65,7 @@ export function Reports() {
 }
 
 function DailyReport({ isCompliant }: { isCompliant: boolean }) {
+  const { logReportsAction } = useActivityLog();
   const today = new Date().toISOString().slice(0, 10);
   const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [startDate, setStartDate] = useState(sevenDaysAgo);
@@ -64,18 +74,42 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   const [location, setLocation] = useState('');
   const toast = useToast((s) => s.push);
 
+  const logDailyFilter = (patch: Partial<{ startDate: string; endDate: string; department: string; location: string }>) => {
+    logReportsAction('ui.reports.filter', {
+      tab: 'daily',
+      startDate: patch.startDate ?? startDate,
+      endDate: patch.endDate ?? endDate,
+      department: (patch.department ?? department) || undefined,
+      location: (patch.location ?? location) || undefined,
+    });
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'daily', startDate, endDate, department, location],
     queryFn: () => reportsApi.daily({ startDate, endDate, department: department || undefined, location: location || undefined }),
   });
 
   const onPrint = () => {
+    logReportsAction('ui.reports.print', {
+      tab: 'daily',
+      startDate,
+      endDate,
+      department: department || undefined,
+      location: location || undefined,
+    });
     document.body.classList.add('print-mode');
     window.print();
     setTimeout(() => document.body.classList.remove('print-mode'), 200);
   };
 
   const onDownloadCsv = () => {
+    logReportsAction('ui.reports.export_csv', {
+      tab: 'daily',
+      startDate,
+      endDate,
+      department: department || undefined,
+      location: location || undefined,
+    });
     const url = reportsApi.dailyCsvUrl({ startDate, endDate, department: department || undefined, location: location || undefined });
     const a = document.createElement('a');
     a.href = url;
@@ -86,23 +120,23 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   return (
     <div>
       <FilterBar>
-        <Field label="From"><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
-        <Field label="To"><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
+        <Field label="From"><Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); logDailyFilter({ startDate: e.target.value }); }} /></Field>
+        <Field label="To"><Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); logDailyFilter({ endDate: e.target.value }); }} /></Field>
         <Field label="Department">
-          <Select value={department} onChange={(e) => setDepartment(e.target.value)}>
+          <Select value={department} onChange={(e) => { setDepartment(e.target.value); logDailyFilter({ department: e.target.value }); }}>
             <option value="">All</option>
             {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
           </Select>
         </Field>
         <Field label="Location">
-          <Select value={location} onChange={(e) => setLocation(e.target.value)}>
+          <Select value={location} onChange={(e) => { setLocation(e.target.value); logDailyFilter({ location: e.target.value }); }}>
             <option value="">All</option>
             {LOCATIONS.map((l) => <option key={l}>{l}</option>)}
           </Select>
         </Field>
       </FilterBar>
 
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="text-sm text-text-muted">
           {isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}
           {data && (
@@ -115,13 +149,21 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
             </span>
           )}
         </div>
-        <div className="flex gap-2 no-print">
-          <button className="btn-outline" onClick={onPrint}>Print to PDF</button>
-          <button className="btn-primary" onClick={onDownloadCsv}>Download CSV</button>
+        <div className="flex gap-2 w-full sm:w-auto no-print">
+          <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
+          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadCsv}>Download CSV</button>
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <DailyReportCardList rows={data?.rows} isLoading={isLoading} isCompliant={isCompliant} />
+
+      {data && data.rows.length > 500 && (
+        <div className="mb-2 p-3 text-center text-xs text-text-muted bg-surface2 rounded-md md:hidden print:hidden">
+          Showing first 500 rows. Download CSV for full export.
+        </div>
+      )}
+
+      <div className="card overflow-hidden hidden md:block print:block">
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
@@ -139,6 +181,12 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
+              {isLoading && (
+                <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">Loading…</td></tr>
+              )}
+              {!isLoading && !data?.rows.length && (
+                <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">No records for this date range.</td></tr>
+              )}
               {data?.rows.slice(0, 500).map((r, i) => {
                 const emp = r.employeeId;
                 const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
@@ -175,10 +223,20 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
 }
 
 function MonthlyReport() {
+  const { logReportsAction } = useActivityLog();
   const now = new Date();
   const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
+
+  const logMonthlyFilter = (patch: Partial<{ yearMonth: string; department: string; location: string }>) => {
+    logReportsAction('ui.reports.filter', {
+      tab: 'monthly',
+      yearMonth: patch.yearMonth ?? yearMonth,
+      department: (patch.department ?? department) || undefined,
+      location: (patch.location ?? location) || undefined,
+    });
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'monthly', yearMonth, department, location],
@@ -190,22 +248,28 @@ function MonthlyReport() {
   return (
     <div>
       <FilterBar>
-        <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} /></Field>
+        <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logMonthlyFilter({ yearMonth: e.target.value }); }} /></Field>
         <Field label="Department">
-          <Select value={department} onChange={(e) => setDepartment(e.target.value)}>
+          <Select value={department} onChange={(e) => { setDepartment(e.target.value); logMonthlyFilter({ department: e.target.value }); }}>
             <option value="">All</option>
             {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
           </Select>
         </Field>
         <Field label="Location">
-          <Select value={location} onChange={(e) => setLocation(e.target.value)}>
+          <Select value={location} onChange={(e) => { setLocation(e.target.value); logMonthlyFilter({ location: e.target.value }); }}>
             <option value="">All</option>
             {LOCATIONS.map((l) => <option key={l}>{l}</option>)}
           </Select>
         </Field>
       </FilterBar>
 
-      <div className="card overflow-hidden">
+      <MonthlyReportCardList
+        rows={data?.rows}
+        isLoading={isLoading}
+        isCompliant={isCompliant ?? false}
+      />
+
+      <div className="card overflow-hidden hidden md:block">
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[560px] xl:min-w-0">
             <thead className="bg-surface2">
@@ -222,7 +286,10 @@ function MonthlyReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {isLoading && <tr><td colSpan={9} className="p-10 text-center text-text-muted">Loading...</td></tr>}
+              {isLoading && <tr><td colSpan={9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+              {!isLoading && !data?.rows.length && (
+                <tr><td colSpan={9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
+              )}
               {data?.rows.map((r) => (
                 <tr key={r.employeeId} className="hover:bg-surface2/50">
                   <td className="px-4 py-2.5 font-mono text-xs">{r.empCode}</td>
@@ -245,6 +312,7 @@ function MonthlyReport() {
 }
 
 function DepartmentReport() {
+  const { logReportsAction } = useActivityLog();
   const now = new Date();
   const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
 
@@ -256,10 +324,12 @@ function DepartmentReport() {
   return (
     <div>
       <FilterBar>
-        <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} /></Field>
+        <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logReportsAction('ui.reports.filter', { tab: 'department', yearMonth: e.target.value }); }} /></Field>
       </FilterBar>
 
-      <div className="card overflow-hidden">
+      <DepartmentReportCardList rows={data?.rows} isLoading={isLoading} />
+
+      <div className="card overflow-hidden hidden md:block">
         <table className="w-full text-sm">
           <thead className="bg-surface2">
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
@@ -273,7 +343,10 @@ function DepartmentReport() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading...</td></tr>}
+            {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+            {!isLoading && !data?.rows.length && (
+              <tr><td colSpan={7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
+            )}
             {data?.rows.map((r) => (
               <tr key={r.department} className="hover:bg-surface2/50">
                 <td className="px-4 py-2.5 font-medium">{r.department}</td>
@@ -300,6 +373,7 @@ function DepartmentReport() {
 }
 
 function LocationReport() {
+  const { logReportsAction } = useActivityLog();
   const now = new Date();
   const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
 
@@ -311,7 +385,7 @@ function LocationReport() {
   return (
     <div>
       <FilterBar>
-        <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} /></Field>
+        <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logReportsAction('ui.reports.filter', { tab: 'location', yearMonth: e.target.value }); }} /></Field>
       </FilterBar>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
