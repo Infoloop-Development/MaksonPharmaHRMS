@@ -12,4 +12,11 @@ export const activityApi = {
   logUi: (body: UiActivityLogBody) => api.post<{ ok: boolean }>('/activity/log', body),
 };
 
-export const ACTIVITY_QUERY_KEY = ['activity', 'me'] as const;
+/** Prefix for invalidating/removing all per-user activity queries. */
+export const ACTIVITY_QUERY_PREFIX = ['activity', 'me'] as const;
+
+export function activityQueryKey(userId: string | undefined, page?: number) {
+  return page !== undefined
+    ? (['activity', 'me', userId ?? '', page] as const)
+    : (['activity', 'me', userId ?? ''] as const);
+}

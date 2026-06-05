@@ -1,6 +1,7 @@
 import type { ActivityListItem } from '@mams/types';
 import { fmtIstDateTimeMs } from '../../lib/format';
-import { activityPageBadge, formatActivityDescription } from '../../lib/activityLabels';
+import { activityPageBadge } from '../../lib/activityLabels';
+import { ActivityDescription } from './ActivityDescription';
 
 export function ActivityCardList({
   items,
@@ -35,7 +36,9 @@ export function ActivityCardList({
               {fmtIstDateTimeMs(row.occurredAt)}
             </span>
           </div>
-          <p className="text-sm text-text break-words">{formatActivityDescription(row)}</p>
+          <p className="text-sm text-text break-words">
+            <ActivityDescription item={row} />
+          </p>
         </div>
       ))}
     </div>

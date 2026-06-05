@@ -9,11 +9,13 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
 import { fmtIstTime } from '../lib/format';
-import type { Permission, Role, UserPublic } from '@mams/types';
+import type { Permission, Role, SensitiveUnmaskField, UserPublic } from '@mams/types';
 import { PERMISSIONS_BY_ROLE, ROLE_PERMISSION_CAP } from '@mams/types';
+import { UnmaskFieldGrantsSection } from '../components/settings/UnmaskFieldGrantsSection';
+import { isUnmaskEnabled } from '../config/featureFlags';
 import { z } from 'zod';
 import { ActivityLogPanel } from '../components/activity/ActivityLogPanel';
-import { ACTIVITY_QUERY_KEY } from '../api/activity';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -114,7 +116,7 @@ export function Settings() {
 }
 
 function invalidateActivity(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+  qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
 }
 
 function SectionCard({
@@ -571,6 +573,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<Role>('hr.admin');
+  const [unmaskFieldGrants, setUnmaskFieldGrants] = useState<SensitiveUnmaskField[]>([]);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<AddUserFieldErrors>({});
@@ -583,6 +586,8 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
         name: name.trim(),
         role,
         password,
+        unmaskFieldGrants:
+          isUnmaskEnabled() && role === 'hr.admin' ? unmaskFieldGrants : [],
       }),
     onSuccess: (created) => {
       if (created.emailSent) {
@@ -665,12 +670,22 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
           />
         </Field>
         <Field label="Role" required>
-          <Select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+          <Select
+            value={role}
+            onChange={(e) => {
+              const r = e.target.value as Role;
+              setRole(r);
+              if (r !== 'hr.admin') setUnmaskFieldGrants([]);
+            }}
+          >
             <option value="hr.admin">HR Admin (real view)</option>
             <option value="hr.compliance">Compliance Auditor (compliant view)</option>
             <option value="it.admin">IT Admin</option>
           </Select>
         </Field>
+        {isUnmaskEnabled() && role === 'hr.admin' && (
+          <UnmaskFieldGrantsSection grants={unmaskFieldGrants} onChange={setUnmaskFieldGrants} />
+        )}
         <Field
           label="Initial password"
           required
@@ -708,6 +723,7 @@ function EditUserModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('hr.admin');
+  const [unmaskFieldGrants, setUnmaskFieldGrants] = useState<SensitiveUnmaskField[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Permission[]>([]);
   const [isActive, setIsActive] = useState(true);
   const toast = useToast((s) => s.push);
@@ -721,7 +737,10 @@ function EditUserModal({
       Array.isArray(user.permissions) && user.permissions.length > 0
         ? [...user.permissions]
         : [...PERMISSIONS_BY_ROLE[user.role]];
-    setSelectedPerms(p);
+    setSelectedPerms(p.filter((perm) => perm !== 'unmask.sensitive'));
+    setUnmaskFieldGrants(
+      Array.isArray(user.unmaskFieldGrants) ? [...user.unmaskFieldGrants] : []
+    );
     setIsActive(user.isActive);
   }, [user]);
 
@@ -730,11 +749,14 @@ function EditUserModal({
       if (selfMode) {
         return usersApi.patch(user._id, { name: name.trim(), email: email.trim().toLowerCase() });
       }
+      const permsForSave = selectedPerms.filter((p) => p !== 'unmask.sensitive');
       return usersApi.patch(user._id, {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         role,
-        permissions: selectedPerms,
+        permissions: permsForSave,
+        unmaskFieldGrants:
+          isUnmaskEnabled() && role === 'hr.admin' ? unmaskFieldGrants : [],
         isActive,
       });
     },
@@ -819,7 +841,8 @@ function EditUserModal({
                 onChange={(e) => {
                   const r = e.target.value as Role;
                   setRole(r);
-                  setSelectedPerms([...PERMISSIONS_BY_ROLE[r]]);
+                  setSelectedPerms([...PERMISSIONS_BY_ROLE[r]].filter((p) => p !== 'unmask.sensitive'));
+                  setUnmaskFieldGrants([]);
                 }}
               >
                 <option value="hr.admin">HR Admin (real view)</option>
@@ -831,20 +854,25 @@ function EditUserModal({
               <span className="text-sm font-medium">Active</span>
               <Toggle checked={isActive} onChange={setIsActive} />
             </div>
+            {isUnmaskEnabled() && role === 'hr.admin' && (
+              <UnmaskFieldGrantsSection grants={unmaskFieldGrants} onChange={setUnmaskFieldGrants} />
+            )}
             <div className="space-y-2">
               <div className="text-xs font-semibold uppercase tracking-wider text-text-muted">Permissions</div>
               <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-md p-3">
-                {cap.map((p) => (
-                  <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={selectedPerms.includes(p)}
-                      onChange={() => togglePerm(p)}
-                    />
-                    <span>{PERMISSION_LABELS[p]}</span>
-                  </label>
-                ))}
+                {cap
+                  .filter((p) => !(role === 'hr.admin' && p === 'unmask.sensitive'))
+                  .map((p) => (
+                    <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={selectedPerms.includes(p)}
+                        onChange={() => togglePerm(p)}
+                      />
+                      <span>{PERMISSION_LABELS[p]}</span>
+                    </label>
+                  ))}
               </div>
             </div>
           </>

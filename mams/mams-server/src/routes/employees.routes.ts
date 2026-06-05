@@ -1,5 +1,9 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
+import { SensitiveUnmaskFieldSchema } from '@mams/types';
+import { UserModel } from '../models/User.js';
+import { userHasUnmaskGrant } from '../services/unmaskGrants.service.js';
 import {
   EmployeeListQuerySchema,
   EmployeeCreateBodySchema,
@@ -10,7 +14,8 @@ import { toMaskedEmployee } from '../services/employee.service.js';
 import { allocateNextEmpCode, previewNextEmpCode } from '../services/employeeCode.service.js';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
-import { audit, logUnmask } from '../services/audit.service.js';
+import { isUnmaskEnabled } from '../config/featureFlags.js';
+import { audit, logUnmask, logUnmaskActivity } from '../services/audit.service.js';
 import { mapEmployeeCreateDuplicateError } from '../utils/mongoDuplicate.js';
 
 const router = Router();
@@ -74,24 +79,59 @@ router.get('/:id', async (req, res, next) => {
 // UNMASK a sensitive field - role-gated, audit-logged
 router.post('/:id/unmask', requirePermission('unmask.sensitive'), async (req, res, next) => {
   try {
+    if (!isUnmaskEnabled()) {
+      throw new ApiError(404, 'feature_disabled', 'Not found');
+    }
     const FieldSchema = (await import('zod')).z.object({
-      field: (await import('zod')).z.enum(['pan', 'aadhaar', 'bankAccountNumber', 'pfNumber', 'esiNumber']),
+      field: SensitiveUnmaskFieldSchema,
+      password: (await import('zod')).z.string().min(1),
       reason: (await import('zod')).z.string().optional(),
     });
-    const { field, reason } = FieldSchema.parse(req.body);
+    const { field, password, reason } = FieldSchema.parse(req.body);
     if (!Types.ObjectId.isValid(req.params.id ?? '')) {
       throw new ApiError(404, 'not_found', 'Employee not found');
     }
-    const doc = await EmployeeModel.findById(req.params.id);
-    if (!doc) throw new ApiError(404, 'not_found', 'Employee not found');
 
-    await logUnmask(req.auth!.sub, doc._id, field, {
+    const doc = await EmployeeModel.findById(req.params.id);
+    if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
+
+    const actor = await UserModel.findById(req.auth!.sub);
+    if (!actor || !actor.isActive) {
+      throw new ApiError(401, 'unauthorized', 'User not found or inactive');
+    }
+
+    const auditCtx = {
       ipAddress: req.clientIp ?? null,
       userAgent: req.header('user-agent') ?? null,
       reason: reason ?? null,
-    });
+      empCode: doc.empCode ?? null,
+      empName: doc.name ?? null,
+    };
 
-    res.json({ field, value: (doc as any)[field], unmaskedAt: new Date().toISOString() });
+    const passwordOk = await bcrypt.compare(password, actor.passwordHash);
+    if (!passwordOk) {
+      await logUnmaskActivity('failed', req.auth!.sub, doc._id, field, {
+        ...auditCtx,
+        failureReason: 'password_failed',
+      });
+      throw new ApiError(401, 'invalid_credentials', 'Incorrect password');
+    }
+
+    if (!userHasUnmaskGrant(actor, field)) {
+      await logUnmaskActivity('failed', req.auth!.sub, doc._id, field, {
+        ...auditCtx,
+        failureReason: 'forbidden',
+      });
+      throw new ApiError(403, 'forbidden', 'You are not allowed to unmask this field');
+    }
+
+    const rawValue = (doc as Record<string, unknown>)[field];
+    const value = rawValue == null ? '' : String(rawValue);
+
+    await logUnmask(req.auth!.sub, doc._id, field, auditCtx);
+    await logUnmaskActivity('succeeded', req.auth!.sub, doc._id, field, auditCtx);
+
+    res.json({ field, value, unmaskedAt: new Date().toISOString() });
   } catch (err) {
     next(err);
   }

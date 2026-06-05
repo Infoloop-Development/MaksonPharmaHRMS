@@ -18,7 +18,7 @@ import {
   type DeviceConnectionState,
 } from './deviceConnectionState';
 import { useActivityLog } from '../../hooks/useActivityLog';
-import { ACTIVITY_QUERY_KEY } from '../../api/activity';
+import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 
 export function DeviceManagementPanel({
   canManage,
@@ -87,7 +87,7 @@ export function DeviceManagementPanel({
     onSuccess: (result) => {
       toast(`Sync finished for ${result.count} devices`, result.ok ? 'success' : 'error');
       qc.invalidateQueries({ queryKey: ['devices'] });
-      qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+      qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
     },
     onError: (e: unknown) => {
       const msg = e instanceof Error ? e.message : 'Sync All failed';
@@ -230,7 +230,7 @@ export function DeviceManagementPanel({
           registered={postRegister}
           onClose={() => {
             setPostRegister(null);
-            qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_KEY });
+            qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
           }}
         />
       )}

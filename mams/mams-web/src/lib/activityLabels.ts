@@ -57,6 +57,27 @@ function formatSettingsChanged(payload: Record<string, unknown>): string {
   return `Updated ${section}: ${labels}`;
 }
 
+function unmaskEmployeeRef(p: Record<string, unknown>): string {
+  const name = typeof p.empName === 'string' && p.empName ? p.empName : null;
+  const code = typeof p.empCode === 'string' && p.empCode ? p.empCode : null;
+  if (name && code) return `${name} (${code})`;
+  if (name) return name;
+  if (code) return code;
+  return 'employee';
+}
+
+function unmaskReasonSuffix(p: Record<string, unknown>): string {
+  const reason = typeof p.reason === 'string' && p.reason.trim() ? p.reason.trim() : '';
+  return reason ? ` — reason: “${reason}”` : '';
+}
+
+/** Green dot = succeeded, red dot = failed; null = not an unmask event. */
+export function unmaskActivityOutcome(eventType: string): boolean | null {
+  if (eventType === 'unmask_succeeded') return true;
+  if (eventType === 'unmask_failed') return false;
+  return null;
+}
+
 function fmtVal(v: unknown): string {
   if (v === null || v === undefined || v === '') return '(empty)';
   if (typeof v === 'boolean') return v ? 'on' : 'off';
@@ -76,7 +97,13 @@ export function activityPageBadge(eventType: string, payload: Record<string, unk
     const p = payload.page;
     return p.charAt(0).toUpperCase() + p.slice(1);
   }
-  if (eventType.startsWith('ui.employees') || eventType === 'employee_created' || eventType === 'csv_import') {
+  if (
+    eventType.startsWith('ui.employees') ||
+    eventType === 'employee_created' ||
+    eventType === 'csv_import' ||
+    eventType === 'unmask_succeeded' ||
+    eventType === 'unmask_failed'
+  ) {
     return 'Employees';
   }
   if (eventType.startsWith('ui.attendance')) return 'Attendance';
@@ -140,6 +167,22 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return `Added user ${p.email ?? ''} (${p.role ?? ''})`.trim();
     case 'user_updated':
       return p.self ? 'Updated own profile' : `Updated user permissions/settings`;
+    case 'unmask_succeeded': {
+      const label = String(p.fieldLabel ?? p.field ?? 'field');
+      return `Unmasked ${label} for ${unmaskEmployeeRef(p)}${unmaskReasonSuffix(p)}`;
+    }
+    case 'unmask_failed': {
+      const label = String(p.fieldLabel ?? p.field ?? 'field');
+      const who = unmaskEmployeeRef(p);
+      const suffix = unmaskReasonSuffix(p);
+      if (p.failureReason === 'password_failed') {
+        return `Unmask failed — password failed: ${label} for ${who}${suffix}`;
+      }
+      if (p.failureReason === 'forbidden') {
+        return `Unmask failed — not permitted: ${label} for ${who}${suffix}`;
+      }
+      return `Unmask failed: ${label} for ${who}${suffix}`;
+    }
     default:
       return item.eventType.replace(/_/g, ' ');
   }
