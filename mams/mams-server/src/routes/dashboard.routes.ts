@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import * as XLSX from 'xlsx';
+import { DashboardAttendanceQuerySchema, DashboardLayoutSchema } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { DeviceModel } from '../models/Device.js';
@@ -6,6 +8,13 @@ import { AdjustmentModel } from '../models/Adjustment.js';
 import { requireAuth } from '../middleware/auth.js';
 import { utcToIstDateString } from '../utils/time.js';
 import { getDashboardCharts } from '../services/dashboard.service.js';
+import { getDashboardLayout, saveDashboardLayout } from '../services/dashboardLayout.service.js';
+import {
+  listDashboardAttendance,
+  listDashboardAttendanceForExport,
+  listDashboardDepartments,
+  shiftLabel,
+} from '../services/dashboardAttendance.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -42,9 +51,81 @@ router.get('/stats', async (_req, res, next) => {
   }
 });
 
-router.get('/charts', async (_req, res, next) => {
+router.get('/layout', async (req, res, next) => {
   try {
-    res.json(await getDashboardCharts());
+    res.json(await getDashboardLayout(req.auth!.sub));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/layout', async (req, res, next) => {
+  try {
+    const layout = DashboardLayoutSchema.parse(req.body);
+    res.json(await saveDashboardLayout(req.auth!.sub, layout));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/charts', async (req, res, next) => {
+  try {
+    const date = typeof req.query.date === 'string' ? req.query.date : undefined;
+    res.json(await getDashboardCharts(date));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/attendance/departments', async (_req, res, next) => {
+  try {
+    const departments = await listDashboardDepartments();
+    res.json({ departments });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/attendance', async (req, res, next) => {
+  try {
+    const q = DashboardAttendanceQuerySchema.parse(req.query);
+    res.json(await listDashboardAttendance(q, req.auth!.viewMode));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/attendance.xlsx', async (req, res, next) => {
+  try {
+    const parsed = DashboardAttendanceQuerySchema.parse({ ...req.query, page: 1, pageSize: 50 });
+    const { page: _p, pageSize: _ps, ...exportQuery } = parsed;
+    const rows = await listDashboardAttendanceForExport(exportQuery, req.auth!.viewMode);
+
+    const sheetRows = rows.map((r) => ({
+      Employee: r.employeeName,
+      ID: r.empCode,
+      Department: r.department,
+      Shift: shiftLabel(r.timeShift),
+      'Entry stamp': r.entryStamp,
+      'Exit stamp': r.exitStamp,
+      'Total Hours Worked': r.totalHoursWorked ?? '',
+      Status: r.displayStatus,
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(sheetRows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Attendance_${parsed.date}.xlsx"`
+    );
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

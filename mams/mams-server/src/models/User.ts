@@ -14,6 +14,18 @@ const userSchema = new Schema(
     failedLoginCount: { type: Number, default: 0 },
     lockedUntil: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
+    dashboardLayout: {
+      type: {
+        rows: [
+          {
+            items: { type: [String], enum: ['bar', 'donut', 'table'] },
+          },
+        ],
+        order: { type: [String], enum: ['bar', 'donut', 'table'] },
+      },
+      required: false,
+      default: undefined,
+    },
   },
   { timestamps: true }
 );

@@ -27,3 +27,11 @@ export function utcToIstTimeString(d: Date): string {
   const ist = toZonedTime(d, IST);
   return formatTz(ist, 'HH:mm:ss', { timeZone: IST });
 }
+
+/** Format UTC Date as 24h HH:mm:ss.SSS in IST (dashboard entry/exit stamps). */
+export function utcToIstTimeHmsMsString(d: Date): string {
+  const ist = toZonedTime(d, IST);
+  const base = formatTz(ist, 'HH:mm:ss', { timeZone: IST });
+  const ms = String(d.getUTCMilliseconds()).padStart(3, '0');
+  return `${base}.${ms}`;
+}

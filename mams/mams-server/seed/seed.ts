@@ -29,6 +29,10 @@ import type { Types } from 'mongoose';
 
 const IST = 'Asia/Kolkata';
 
+/** Weekday absent / late weights (Mon..Sun) — shared by punch seed and dashboard day demo. */
+const ABS_RATES = [0.09, 0.065, 0.055, 0.07, 0.11, 0.16, 0.22];
+const LATE_RATES = [0.15, 0.10, 0.09, 0.11, 0.14, 0.07, 0.05];
+
 const SeedUsersEnvSchema = z.object({
   SEED_HR_ADMIN_EMAIL: z.string().email().default('hr.admin@makson-group.com'),
   SEED_HR_COMPLIANCE_EMAIL: z.string().email().default('hr.compliance@makson-group.com'),
@@ -128,10 +132,6 @@ async function main() {
   logger.info('Set employeeCodeSequence to 1800 for next modal hire (MKS1801)');
 
   // Attendance: last 7 days + tomorrow (IST) so dashboard bar/pie still work on the next demo day.
-  // Use the same daily pattern as the mockup - weighted absent / late rates per weekday.
-  const ABS_RATES = [0.09, 0.065, 0.055, 0.07, 0.11, 0.16, 0.22]; // Mon..Sun
-  const LATE_RATES = [0.15, 0.10, 0.09, 0.11, 0.14, 0.07, 0.05];
-
   const today = new Date();
   const days: { date: string; weekdayIdx: number }[] = [];
   // i: 6..0 = past week through today; -1 = tomorrow (IST calendar day)
@@ -218,18 +218,26 @@ async function main() {
   }
   logger.info(`Computed ${derivedCount} attendance_derived records via Smart Anchor v2`);
 
-  const last5 = days.slice(-5).map((d) => d.date);
-  for (const date of last5) {
-    const present = await AttendanceDerivedModel.countDocuments({ date, status: 'Present' });
-    logger.info('Dashboard seed snapshot', { date, present, activeEmployees: empIds.length });
+  const activeEmps = empDocs.filter((e) => e.status === 'Active');
+  // Bar chart uses last 7 IST days (excludes tomorrow). Apply consistent demo rows so
+  // bar present counts, donut breakdown, and attendance table align per day.
+  const barChartDays = days.slice(0, 7);
+  for (const day of barChartDays) {
+    await applyDashboardDayDemo(activeEmps, day.date, day.weekdayIdx);
   }
 
-  const activeEmps = empDocs.filter((e) => e.status === 'Active');
-  const todayDate = utcToIstDateString(today);
-  const tomorrowDate = utcToIstDateString(new Date(today.getTime() + 24 * 60 * 60 * 1000));
-
-  for (const demoDate of [todayDate, tomorrowDate]) {
-    await applyDashboardPunctualityDemo(activeEmps, demoDate);
+  for (const day of barChartDays) {
+    const present = await AttendanceDerivedModel.countDocuments({ date: day.date, status: 'Present' });
+    const absent = await AttendanceDerivedModel.countDocuments({
+      date: day.date,
+      status: { $in: ['Absent', 'Weekly Off', 'Half Day'] },
+    });
+    logger.info('Dashboard seed snapshot', {
+      date: day.date,
+      present,
+      absent,
+      activeEmployees: activeEmps.length,
+    });
   }
 
   logger.info('Seed done');
@@ -247,24 +255,30 @@ function pad(n: number): string {
 }
 
 /**
- * Force derived rows for a date into ~80% on-time / 10% delay / 10% on-leave for dashboard pie demo.
+ * Force derived rows for one IST date using the same weekday absent/late weights as punch seed.
+ * Ensures bar (present count), donut (on-time/delay/on-leave), and table rows stay consistent.
  */
-async function applyDashboardPunctualityDemo(
+async function applyDashboardDayDemo(
   activeEmps: Array<{ _id: Types.ObjectId; empCode: string; timeShift: 'Day' | 'Night' }>,
-  demoDate: string
+  demoDate: string,
+  weekdayIdx: number
 ) {
   const n = activeEmps.length;
   if (n === 0) return;
 
-  const onLeaveCount = Math.round(n * 0.1);
-  const delayCount = Math.round(n * 0.1);
+  const absentRate = ABS_RATES[weekdayIdx] ?? 0.1;
+  const lateRateAmongPresent = LATE_RATES[weekdayIdx] ?? 0.12;
+  const onLeaveCount = Math.round(n * absentRate);
+  const presentCount = n - onLeaveCount;
+  const delayCount = Math.round(presentCount * lateRateAmongPresent);
+  const onTimeCount = Math.max(0, presentCount - delayCount);
 
   const sorted = [...activeEmps].sort((a, b) =>
     `${demoDate}:${a.empCode}`.localeCompare(`${demoDate}:${b.empCode}`)
   );
   const onLeaveEmps = sorted.slice(0, onLeaveCount);
   const delayEmps = sorted.slice(onLeaveCount, onLeaveCount + delayCount);
-  const onTimeEmps = sorted.slice(onLeaveCount + delayCount);
+  const onTimeEmps = sorted.slice(onLeaveCount + delayCount, onLeaveCount + presentCount);
 
   const absentFields = {
     status: 'Absent',
@@ -351,8 +365,9 @@ async function applyDashboardPunctualityDemo(
   }
 
   const present = await AttendanceDerivedModel.countDocuments({ date: demoDate, status: 'Present' });
-  logger.info('Dashboard punctuality demo', {
+  logger.info('Dashboard day demo', {
     date: demoDate,
+    weekdayIdx,
     present,
     onTime,
     delay,

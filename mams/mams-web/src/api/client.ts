@@ -66,6 +66,7 @@ async function rawRequest<T>(method: string, path: string, body?: unknown, retri
 export const api = {
   get: <T,>(p: string) => rawRequest<T>('GET', p),
   post: <T,>(p: string, b?: unknown) => rawRequest<T>('POST', p, b),
+  put: <T,>(p: string, b?: unknown) => rawRequest<T>('PUT', p, b),
   patch: <T,>(p: string, b?: unknown) => rawRequest<T>('PATCH', p, b),
   delete: <T,>(p: string) => rawRequest<T>('DELETE', p),
 };
