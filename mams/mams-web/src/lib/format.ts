@@ -26,6 +26,22 @@ export function fmtIstTime(d: Date | string | null): string {
   }).format(date);
 }
 
+/** Live header clock time in IST (e.g. 10:01:45 am). */
+export function fmtIstHeaderTime(d: Date): string {
+  return fmtIstTime(d);
+}
+
+/** Live header date line in IST (e.g. Monday, 8 June 2026). */
+export function fmtIstHeaderDate(d: Date): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(d);
+}
+
 /** Date + time with milliseconds in IST (Activity log). */
 export function fmtIstDateTimeMs(d: Date | string | null): string {
   if (!d) return '-';
@@ -49,6 +65,16 @@ export function fmtDate(yyyymmdd: string): string {
   if (!yyyymmdd) return '-';
   const [y, m, d] = yyyymmdd.split('-');
   return `${d}/${m}/${y}`;
+}
+
+/** Short weekday from YYYY-MM-DD in IST (e.g. Mon, Tue). */
+export function fmtWeekdayShort(yyyymmdd: string): string {
+  if (!yyyymmdd) return '-';
+  const date = new Date(`${yyyymmdd}T12:00:00+05:30`);
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    weekday: 'short',
+  }).format(date);
 }
 
 export function fmtNumber(n: number): string {

@@ -39,6 +39,94 @@ input, select, textarea {
     @apply overflow-x-auto -mx-1 px-1;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Dashboard attendance table — aligned with mockup/index.html table-card */
+  .dash-table-card {
+    @apply bg-white rounded-[10px] shadow-card border border-border overflow-hidden mt-6;
+  }
+  .dash-table-header {
+    @apply flex items-center justify-between flex-wrap gap-3 px-5 py-4 border-b border-border;
+  }
+  .dash-table-header h3 {
+    @apply text-[15px] font-bold text-text whitespace-nowrap;
+  }
+  .dash-table-filters {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .dash-table-filters input,
+  .dash-table-filters select {
+    @apply px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none;
+  }
+  .dash-table-hint {
+    @apply text-[11px] text-text-subtle px-5 py-1.5 bg-surface2 border-b border-border;
+  }
+  .dash-table-scroll {
+    @apply overflow-x-auto overflow-y-auto max-h-[380px];
+    -webkit-overflow-scrolling: touch;
+  }
+  .dash-table-scroll table {
+    @apply w-full border-collapse min-w-[720px];
+  }
+  .dash-table-scroll thead {
+    @apply bg-surface2 sticky top-0 z-[1];
+  }
+  .dash-table-scroll th {
+    @apply px-3.5 py-2.5 text-left text-[11px] font-semibold text-text-subtle uppercase tracking-wide border-b border-border whitespace-nowrap cursor-pointer select-none transition-colors;
+  }
+  .dash-table-scroll th:hover {
+    @apply text-primary bg-primary-bg;
+  }
+  .dash-table-scroll th.sorted {
+    @apply text-primary;
+  }
+  .dash-table-scroll th .sort-arrow {
+    @apply inline-block ml-1 text-[9px] opacity-40;
+  }
+  .dash-table-scroll th.sorted .sort-arrow {
+    @apply opacity-100;
+  }
+  .dash-table-scroll td {
+    @apply px-3.5 py-2.5 text-[13px] text-text-muted border-b border-border whitespace-nowrap;
+  }
+  .dash-table-scroll tbody tr {
+    @apply transition-colors;
+  }
+  .dash-table-scroll tbody tr:hover {
+    @apply bg-surface2;
+  }
+  .dash-table-scroll tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .dash-emp-link {
+    @apply font-semibold text-text no-underline border-b-[1.5px] border-transparent hover:text-primary hover:border-primary transition-colors;
+  }
+  .dash-pill {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap;
+  }
+  .dash-pill-blue {
+    @apply dash-pill bg-primary-bg text-primary;
+  }
+  .dash-pill-amber {
+    @apply dash-pill bg-amber-bg text-[#92400e];
+  }
+  .dash-pill-green {
+    @apply dash-pill bg-green-bg text-[#4a7a16];
+  }
+  .dash-pill-red {
+    @apply dash-pill bg-red-bg text-red;
+  }
+  .dash-time {
+    @apply font-mono text-xs text-text-muted;
+  }
+  .dash-table-footer {
+    @apply px-5 py-3 border-t border-border text-xs text-text-subtle flex flex-wrap items-center justify-between gap-2;
+  }
+  .dash-filter-tag {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl text-[11px] font-semibold bg-primary-bg text-primary cursor-pointer transition-colors hover:bg-primary hover:text-white;
+  }
+  .btn-green {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold bg-green text-white border-none cursor-pointer transition-colors hover:bg-[#5f9420] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
     touch-action: manipulation;
@@ -47,6 +135,127 @@ input, select, textarea {
     @apply min-h-[36px];
     touch-action: manipulation;
   }
+
+  .live-dot {
+    @apply w-2 h-2 rounded-full bg-green inline-block align-middle mr-1.5;
+    animation: livePulse 2s ease-in-out infinite;
+  }
+  .live-dot-offline {
+    @apply bg-red;
+    animation: none;
+  }
+
+  /* Dashboard KPI stat cards — mockup stat-card */
+  .dash-filter-bar {
+    @apply flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 mb-3 rounded-lg border border-primary/20 bg-primary-bg;
+  }
+  .dash-filter-bar-label {
+    @apply text-xs text-primary font-medium;
+  }
+  .dash-stat-card {
+    @apply card p-4 border-l-4 cursor-pointer relative transition-all duration-200;
+  }
+  .dash-stat-card:hover {
+    @apply shadow-[0_4px_16px_rgba(0,0,0,0.1)] -translate-y-0.5;
+  }
+  .dash-stat-card.selected {
+    @apply -translate-y-0.5 shadow-[0_4px_20px_rgba(26,40,120,0.15)];
+  }
+  .dash-stat-card.selected.accent-primary {
+    @apply border-primary bg-primary-bg;
+  }
+  .dash-stat-card.selected.accent-green {
+    @apply border-green bg-green-bg;
+  }
+  .dash-stat-card.selected.accent-red {
+    @apply border-red bg-red-bg;
+  }
+  .dash-stat-card.selected.accent-amber {
+    @apply border-amber bg-amber-bg;
+  }
+  .dash-stat-card.accent-primary {
+    @apply border-l-primary;
+  }
+  .dash-stat-card.accent-green {
+    @apply border-l-green;
+  }
+  .dash-stat-card.accent-red {
+    @apply border-l-red;
+  }
+  .dash-stat-card.accent-amber {
+    @apply border-l-amber;
+  }
+  .dash-stat-hint {
+    @apply absolute top-2 right-2.5 text-[9px] text-text-subtle opacity-0 transition-opacity duration-200 pointer-events-none;
+  }
+  .dash-stat-card:hover .dash-stat-hint {
+    @apply opacity-100;
+  }
+  .dash-donut-legend-item {
+    @apply flex items-center gap-2 text-xs text-text-muted cursor-pointer py-1 px-2 rounded-md transition-colors;
+  }
+  .dash-donut-legend-item:hover {
+    @apply bg-surface2 text-text;
+  }
+  .dash-donut-legend-item.active {
+    @apply bg-primary-bg text-primary font-semibold;
+  }
+  .dash-layout-hint {
+    @apply text-sm text-text-muted bg-surface2 border border-border rounded-lg px-4 py-3 mb-4;
+  }
+  .dash-layout-block {
+    @apply rounded-xl;
+  }
+  .dash-layout-block--editing {
+    @apply border border-dashed border-primary/40 bg-primary-bg/30;
+  }
+  .dash-layout-block--dragging {
+    @apply shadow-lg ring-2 ring-primary/20 z-10;
+  }
+  .dash-layout-block-toolbar {
+    @apply flex items-center gap-2 px-3 py-2 border-b border-primary/15 bg-white/60 rounded-t-xl;
+  }
+  .dash-layout-block-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-primary;
+  }
+  .dash-drag-handle {
+    @apply flex items-center justify-center w-8 h-8 rounded-md text-text-muted hover:text-primary hover:bg-white cursor-grab active:cursor-grabbing transition-colors;
+  }
+  .dash-layout-block-content {
+    @apply rounded-b-xl overflow-hidden;
+  }
+  .dash-layout-toolbar {
+    @apply sticky top-0 z-20 bg-surface/95 backdrop-blur-sm py-1 -mx-1 px-1;
+  }
+  .dash-layout-row--drop-target {
+    @apply rounded-xl border-2 border-dashed border-primary/25 transition-shadow;
+  }
+  .dash-layout-guide {
+    @apply bg-surface2 border border-border rounded-lg px-3 py-2.5 mb-3;
+  }
+  .dash-layout-segment {
+    @apply inline-flex rounded-md border border-border bg-white p-0.5;
+  }
+  .dash-layout-segment-btn {
+    @apply text-xs font-semibold px-2.5 py-1 rounded text-text-muted hover:text-primary transition-colors;
+  }
+  .dash-layout-segment-btn--active {
+    @apply bg-primary-bg text-primary;
+  }
+  .dash-layout-blocked-msg {
+    @apply text-xs text-amber bg-amber-bg border border-amber/30 rounded-lg px-3 py-2 mb-3;
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-stat-hint {
+    display: none;
+  }
+}
+
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(115, 174, 37, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(115, 174, 37, 0); }
 }
 
 @keyframes fadeIn {

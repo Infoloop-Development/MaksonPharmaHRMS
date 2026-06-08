@@ -1,8 +1,28 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../store/auth';
+import { fmtIstHeaderDate, fmtIstHeaderTime } from '../lib/format';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { isAutogenDemoEnabled } from '../config/featureFlags';
+
+function pageTitle(pathname: string): string {
+  if (pathname === '/dashboard' || pathname === '/') return 'Dashboard';
+  if (pathname.startsWith('/employees/')) return 'Employee Detail';
+  if (pathname === '/employees') return 'Employees';
+  if (pathname === '/attendance') return 'Attendance Log';
+  if (pathname === '/reports') return 'Reports';
+  if (pathname === '/adjustments') return 'Adjustments';
+  if (pathname === '/devices') return 'Devices';
+  if (pathname === '/settings') return 'Settings';
+  if (pathname === '/autogeneration-demo' && isAutogenDemoEnabled()) return 'Auto Genrated Shift Demo';
+  if (pathname === '/change-password') return 'Change Password';
+  return 'MAMS';
+}
 
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const user = useAuth((s) => s.user);
+  const location = useLocation();
+  const isOnline = useOnlineStatus();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -10,24 +30,13 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
     return () => clearInterval(t);
   }, []);
 
-  const ist = new Intl.DateTimeFormat('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(now);
-
   const isCompliant = user?.viewMode === 'compliant';
   const badgeFull = isCompliant ? 'COMPLIANT VIEW (8-hour)' : 'REAL VIEW (12-hour)';
   const badgeShort = isCompliant ? 'COMPLIANT' : 'REAL';
+  const title = pageTitle(location.pathname);
 
   return (
-    <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-2 sticky top-0 z-10 flex-wrap">
+    <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-2 sticky top-0 z-10">
       <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
@@ -40,19 +49,38 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
           <span className="block w-5 h-0.5 bg-text rounded" />
         </button>
         <div className="min-w-0">
-          <h2 className="text-base font-bold">MAMS</h2>
-          <div className="text-[11px] text-text-subtle truncate max-w-[200px] sm:max-w-none">{ist} IST</div>
+          <h1 className="text-base md:text-lg font-bold truncate">{title}</h1>
+          <span
+            title={badgeFull}
+            className={`md:hidden inline-block mt-0.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+              isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
+            }`}
+          >
+            {badgeShort}
+          </span>
         </div>
       </div>
-      <span
-        title={badgeFull}
-        className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-full shrink-0 ${
-          isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
-        }`}
-      >
-        <span className="sm:hidden">{badgeShort}</span>
-        <span className="hidden sm:inline">{badgeFull}</span>
-      </span>
+
+      <div className="flex items-center gap-3 shrink-0">
+        <span
+          title={badgeFull}
+          className={`hidden md:inline text-[11px] font-semibold px-2.5 py-1.5 rounded-full ${
+            isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
+          }`}
+        >
+          {badgeFull}
+        </span>
+        <div className="text-right">
+          <div className="font-mono text-sm font-semibold tracking-wide text-text">
+            <span
+              className={isOnline ? 'live-dot' : 'live-dot live-dot-offline'}
+              aria-label={isOnline ? 'Online' : 'Offline'}
+            />
+            {fmtIstHeaderTime(now)}
+          </div>
+          <div className="text-[11px] text-text-subtle mt-0.5">{fmtIstHeaderDate(now)}</div>
+        </div>
+      </div>
     </header>
   );
 }
