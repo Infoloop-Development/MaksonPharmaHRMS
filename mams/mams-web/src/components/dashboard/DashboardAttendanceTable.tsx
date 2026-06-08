@@ -1,0 +1,377 @@
+import { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import type { DashboardAttendanceRow, DashboardAttendanceStatusFilter } from '@mams/types';
+import { dashboardApi } from '../../api/dashboard';
+import { useToast } from '../ui/Toast';
+import { fmtHours, fmtWeekdayShort } from '../../lib/format';
+import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
+import {
+  AttendanceShiftPill,
+  AttendanceStatusPill,
+  displayAttendanceCell,
+} from './dashboardAttendanceUi';
+
+type ShiftFilter = 'All' | 'Day' | 'Night';
+type StatusFilter = DashboardAttendanceStatusFilter;
+type SortCol = 'name' | 'id' | 'dept' | 'shift' | 'hrs' | 'status' | null;
+
+const PAGE_SIZE = 50;
+
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+      <path d="M12 3v12M7 10l5 5 5-5M5 21h14" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function sortRows(rows: DashboardAttendanceRow[], col: SortCol, dir: 'asc' | 'desc') {
+  if (!col) return rows;
+  const sorted = [...rows].sort((a, b) => {
+    let va: string | number = '';
+    let vb: string | number = '';
+    switch (col) {
+      case 'name':
+        va = a.employeeName;
+        vb = b.employeeName;
+        break;
+      case 'id':
+        va = a.empCode;
+        vb = b.empCode;
+        break;
+      case 'dept':
+        va = a.department;
+        vb = b.department;
+        break;
+      case 'shift':
+        va = a.timeShift;
+        vb = b.timeShift;
+        break;
+      case 'hrs':
+        va = a.totalHoursWorked ?? -1;
+        vb = b.totalHoursWorked ?? -1;
+        break;
+      case 'status':
+        va = a.displayStatus;
+        vb = b.displayStatus;
+        break;
+    }
+    if (typeof va === 'number' && typeof vb === 'number') {
+      return dir === 'asc' ? va - vb : vb - va;
+    }
+    return dir === 'asc'
+      ? String(va).localeCompare(String(vb))
+      : String(vb).localeCompare(String(va));
+  });
+  return sorted;
+}
+
+export function DashboardAttendanceTable({
+  selectedDate,
+  statusFilter,
+  onStatusFilterChange,
+}: {
+  selectedDate: string;
+  statusFilter: StatusFilter;
+  onStatusFilterChange: (s: StatusFilter) => void;
+}) {
+  const toast = useToast((s) => s.push);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [department, setDepartment] = useState('');
+  const [shift, setShift] = useState<ShiftFilter>('All');
+  const status = statusFilter;
+  const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [sortCol, setSortCol] = useState<SortCol>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedDate, debouncedSearch, department, shift, status]);
+
+  const { data: departmentsData } = useQuery({
+    queryKey: ['dashboard', 'attendance', 'departments'],
+    queryFn: dashboardApi.departments,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const queryParams = useMemo(
+    () => ({
+      date: selectedDate,
+      search: debouncedSearch.trim() || undefined,
+      department: department || undefined,
+      timeShift: shift === 'All' ? undefined : shift,
+      status,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    [selectedDate, debouncedSearch, department, shift, status, page]
+  );
+
+  const { data, isPending, isFetching, error } = useQuery({
+    queryKey: ['dashboard', 'attendance', queryParams],
+    queryFn: () => dashboardApi.attendance(queryParams),
+    enabled: Boolean(selectedDate),
+    placeholderData: keepPreviousData,
+  });
+
+  const isInitialLoad = isPending && !data;
+  const isRefreshing = isFetching && Boolean(data);
+
+  const rows = useMemo(
+    () => sortRows(data?.items ?? [], sortCol, sortDir),
+    [data?.items, sortCol, sortDir]
+  );
+
+  const hasFilters =
+    Boolean(debouncedSearch.trim()) || Boolean(department) || shift !== 'All' || status !== 'All';
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setDepartment('');
+    setShift('All');
+    onStatusFilterChange('All');
+    setPage(1);
+  };
+
+  const toggleSort = (col: SortCol) => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+  };
+
+  const sortArrow = (col: SortCol) => {
+    if (sortCol !== col) return '▴';
+    return sortDir === 'asc' ? '▲' : '▼';
+  };
+
+  const onExport = async () => {
+    if (!selectedDate) return;
+    setExporting(true);
+    try {
+      await dashboardApi.downloadAttendanceXlsx({
+        date: selectedDate,
+        search: debouncedSearch.trim() || undefined,
+        department: department || undefined,
+        timeShift: shift === 'All' ? undefined : shift,
+        status,
+      });
+      toast('Attendance export downloaded', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
+
+  if (!selectedDate) {
+    return null;
+  }
+
+  return (
+    <div className="dash-table-card">
+      <div className="dash-table-header">
+        <h3>
+          Attendance - {selectedDate}
+          {weekday !== '-' && ` (${weekday})`}
+        </h3>
+        <div className="dash-table-filters">
+          <input
+            placeholder="Search name or ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 170 }}
+          />
+          <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+            <option value="">All Depts</option>
+            {(departmentsData?.departments ?? []).map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <select value={shift} onChange={(e) => setShift(e.target.value as ShiftFilter)}>
+            <option value="All">All Time Shifts</option>
+            <option value="Day">Day (6AM-6PM)</option>
+            <option value="Night">Night (6PM-6AM)</option>
+          </select>
+          <select
+            value={status}
+            onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}
+          >
+            <option value="All">All Status</option>
+            <option value="Present">Present</option>
+            <option value="Absent">Absent</option>
+            <option value="Late">Late</option>
+          </select>
+          <button
+            type="button"
+            className="btn-green"
+            onClick={onExport}
+            disabled={exporting || isInitialLoad}
+          >
+            <DownloadIcon />
+            {exporting ? 'Exporting…' : 'Export'}
+          </button>
+        </div>
+      </div>
+
+      <div className="dash-table-hint">
+        Click employee name to view full profile and attendance history
+      </div>
+
+      {error && <div className="px-5 py-3 text-red text-sm">Failed to load attendance table.</div>}
+
+      <DashboardAttendanceCardList
+        rows={rows}
+        isInitialLoad={isInitialLoad}
+        isRefreshing={isRefreshing}
+      />
+
+      <div
+        className={`dash-table-scroll relative hidden md:block ${isRefreshing ? 'opacity-60 transition-opacity duration-150' : ''}`}
+      >
+        <table>
+          <thead>
+            <tr>
+              <th
+                className={sortCol === 'name' ? 'sorted' : ''}
+                onClick={() => toggleSort('name')}
+              >
+                Employee <span className="sort-arrow">{sortArrow('name')}</span>
+              </th>
+              <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleSort('id')}>
+                ID <span className="sort-arrow">{sortArrow('id')}</span>
+              </th>
+              <th
+                className={sortCol === 'dept' ? 'sorted' : ''}
+                onClick={() => toggleSort('dept')}
+              >
+                Department <span className="sort-arrow">{sortArrow('dept')}</span>
+              </th>
+              <th
+                className={sortCol === 'shift' ? 'sorted' : ''}
+                onClick={() => toggleSort('shift')}
+              >
+                Shift <span className="sort-arrow">{sortArrow('shift')}</span>
+              </th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleSort('hrs')}>
+                Hours <span className="sort-arrow">{sortArrow('hrs')}</span>
+              </th>
+              <th
+                className={sortCol === 'status' ? 'sorted' : ''}
+                onClick={() => toggleSort('status')}
+              >
+                Status <span className="sort-arrow">{sortArrow('status')}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {isInitialLoad && (
+              <tr>
+                <td colSpan={8} className="text-center py-8 text-text-subtle">
+                  Loading attendance…
+                </td>
+              </tr>
+            )}
+            {!isInitialLoad && rows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center py-8 text-text-subtle">
+                  No attendance records match your filters.
+                </td>
+              </tr>
+            )}
+            {!isInitialLoad &&
+              rows.map((row) => (
+                <tr key={row.employeeId}>
+                  <td>
+                    <Link to={`/employees/${row.employeeId}`} className="dash-emp-link">
+                      {row.employeeName}
+                    </Link>
+                  </td>
+                  <td className="font-mono text-[11px]">{row.empCode}</td>
+                  <td>{row.department}</td>
+                  <td>
+                    <AttendanceShiftPill shift={row.timeShift} />
+                  </td>
+                  <td className="dash-time">{displayAttendanceCell(row.entryStamp)}</td>
+                  <td className="dash-time">{displayAttendanceCell(row.exitStamp)}</td>
+                  <td className="dash-time">
+                    {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
+                  </td>
+                  <td>
+                    <AttendanceStatusPill status={row.displayStatus} />
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="dash-table-footer">
+        <div className="flex flex-wrap items-center gap-2">
+          <span>
+            Showing {data?.items.length ?? 0} of {data?.total ?? 0}
+          </span>
+          {status !== 'All' && (
+            <button type="button" className="dash-filter-tag" onClick={() => onStatusFilterChange('All')}>
+              {status} ×
+            </button>
+          )}
+          {department && (
+            <button type="button" className="dash-filter-tag" onClick={() => setDepartment('')}>
+              {department} ×
+            </button>
+          )}
+          {shift !== 'All' && (
+            <button type="button" className="dash-filter-tag" onClick={() => setShift('All')}>
+              {shift} Shift ×
+            </button>
+          )}
+          {hasFilters && (
+            <button type="button" className="dash-filter-tag" onClick={clearFilters}>
+              Clear all ×
+            </button>
+          )}
+          {totalPages > 1 && (
+            <span className="flex items-center gap-2 ml-1">
+              <button
+                type="button"
+                className="text-text-subtle hover:text-primary disabled:opacity-40"
+                disabled={page <= 1 || isFetching}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                ‹ Prev
+              </button>
+              <button
+                type="button"
+                className="text-text-subtle hover:text-primary disabled:opacity-40"
+                disabled={page >= totalPages || isFetching}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next ›
+              </button>
+            </span>
+          )}
+        </div>
+        <span>{selectedDate}</span>
+      </div>
+    </div>
+  );
+}

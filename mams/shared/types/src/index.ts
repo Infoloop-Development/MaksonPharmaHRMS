@@ -9,3 +9,5 @@ export * from './device.js';
 export * from './punchEvent.js';
 export * from './settings.js';
 export * from './activity.js';
+export * from './dashboardAttendance.js';
+export * from './dashboardLayout.js';
