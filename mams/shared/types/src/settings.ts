@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { ExportNamingSettingsSchema } from './exportNaming.js';
+import { LeaveQuotaResetPolicySchema } from './leave.js';
 
 export const ShiftWindowSchema = z.object({
   id: z.string(),
@@ -26,5 +28,8 @@ export const SettingsPublicSchema = z.object({
   smartAnchorVersion: z.string(),
   confidentialityNoticeEnabled: z.boolean(),
   confidentialityNoticeText: z.string(),
+  exportNaming: ExportNamingSettingsSchema,
+  leaveQuotaResetPolicy: LeaveQuotaResetPolicySchema,
+  financialYearStartMonth: z.number().int().min(1).max(12),
 });
 export type SettingsPublic = z.infer<typeof SettingsPublicSchema>;

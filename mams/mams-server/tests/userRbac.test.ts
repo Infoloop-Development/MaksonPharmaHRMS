@@ -39,6 +39,20 @@ describe('validatePermissionsForRole', () => {
 });
 
 describe('ROLE_PERMISSION_CAP', () => {
+  it('rejects manage.export_naming for compliance role', () => {
+    const r = validatePermissionsForRole('hr.compliance', [
+      'read.compliant',
+      'approve.adjust',
+      'manage.export_naming',
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it('accepts manage.export_naming for hr.admin', () => {
+    const r = validatePermissionsForRole('hr.admin', ['read.real', 'manage.export_naming']);
+    expect(r.ok).toBe(true);
+  });
+
   it('hr.admin cap includes all Permission enum values', () => {
     const cap = ROLE_PERMISSION_CAP['hr.admin'];
     const all: Permission[] = [
@@ -50,6 +64,9 @@ describe('ROLE_PERMISSION_CAP', () => {
       'manage.users',
       'manage.devices',
       'manage.settings',
+      'manage.export_naming',
+      'read.leave',
+      'manage.leave',
     ];
     for (const p of all) {
       expect(cap).toContain(p);

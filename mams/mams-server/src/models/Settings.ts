@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from 'mongoose';
+import { DEFAULT_EXPORT_NAMING } from '@mams/types';
 
 /**
  * Singleton: there is exactly one Settings document.
@@ -50,6 +51,30 @@ const settingsSchema = new Schema(
     },
     /** Last issued employee numeric suffix (MKS####). Incremented on each server-allocated hire. */
     employeeCodeSequence: { type: Number, default: 0 },
+    exportNaming: {
+      type: {
+        companyCode: { type: String, default: DEFAULT_EXPORT_NAMING.companyCode },
+        dateFormat: { type: String, enum: ['YYYYMMDD', 'DDMMYY'], default: DEFAULT_EXPORT_NAMING.dateFormat },
+        includeGeneratedTimestamp: {
+          type: Boolean,
+          default: DEFAULT_EXPORT_NAMING.includeGeneratedTimestamp,
+        },
+        patterns: {
+          dailyReportCsv: { type: String, default: DEFAULT_EXPORT_NAMING.patterns.dailyReportCsv },
+          dashboardAttendanceXlsx: {
+            type: String,
+            default: DEFAULT_EXPORT_NAMING.patterns.dashboardAttendanceXlsx,
+          },
+        },
+      },
+      default: () => ({ ...DEFAULT_EXPORT_NAMING }),
+    },
+    leaveQuotaResetPolicy: {
+      type: String,
+      enum: ['calendar_year', 'financial_year', 'joining_anniversary'],
+      default: 'calendar_year',
+    },
+    financialYearStartMonth: { type: Number, default: 4, min: 1, max: 12 },
   },
   { timestamps: true }
 );

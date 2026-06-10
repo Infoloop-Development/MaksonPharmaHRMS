@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-export const DashboardAttendanceStatusFilterSchema = z.enum(['Present', 'Absent', 'Late', 'All']);
+export const DashboardAttendanceStatusFilterSchema = z.enum([
+  'Present',
+  'Absent',
+  'Late',
+  'On Time',
+  'Weekly Off',
+  'Half Day',
+  'All',
+]);
 export type DashboardAttendanceStatusFilter = z.infer<typeof DashboardAttendanceStatusFilterSchema>;
 
 export const DashboardAttendanceTimeShiftSchema = z.enum(['Day', 'Night']);

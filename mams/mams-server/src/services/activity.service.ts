@@ -122,11 +122,13 @@ export function settingsSectionFromChangedFields(fields: string[]): string {
   ]);
   const smartAnchor = new Set(['smartAnchorEnabled']);
   const confidentiality = new Set(['confidentialityNoticeEnabled', 'confidentialityNoticeText']);
+  const exportNaming = new Set(['exportNaming']);
 
   if (fields.some((f) => company.has(f))) return 'company';
   if (fields.some((f) => compliance.has(f))) return 'compliance';
   if (fields.some((f) => smartAnchor.has(f))) return 'smart_anchor';
   if (fields.some((f) => confidentiality.has(f))) return 'confidentiality';
+  if (fields.some((f) => exportNaming.has(f))) return 'export_naming';
   if (fields.some((f) => f === 'realShifts' || f === 'complianceShifts' || f === 'weeklyOffDefault')) {
     return 'shifts';
   }

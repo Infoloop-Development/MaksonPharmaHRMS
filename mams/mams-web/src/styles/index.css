@@ -26,6 +26,9 @@ input, select, textarea {
   .btn-outline {
     @apply btn border border-border bg-white text-text hover:bg-surface2 disabled:opacity-50;
   }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs min-h-[36px] sm:min-h-0;
+  }
   .input {
     @apply w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition;
   }
@@ -49,6 +52,14 @@ input, select, textarea {
   }
   .dash-table-header h3 {
     @apply text-[15px] font-bold text-text whitespace-nowrap;
+  }
+  @media (max-width: 767px) {
+    .dash-table-header {
+      @apply flex-col items-stretch;
+    }
+    .dash-table-header h3 {
+      @apply w-full whitespace-normal;
+    }
   }
   .dash-table-filters {
     @apply flex flex-wrap items-center gap-2;
@@ -125,7 +136,10 @@ input, select, textarea {
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl text-[11px] font-semibold bg-primary-bg text-primary cursor-pointer transition-colors hover:bg-primary hover:text-white;
   }
   .btn-green {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold bg-green text-white border-none cursor-pointer transition-colors hover:bg-[#5f9420] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-[11px] font-semibold bg-green text-white border-none cursor-pointer transition-colors hover:bg-[#5f9420] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .settings-section-footer {
+    @apply flex flex-col-reverse sm:flex-row sm:justify-end gap-2 [&_.btn]:w-full sm:[&_.btn]:w-auto;
   }
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
@@ -146,6 +160,33 @@ input, select, textarea {
   }
 
   /* Dashboard KPI stat cards — mockup stat-card */
+  .dash-stat-grid {
+    @apply grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4;
+  }
+  .dash-kpi-grid--editing {
+    @apply rounded-lg border border-dashed border-primary/30 bg-primary-bg/20 p-1.5 sm:p-2;
+  }
+  .dash-kpi-edit-btn {
+    @apply inline-flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 sm:min-w-0 sm:min-h-0 sm:w-8 sm:h-8 rounded-md text-text-muted hover:text-primary hover:bg-white border border-border bg-white shadow-sm transition-colors;
+  }
+  .dash-kpi-toolbar {
+    @apply sticky top-0 z-20 bg-surface/95 backdrop-blur-sm;
+  }
+  .dash-kpi-toolbar-btn {
+    @apply w-full sm:w-auto min-h-[44px] sm:min-h-0;
+  }
+  .dash-kpi-edit-hint {
+    @apply px-0.5;
+  }
+  .dash-kpi-slot--editing .dash-stat-card {
+    @apply pl-9 sm:pl-10;
+  }
+  .dash-kpi-drag-handle {
+    @apply absolute top-1.5 left-1.5 z-10 w-9 h-9 sm:w-8 sm:h-8 touch-none;
+  }
+  .dash-kpi-picker-panel {
+    box-shadow: theme('boxShadow.floating');
+  }
   .dash-filter-bar {
     @apply flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 mb-3 rounded-lg border border-primary/20 bg-primary-bg;
   }
@@ -153,7 +194,7 @@ input, select, textarea {
     @apply text-xs text-primary font-medium;
   }
   .dash-stat-card {
-    @apply card p-4 border-l-4 cursor-pointer relative transition-all duration-200;
+    @apply card p-3 md:p-4 border-l-4 cursor-pointer relative transition-all duration-200;
   }
   .dash-stat-card:hover {
     @apply shadow-[0_4px_16px_rgba(0,0,0,0.1)] -translate-y-0.5;
@@ -219,7 +260,10 @@ input, select, textarea {
     @apply text-xs font-semibold uppercase tracking-wider text-primary;
   }
   .dash-drag-handle {
-    @apply flex items-center justify-center w-8 h-8 rounded-md text-text-muted hover:text-primary hover:bg-white cursor-grab active:cursor-grabbing transition-colors;
+    @apply flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-md text-text-muted hover:text-primary hover:bg-white cursor-grab active:cursor-grabbing transition-colors;
+  }
+  .dash-layout-toolbar-btn {
+    @apply w-full sm:w-auto min-h-[44px] sm:min-h-0;
   }
   .dash-layout-block-content {
     @apply rounded-b-xl overflow-hidden;
@@ -234,10 +278,16 @@ input, select, textarea {
     @apply bg-surface2 border border-border rounded-lg px-3 py-2.5 mb-3;
   }
   .dash-layout-segment {
-    @apply inline-flex rounded-md border border-border bg-white p-0.5;
+    @apply inline-flex flex-wrap rounded-md border border-border bg-white p-0.5 max-w-full;
+  }
+  .dash-layout-chart--hidden-mobile {
+    @apply opacity-40;
+  }
+  .dash-layout-mobile-hidden-badge {
+    @apply absolute top-2 right-2 z-10 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-surface border border-border text-text-muted pointer-events-none;
   }
   .dash-layout-segment-btn {
-    @apply text-xs font-semibold px-2.5 py-1 rounded text-text-muted hover:text-primary transition-colors;
+    @apply text-xs font-semibold px-2.5 py-2 sm:py-1 min-h-[44px] sm:min-h-0 rounded text-text-muted hover:text-primary transition-colors;
   }
   .dash-layout-segment-btn--active {
     @apply bg-primary-bg text-primary;
@@ -245,11 +295,127 @@ input, select, textarea {
   .dash-layout-blocked-msg {
     @apply text-xs text-amber bg-amber-bg border border-amber/30 rounded-lg px-3 py-2 mb-3;
   }
+
+  /* Settings — compact cards pair on md+; wide sections span full row */
+  .settings-layout {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch;
+  }
+  .settings-layout__full {
+    @apply md:col-span-2 min-w-0;
+  }
+  .settings-layout__cell {
+    @apply min-w-0 h-full;
+  }
+
+  .filter-mobile-toolbar {
+    @apply flex items-center gap-2 min-w-0;
+  }
+  .filter-search-outside {
+    @apply flex-1 min-w-0;
+  }
+  .filter-search-outside input,
+  .filter-search-outside .input,
+  .filter-search-outside select {
+    @apply w-full min-h-[44px];
+  }
+  .filter-mobile-actions {
+    @apply flex gap-2 shrink-0 items-center;
+  }
+  .filter-trigger {
+    @apply inline-flex items-center justify-center gap-1.5 min-h-[44px] min-w-[44px] px-2.5 py-2 rounded-md border border-border bg-surface2 text-text hover:bg-white transition-colors shrink-0;
+  }
+  .filter-sheet-backdrop {
+    @apply fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm;
+  }
+  .filter-sheet {
+    @apply fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-xl flex flex-col max-h-[85vh] animate-[slideUp_0.2s_ease-out];
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  }
+  .filter-sheet-header {
+    @apply flex items-center justify-between px-4 py-4 border-b border-border shrink-0;
+  }
+  .filter-sheet-close {
+    @apply w-10 h-10 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center;
+  }
+  .filter-sheet-body {
+    @apply flex-1 overflow-y-auto px-4 py-4 grid grid-cols-2 gap-3 items-start;
+  }
+  .filter-sheet-body > .hidden {
+    display: none !important;
+  }
+  /* Wrapped fields (Reports, etc.) — full width stack */
+  .filter-sheet-body > div:not(.hidden) {
+    @apply col-span-2 min-w-0;
+  }
+  /* Bare inputs/selects — equal-width pairs; lone last odd field spans full row */
+  .filter-sheet-body > input,
+  .filter-sheet-body > select {
+    @apply w-full max-w-none min-h-[44px] min-w-0;
+  }
+  .filter-sheet-body > :last-child:nth-child(odd):not(:only-child) {
+    grid-column: 1 / -1;
+  }
+  .filter-sheet-body input,
+  .filter-sheet-body select,
+  .filter-sheet-body .input {
+    @apply w-full max-w-none min-h-[44px];
+  }
+  .filter-sheet-footer {
+    @apply flex gap-3 px-4 py-4 border-t border-border bg-surface2 shrink-0;
+  }
+  .filter-sheet-footer .btn-outline,
+  .filter-sheet-footer .btn-primary {
+    @apply flex-1 min-h-[44px] justify-center;
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (pointer: coarse) {
+  .dash-drag-handle {
+    @apply w-10 h-10;
+  }
+  .dash-kpi-drag-handle {
+    @apply w-10 h-10;
+  }
 }
 
 @media (max-width: 640px) {
   .dash-stat-hint {
     display: none;
+  }
+  .dash-stat-card .dash-stat-value {
+    @apply text-2xl;
+  }
+  .dash-stat-grid {
+    @apply gap-2;
+  }
+  .dash-kpi-grid--editing {
+    @apply gap-2;
+  }
+  .dash-filter-bar {
+    @apply flex-col items-stretch gap-2;
+  }
+  .dash-filter-bar .btn-primary {
+    @apply w-full justify-center min-h-[44px];
+  }
+  .dash-kpi-picker-overlay {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-area-pb {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (pointer: coarse) {
+  .dash-kpi-drag-handle {
+    @apply w-10 h-10;
+  }
+  .dash-kpi-slot--editing .dash-stat-card {
+    @apply pl-11;
   }
 }
 

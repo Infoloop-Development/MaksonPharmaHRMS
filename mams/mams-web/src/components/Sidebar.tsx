@@ -12,6 +12,7 @@ const BASE_NAV = [
   { to: '/attendance', label: 'Attendance Log' },
   { to: '/reports', label: 'Reports' },
   { to: '/adjustments', label: 'Adjustments' },
+  { to: '/leave', label: 'Leave' },
   { to: '/devices', label: 'Devices' },
   { to: '/settings', label: 'Settings' },
 ] as const;
@@ -20,16 +21,7 @@ const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift De
 
 function buildNav() {
   if (!isAutogenDemoEnabled()) return [...BASE_NAV];
-  return [
-    BASE_NAV[0],
-    BASE_NAV[1],
-    BASE_NAV[2],
-    BASE_NAV[3],
-    AUTOGEN_NAV,
-    BASE_NAV[4],
-    BASE_NAV[5],
-    BASE_NAV[6],
-  ];
+  return [...BASE_NAV.slice(0, 4), AUTOGEN_NAV, ...BASE_NAV.slice(4)];
 }
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

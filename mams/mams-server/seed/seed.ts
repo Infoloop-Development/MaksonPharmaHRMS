@@ -26,6 +26,7 @@ import { logger } from '../src/utils/logger.js';
 import { seededRandom } from '../src/utils/prng.js';
 import { fromZonedTime } from 'date-fns-tz';
 import type { Types } from 'mongoose';
+import { seedLeaveData, wipeLeaveCollections } from './leaveSeed.js';
 
 const IST = 'Asia/Kolkata';
 
@@ -59,12 +60,13 @@ async function main() {
     DeviceModel.deleteMany({}),
     AttendanceRawModel.collection.deleteMany({}),
     AttendanceDerivedModel.deleteMany({}),
+    wipeLeaveCollections(),
   ]);
   logger.info('Wiped master collections');
 
   // Users (credentials from env with Makson defaults — login reads these rows from DB)
   const passwordHash = await bcrypt.hash(seedUsers.SEED_DEFAULT_PASSWORD, 10);
-  await UserModel.create([
+  const users = await UserModel.create([
     {
       email: seedUsers.SEED_HR_ADMIN_EMAIL.toLowerCase(),
       passwordHash,
@@ -86,6 +88,7 @@ async function main() {
       mustChangePassword: false,
     },
   ]);
+  const adminUser = users[0]!;
   logger.info('Created seed users', {
     adminEmail: seedUsers.SEED_HR_ADMIN_EMAIL,
     complianceEmail: seedUsers.SEED_HR_COMPLIANCE_EMAIL,
@@ -127,6 +130,11 @@ async function main() {
   const mockEmps = generateEmployees(1800);
   const empDocs = await EmployeeModel.insertMany(mockEmps);
   logger.info(`Created ${empDocs.length} employees`);
+
+  await seedLeaveData({
+    adminUserId: adminUser._id,
+    sampleEmployeeIds: empDocs.slice(0, 3).map((e) => e._id),
+  });
 
   await SettingsModel.updateOne({}, { $set: { employeeCodeSequence: 1800 } });
   logger.info('Set employeeCodeSequence to 1800 for next modal hire (MKS1801)');

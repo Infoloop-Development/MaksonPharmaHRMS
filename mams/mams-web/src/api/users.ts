@@ -32,6 +32,7 @@ export const usersApi = {
     role: Role;
     password: string;
     unmaskFieldGrants?: SensitiveUnmaskField[];
+    permissions?: Permission[];
   }) => api.post<UserCreateResponse>('/users', body),
   patch: (id: string, body: UserUpdateBody) => api.patch<UserPatchResponse>(`/users/${id}`, body),
 };

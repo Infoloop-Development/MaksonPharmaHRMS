@@ -31,9 +31,13 @@ export function isStrictDashboardLayout(layout: { rows: DashboardLayoutRow[] }):
   );
 }
 
+export const DashboardMobileChartSchema = z.enum(['both', 'bar', 'donut']);
+export type DashboardMobileChart = z.infer<typeof DashboardMobileChartSchema>;
+
 export const DashboardLayoutSchema = z
   .object({
     rows: z.array(DashboardLayoutRowSchema).length(2),
+    mobileChart: DashboardMobileChartSchema.optional().default('both'),
   })
   .refine(
     (layout) => {
@@ -55,6 +59,7 @@ export const DEFAULT_DASHBOARD_LAYOUT_ORDER: DashboardBlockId[] = ['bar', 'donut
 
 export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = {
   rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+  mobileChart: 'both',
 };
 
 export type TablePosition = 'top' | 'bottom';
@@ -98,8 +103,8 @@ export function normalizeToStrictLayout(
   const tableRow: DashboardLayoutRow = { items: ['table'] };
 
   const normalized: DashboardLayout = tableOnTop
-    ? { rows: [tableRow, chartsRow] }
-    : { rows: [chartsRow, tableRow] };
+    ? { rows: [tableRow, chartsRow], mobileChart: 'both' }
+    : { rows: [chartsRow, tableRow], mobileChart: 'both' };
 
   return DashboardLayoutSchema.parse(normalized);
 }
@@ -131,9 +136,33 @@ const LooseRowsLayoutSchema = z.object({
   rows: z.array(DashboardLayoutRowSchema).min(1).max(3),
 });
 
+function withDefaultMobileChart(layout: DashboardLayout): DashboardLayout {
+  return {
+    ...layout,
+    mobileChart: layout.mobileChart ?? 'both',
+  };
+}
+
 export function migrateDashboardLayout(input: unknown): DashboardLayout {
   const strict = DashboardLayoutSchema.safeParse(input);
-  if (strict.success) return strict.data;
+  if (strict.success) return withDefaultMobileChart(strict.data);
+
+  const looseWithMobile = z
+    .object({
+      rows: z.array(DashboardLayoutRowSchema).min(1).max(3),
+      mobileChart: DashboardMobileChartSchema.optional(),
+    })
+    .safeParse(input);
+  if (looseWithMobile.success) {
+    const flat = looseWithMobile.data.rows.flatMap((r) => r.items);
+    if (flat.length === 3 && new Set(flat).size === 3) {
+      const normalized = normalizeToStrictLayout(looseWithMobile.data.rows);
+      return withDefaultMobileChart({
+        ...normalized,
+        mobileChart: looseWithMobile.data.mobileChart ?? 'both',
+      });
+    }
+  }
 
   const loose = LooseRowsLayoutSchema.safeParse(input);
   if (loose.success) {

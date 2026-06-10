@@ -10,6 +10,8 @@ import { DailyReportCardList } from '../components/reports/DailyReportCardList';
 import { MonthlyReportCardList } from '../components/reports/MonthlyReportCardList';
 import { DepartmentReportCardList } from '../components/reports/DepartmentReportCardList';
 import { fmtDate, fmtIstTime, fmtHours, fmtNumber } from '../lib/format';
+import { MobileFilterBar } from '../components/ui/MobileFilterBar';
+import { countActiveFilters } from '../lib/countActiveFilters';
 
 type Tab = 'daily' | 'monthly' | 'department' | 'location';
 
@@ -26,7 +28,7 @@ export function Reports() {
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Reports</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Reports</h1>
           <div className="text-sm text-text-muted">
             View mode: <Badge tone={isCompliant ? 'amber' : 'blue'}>{isCompliant ? 'COMPLIANT (8-hour)' : 'REAL (12-hour)'}</Badge>
           </div>
@@ -117,9 +119,19 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
     toast('CSV download started', 'success');
   };
 
+  const dailyFilterDefaults = { startDate: sevenDaysAgo, endDate: today, department: '', location: '' };
+
   return (
     <div>
-      <FilterBar>
+      <FilterBar
+        activeCount={countActiveFilters({ startDate, endDate, department, location }, dailyFilterDefaults)}
+        onClear={() => {
+          setStartDate(sevenDaysAgo);
+          setEndDate(today);
+          setDepartment('');
+          setLocation('');
+        }}
+      >
         <Field label="From"><Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); logDailyFilter({ startDate: e.target.value }); }} /></Field>
         <Field label="To"><Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); logDailyFilter({ endDate: e.target.value }); }} /></Field>
         <Field label="Department">
@@ -137,16 +149,14 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       </FilterBar>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div className="text-sm text-text-muted">
-          {isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}
+        <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
           {data && (
-            <span className="ml-3">
+            <>
               <Badge tone="green">{data.summary.present} present</Badge>
-              <span className="mx-1"> </span>
               <Badge tone="red">{data.summary.absent} absent</Badge>
-              <span className="mx-1"> </span>
               <Badge tone="gray">{data.summary.weeklyOff} weekly off</Badge>
-            </span>
+            </>
           )}
         </div>
         <div className="flex gap-2 w-full sm:w-auto no-print">
@@ -225,7 +235,8 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
 function MonthlyReport() {
   const { logReportsAction } = useActivityLog();
   const now = new Date();
-  const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [yearMonth, setYearMonth] = useState(defaultYearMonth);
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
 
@@ -244,10 +255,18 @@ function MonthlyReport() {
   });
 
   const isCompliant = data?.viewMode === 'compliant';
+  const monthlyFilterDefaults = { yearMonth: defaultYearMonth, department: '', location: '' };
 
   return (
     <div>
-      <FilterBar>
+      <FilterBar
+        activeCount={countActiveFilters({ yearMonth, department, location }, monthlyFilterDefaults)}
+        onClear={() => {
+          setYearMonth(defaultYearMonth);
+          setDepartment('');
+          setLocation('');
+        }}
+      >
         <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logMonthlyFilter({ yearMonth: e.target.value }); }} /></Field>
         <Field label="Department">
           <Select value={department} onChange={(e) => { setDepartment(e.target.value); logMonthlyFilter({ department: e.target.value }); }}>
@@ -314,23 +333,30 @@ function MonthlyReport() {
 function DepartmentReport() {
   const { logReportsAction } = useActivityLog();
   const now = new Date();
-  const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [yearMonth, setYearMonth] = useState(defaultYearMonth);
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'department', yearMonth],
     queryFn: () => reportsApi.department({ yearMonth }),
   });
 
+  const deptFilterDefaults = { yearMonth: defaultYearMonth };
+
   return (
     <div>
-      <FilterBar>
+      <FilterBar
+        activeCount={countActiveFilters({ yearMonth }, deptFilterDefaults)}
+        onClear={() => setYearMonth(defaultYearMonth)}
+      >
         <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logReportsAction('ui.reports.filter', { tab: 'department', yearMonth: e.target.value }); }} /></Field>
       </FilterBar>
 
       <DepartmentReportCardList rows={data?.rows} isLoading={isLoading} />
 
       <div className="card overflow-hidden hidden md:block">
-        <table className="w-full text-sm">
+        <div className="tbl-scroll">
+        <table className="w-full text-sm md:min-w-[640px]">
           <thead className="bg-surface2">
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
               <th className="px-4 py-3 font-semibold">Department</th>
@@ -367,6 +393,7 @@ function DepartmentReport() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -375,16 +402,22 @@ function DepartmentReport() {
 function LocationReport() {
   const { logReportsAction } = useActivityLog();
   const now = new Date();
-  const [yearMonth, setYearMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [yearMonth, setYearMonth] = useState(defaultYearMonth);
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'location', yearMonth],
     queryFn: () => reportsApi.location({ yearMonth }),
   });
 
+  const locFilterDefaults = { yearMonth: defaultYearMonth };
+
   return (
     <div>
-      <FilterBar>
+      <FilterBar
+        activeCount={countActiveFilters({ yearMonth }, locFilterDefaults)}
+        onClear={() => setYearMonth(defaultYearMonth)}
+      >
         <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logReportsAction('ui.reports.filter', { tab: 'location', yearMonth: e.target.value }); }} /></Field>
       </FilterBar>
 
@@ -420,10 +453,23 @@ function LocationReport() {
   );
 }
 
-function FilterBar({ children }: { children: React.ReactNode }) {
+function FilterBar({
+  children,
+  activeCount = 0,
+  onClear,
+}: {
+  children: React.ReactNode;
+  activeCount?: number;
+  onClear?: () => void;
+}) {
   return (
-    <div className="card p-4 mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 no-print">
+    <MobileFilterBar
+      activeCount={activeCount}
+      onClear={onClear}
+      className="no-print"
+      desktopClassName="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+    >
       {children}
-    </div>
+    </MobileFilterBar>
   );
 }

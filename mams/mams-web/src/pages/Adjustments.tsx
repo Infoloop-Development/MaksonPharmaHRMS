@@ -78,7 +78,7 @@ export function Adjustments() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="dash-stat-grid mb-6">
         <StatCard
           label="Pending"
           value={counts.Pending}

@@ -14,6 +14,10 @@ export interface DashboardChartsPayload {
     present: number[];
     absent: number[];
     late: number[];
+    weeklyOff: number[];
+    halfDay: number[];
+    dayShiftPresent: number[];
+    nightShiftPresent: number[];
   };
   weekPunctuality: {
     /** IST date this breakdown applies to (matches selected bar / table day). */
@@ -84,6 +88,34 @@ async function getDayPunctuality(date: string, totalActive: number) {
   return { date, onTime, delay, onLeave, totalActive };
 }
 
+async function countStatusByDate(dates: string[], status: string): Promise<number[]> {
+  const rows = await AttendanceDerivedModel.aggregate([
+    { $match: { date: { $in: dates }, status } },
+    { $group: { _id: '$date', count: { $sum: 1 } } },
+  ]);
+  const byDate = new Map(rows.map((r) => [r._id as string, r.count as number]));
+  return dates.map((d) => byDate.get(d) ?? 0);
+}
+
+async function countPresentByShift(dates: string[], shift: 'Day' | 'Night'): Promise<number[]> {
+  const rows = await AttendanceDerivedModel.aggregate([
+    { $match: { date: { $in: dates }, status: 'Present' } },
+    {
+      $lookup: {
+        from: 'employees',
+        localField: 'employeeId',
+        foreignField: '_id',
+        as: 'emp',
+      },
+    },
+    { $unwind: '$emp' },
+    { $match: { 'emp.timeShift': shift } },
+    { $group: { _id: '$date', count: { $sum: 1 } } },
+  ]);
+  const byDate = new Map(rows.map((r) => [r._id as string, r.count as number]));
+  return dates.map((d) => byDate.get(d) ?? 0);
+}
+
 export async function getDashboardCharts(punctualityDate?: string): Promise<DashboardChartsPayload> {
   const asOfDate = utcToIstDateString(new Date());
   const dates = lastNIstDates(7);
@@ -140,6 +172,13 @@ export async function getDashboardCharts(punctualityDate?: string): Promise<Dash
   }
   const late = dates.map((d) => lateByDate.get(d) ?? 0);
 
+  const [weeklyOff, halfDay, dayShiftPresent, nightShiftPresent] = await Promise.all([
+    countStatusByDate(dates, 'Weekly Off'),
+    countStatusByDate(dates, 'Half Day'),
+    countPresentByShift(dates, 'Day'),
+    countPresentByShift(dates, 'Night'),
+  ]);
+
   const weekPunctuality = await getDayPunctuality(punctualityFor, totalActive);
 
   return {
@@ -151,6 +190,10 @@ export async function getDashboardCharts(punctualityDate?: string): Promise<Dash
       present,
       absent,
       late,
+      weeklyOff,
+      halfDay,
+      dayShiftPresent,
+      nightShiftPresent,
     },
     weekPunctuality,
   };

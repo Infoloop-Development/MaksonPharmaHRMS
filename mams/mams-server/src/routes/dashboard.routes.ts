@@ -1,20 +1,30 @@
 import { Router } from 'express';
 import * as XLSX from 'xlsx';
-import { DashboardAttendanceQuerySchema, DashboardLayoutSchema } from '@mams/types';
+import { DashboardAttendanceQuerySchema, DashboardKpiConfigSchema, DashboardLayoutSchema } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { DeviceModel } from '../models/Device.js';
 import { AdjustmentModel } from '../models/Adjustment.js';
 import { requireAuth } from '../middleware/auth.js';
+import { audit } from '../services/audit.service.js';
+import {
+  dashboardKpiAuditPayload,
+  dashboardKpiChanged,
+  dashboardLayoutAuditPayload,
+  dashboardLayoutChangedFields,
+} from '../services/dashboardActivity.service.js';
 import { utcToIstDateString } from '../utils/time.js';
 import { getDashboardCharts } from '../services/dashboard.service.js';
 import { getDashboardLayout, saveDashboardLayout } from '../services/dashboardLayout.service.js';
+import { getDashboardKpi, saveDashboardKpi } from '../services/dashboardKpi.service.js';
 import {
   listDashboardAttendance,
   listDashboardAttendanceForExport,
   listDashboardDepartments,
   shiftLabel,
 } from '../services/dashboardAttendance.service.js';
+import { SettingsModel } from '../models/Settings.js';
+import { buildExportFileName } from '../services/exportFileName.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -61,8 +71,62 @@ router.get('/layout', async (req, res, next) => {
 
 router.put('/layout', async (req, res, next) => {
   try {
+    const userId = req.auth!.sub;
+    const before = await getDashboardLayout(userId);
     const layout = DashboardLayoutSchema.parse(req.body);
-    res.json(await saveDashboardLayout(req.auth!.sub, layout));
+    const saved = await saveDashboardLayout(userId, layout);
+    const changedFields = dashboardLayoutChangedFields(before, saved);
+    if (changedFields.length > 0) {
+      await audit(
+        'dashboard_layout_saved',
+        {
+          userId,
+          ipAddress: req.clientIp ?? null,
+          userAgent: req.header('user-agent') ?? null,
+        },
+        {
+          entityType: 'user',
+          entityId: userId,
+          payload: dashboardLayoutAuditPayload(before, saved),
+        }
+      );
+    }
+    res.json(saved);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/kpi', async (req, res, next) => {
+  try {
+    res.json(await getDashboardKpi(req.auth!.sub));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/kpi', async (req, res, next) => {
+  try {
+    const userId = req.auth!.sub;
+    const before = await getDashboardKpi(userId);
+    const config = DashboardKpiConfigSchema.parse(req.body);
+    const saved = await saveDashboardKpi(userId, config);
+    if (dashboardKpiChanged(before, saved)) {
+      await audit(
+        'dashboard_kpi_saved',
+        {
+          userId,
+          ipAddress: req.clientIp ?? null,
+          userAgent: req.header('user-agent') ?? null,
+        },
+        {
+          entityType: 'user',
+          entityId: userId,
+          payload: dashboardKpiAuditPayload(before, saved),
+        }
+      );
+    }
+    res.json(saved);
   } catch (err) {
     next(err);
   }
@@ -121,10 +185,18 @@ router.get('/attendance.xlsx', async (req, res, next) => {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="Attendance_${parsed.date}.xlsx"`
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'dashboardAttendanceXlsx',
+      {
+        department: parsed.department,
+        asOfDate: parsed.date,
+        companyName: settingsDoc?.companyName,
+      },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
     );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
   } catch (err) {
     next(err);

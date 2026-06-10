@@ -1,55 +1,71 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { DashboardAttendanceStatusFilter, DashboardBlockId, DashboardLayoutRow } from '@mams/types';
-import { DEFAULT_DASHBOARD_LAYOUT } from '@mams/types';
+import type {
+  DashboardAttendanceStatusFilter,
+  DashboardBlockId,
+  DashboardKpiConfig,
+  DashboardKpiMetricId,
+  DashboardLayoutRow,
+  DashboardMobileChart,
+} from '@mams/types';
+import { DEFAULT_DASHBOARD_KPI, DEFAULT_DASHBOARD_LAYOUT } from '@mams/types';
 import { dashboardApi } from '../api/dashboard';
 import { DashboardBarChartCard } from '../components/dashboard/DashboardBarChartCard';
 import { DashboardDonutChartCard } from '../components/dashboard/DashboardDonutChartCard';
 import { DashboardAttendanceTable } from '../components/dashboard/DashboardAttendanceTable';
+import { DashboardKpiGrid } from '../components/dashboard/DashboardKpiGrid';
 import { DashboardLayoutEditor } from '../components/dashboard/DashboardLayoutEditor';
 import { useDashboardChartState } from '../components/dashboard/useDashboardChartState';
 import { layoutEquals } from '../lib/dashboardLayout';
-import { fmtDate, fmtNumber, fmtWeekdayShort } from '../lib/format';
+import {
+  type DashboardKpiFilterState,
+  type DashboardShiftFilter,
+  kpiMetricToBarMetric,
+  syncActiveMetricFromFilters,
+} from '../lib/dashboardKpiRegistry';
+import { fmtDate, fmtWeekdayShort } from '../lib/format';
 import { useToast } from '../components/ui/Toast';
+import { useActivityLog } from '../hooks/useActivityLog';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
-export type DashboardTile = 'total' | 'present' | 'absent' | 'late';
-export type BarMetric = 'present' | 'absent' | 'late';
-
-function tileToStatus(tile: DashboardTile | null): DashboardAttendanceStatusFilter {
-  if (tile === 'present') return 'Present';
-  if (tile === 'absent') return 'Absent';
-  if (tile === 'late') return 'Late';
-  return 'All';
+function kpiConfigEquals(a: DashboardKpiConfig, b: DashboardKpiConfig): boolean {
+  return a.slots.every((s, i) => s === b.slots[i]);
 }
 
-export function statusToTile(status: DashboardAttendanceStatusFilter): DashboardTile | null {
-  if (status === 'Present') return 'present';
-  if (status === 'Absent') return 'absent';
-  if (status === 'Late') return 'late';
-  return null;
-}
-
-function tileToBarMetric(tile: DashboardTile | null): BarMetric {
-  if (tile === 'absent') return 'absent';
-  if (tile === 'late') return 'late';
-  return 'present';
+function invalidateActivity(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
 }
 
 export function Dashboard() {
   const toast = useToast((s) => s.push);
   const queryClient = useQueryClient();
+  const { logFilterDebounced } = useActivityLog();
   const [selectedDate, setSelectedDate] = useState('');
-  const [activeTile, setActiveTile] = useState<DashboardTile | null>(null);
+  const [statusFilter, setStatusFilter] = useState<DashboardAttendanceStatusFilter>('All');
+  const [shiftFilter, setShiftFilter] = useState<DashboardShiftFilter>('All');
+  const [activeKpiMetric, setActiveKpiMetric] = useState<DashboardKpiMetricId | null>(null);
   const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const [isEditingKpi, setIsEditingKpi] = useState(false);
   const [draftRows, setDraftRows] = useState<DashboardLayoutRow[]>(
     () => DEFAULT_DASHBOARD_LAYOUT.rows.map((r) => ({ items: [...r.items] }))
   );
+  const [draftMobileChart, setDraftMobileChart] = useState<DashboardMobileChart>(
+    () => DEFAULT_DASHBOARD_LAYOUT.mobileChart ?? 'both'
+  );
+  const [draftKpiSlots, setDraftKpiSlots] = useState<DashboardKpiMetricId[]>([
+    ...DEFAULT_DASHBOARD_KPI.slots,
+  ]);
 
-  const statusFilter = tileToStatus(activeTile);
-  const barMetric = tileToBarMetric(activeTile);
+  const filterState: DashboardKpiFilterState = useMemo(
+    () => ({ statusFilter, shiftFilter, activeMetric: activeKpiMetric }),
+    [statusFilter, shiftFilter, activeKpiMetric]
+  );
+
+  const barMetric = kpiMetricToBarMetric(activeKpiMetric);
 
   const stats = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: dashboardApi.stats });
   const layout = useQuery({ queryKey: ['dashboard', 'layout'], queryFn: dashboardApi.getLayout });
+  const kpiConfig = useQuery({ queryKey: ['dashboard', 'kpi'], queryFn: dashboardApi.getKpi });
   const charts = useQuery({
     queryKey: ['dashboard', 'charts', selectedDate],
     queryFn: () => dashboardApi.charts(selectedDate || undefined),
@@ -58,23 +74,58 @@ export function Dashboard() {
   });
 
   const savedRows = layout.data?.rows ?? DEFAULT_DASHBOARD_LAYOUT.rows;
+  const savedMobileChart = layout.data?.mobileChart ?? DEFAULT_DASHBOARD_LAYOUT.mobileChart ?? 'both';
+  const savedKpiSlots = kpiConfig.data?.slots ?? DEFAULT_DASHBOARD_KPI.slots;
+  const displayKpiSlots = isEditingKpi ? draftKpiSlots : savedKpiSlots;
 
   useEffect(() => {
     if (layout.data && !isEditingLayout) {
       setDraftRows(layout.data.rows.map((r) => ({ items: [...r.items] })));
+      setDraftMobileChart(layout.data.mobileChart ?? 'both');
     }
   }, [layout.data, isEditingLayout]);
+
+  useEffect(() => {
+    if (kpiConfig.data && !isEditingKpi) {
+      setDraftKpiSlots([...kpiConfig.data.slots]);
+    }
+  }, [kpiConfig.data, isEditingKpi]);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    logFilterDebounced('dashboard', 'filter', {
+      date: selectedDate,
+      statusFilter,
+      shiftFilter,
+    });
+  }, [selectedDate, statusFilter, shiftFilter, logFilterDebounced]);
 
   const saveLayoutMutation = useMutation({
     mutationFn: dashboardApi.saveLayout,
     onSuccess: (data) => {
       queryClient.setQueryData(['dashboard', 'layout'], data);
       setDraftRows(data.rows.map((r) => ({ items: [...r.items] })));
+      setDraftMobileChart(data.mobileChart ?? 'both');
       setIsEditingLayout(false);
+      invalidateActivity(queryClient);
       toast('Dashboard layout saved', 'success');
     },
     onError: (e) => {
       toast(e instanceof Error ? e.message : 'Failed to save layout', 'error');
+    },
+  });
+
+  const saveKpiMutation = useMutation({
+    mutationFn: dashboardApi.saveKpi,
+    onSuccess: (data) => {
+      queryClient.setQueryData(['dashboard', 'kpi'], data);
+      setDraftKpiSlots([...data.slots]);
+      setIsEditingKpi(false);
+      invalidateActivity(queryClient);
+      toast('KPI cards saved', 'success');
+    },
+    onError: (e) => {
+      toast(e instanceof Error ? e.message : 'Failed to save KPI cards', 'error');
     },
   });
 
@@ -84,20 +135,28 @@ export function Dashboard() {
     }
   }, [stats.data?.asOfDate, selectedDate]);
 
-  const clickTile = useCallback((tile: DashboardTile) => {
-    if (tile === 'total') {
-      setActiveTile(null);
-      return;
-    }
-    setActiveTile((prev) => (prev === tile ? null : tile));
+  const onFilterChange = useCallback((next: DashboardKpiFilterState) => {
+    setStatusFilter(next.statusFilter);
+    setShiftFilter(next.shiftFilter);
+    setActiveKpiMetric(next.activeMetric);
   }, []);
 
   const onStatusFilterChange = useCallback((status: DashboardAttendanceStatusFilter) => {
-    setActiveTile(statusToTile(status));
+    setStatusFilter(status);
+    setShiftFilter('All');
+    setActiveKpiMetric(syncActiveMetricFromFilters(status, 'All'));
+  }, []);
+
+  const onShiftFilterChange = useCallback((shift: DashboardShiftFilter) => {
+    setShiftFilter(shift);
+    setStatusFilter('All');
+    setActiveKpiMetric(syncActiveMetricFromFilters('All', shift));
   }, []);
 
   const resetView = useCallback(() => {
-    setActiveTile(null);
+    setStatusFilter('All');
+    setShiftFilter('All');
+    setActiveKpiMetric(null);
     if (charts.data?.asOfDate) {
       setSelectedDate(charts.data.asOfDate);
     } else if (stats.data?.asOfDate) {
@@ -148,10 +207,19 @@ export function Dashboard() {
           selectedDate={selectedDate}
           statusFilter={statusFilter}
           onStatusFilterChange={onStatusFilterChange}
+          shiftFilter={shiftFilter}
+          onShiftFilterChange={onShiftFilterChange}
         />
       );
     },
-    [chartState, selectedDate, statusFilter, onStatusFilterChange]
+    [
+      chartState,
+      selectedDate,
+      statusFilter,
+      shiftFilter,
+      onStatusFilterChange,
+      onShiftFilterChange,
+    ]
   );
 
   const dayIdx = useMemo(() => {
@@ -159,7 +227,7 @@ export function Dashboard() {
     return charts.data.last7Days.dates.indexOf(selectedDate);
   }, [charts.data, selectedDate]);
 
-  const kpi = useMemo(() => {
+  const kpiValues = useMemo(() => {
     const total = charts.data?.last7Days.totalEmployees ?? stats.data?.employees.active ?? 0;
     const idx =
       dayIdx >= 0
@@ -167,31 +235,60 @@ export function Dashboard() {
         : charts.data?.last7Days.dates.length
           ? charts.data.last7Days.dates.length - 1
           : -1;
-    const present = idx >= 0 ? (charts.data?.last7Days.present[idx] ?? 0) : 0;
-    const absent = idx >= 0 ? (charts.data?.last7Days.absent[idx] ?? 0) : 0;
-    const late = idx >= 0 ? (charts.data?.last7Days.late[idx] ?? 0) : 0;
     const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
-    return { total, present, absent, late, weekday };
+    return {
+      total,
+      present: idx >= 0 ? (charts.data?.last7Days.present[idx] ?? 0) : 0,
+      absent: idx >= 0 ? (charts.data?.last7Days.absent[idx] ?? 0) : 0,
+      late: idx >= 0 ? (charts.data?.last7Days.late[idx] ?? 0) : 0,
+      onTime: charts.data?.weekPunctuality.onTime ?? 0,
+      weeklyOff: idx >= 0 ? (charts.data?.last7Days.weeklyOff[idx] ?? 0) : 0,
+      halfDay: idx >= 0 ? (charts.data?.last7Days.halfDay[idx] ?? 0) : 0,
+      dayShiftPresent: idx >= 0 ? (charts.data?.last7Days.dayShiftPresent[idx] ?? 0) : 0,
+      nightShiftPresent: idx >= 0 ? (charts.data?.last7Days.nightShiftPresent[idx] ?? 0) : 0,
+      weekday,
+    };
   }, [charts.data, stats.data, dayIdx, selectedDate]);
 
   const asOfDate = stats.data?.asOfDate ?? charts.data?.asOfDate ?? '';
+  const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
   const isModified =
-    activeTile !== null || Boolean(selectedDate && asOfDate && selectedDate !== asOfDate);
+    statusFilter !== 'All' ||
+    shiftFilter !== 'All' ||
+    Boolean(selectedDate && asOfDate && selectedDate !== asOfDate);
 
-  const layoutChanged = !layoutEquals({ rows: draftRows }, { rows: savedRows });
+  const layoutChanged = !layoutEquals(
+    { rows: draftRows, mobileChart: draftMobileChart },
+    { rows: savedRows, mobileChart: savedMobileChart }
+  );
+  const kpiChanged = !kpiConfigEquals({ slots: draftKpiSlots }, { slots: savedKpiSlots });
 
   const startEditLayout = () => {
+    if (isEditingKpi) return;
     setDraftRows(savedRows.map((r) => ({ items: [...r.items] })));
+    setDraftMobileChart(savedMobileChart);
     setIsEditingLayout(true);
   };
 
   const cancelEditLayout = () => {
     setDraftRows(savedRows.map((r) => ({ items: [...r.items] })));
+    setDraftMobileChart(savedMobileChart);
     setIsEditingLayout(false);
   };
 
   const saveEditLayout = () => {
-    saveLayoutMutation.mutate({ rows: draftRows });
+    saveLayoutMutation.mutate({ rows: draftRows, mobileChart: draftMobileChart });
+  };
+
+  const startEditKpi = () => {
+    if (isEditingLayout) return;
+    setDraftKpiSlots([...savedKpiSlots]);
+    setIsEditingKpi(true);
+  };
+
+  const cancelEditKpi = () => {
+    setDraftKpiSlots([...savedKpiSlots]);
+    setIsEditingKpi(false);
   };
 
   if (stats.isLoading) return <div className="text-text-muted">Loading...</div>;
@@ -200,9 +297,23 @@ export function Dashboard() {
 
   return (
     <div className="2xl:max-w-[1600px] 2xl:mx-auto">
-      <div className="mb-3">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="text-xs text-text-muted">As of {fmtDate(s.asOfDate)}</div>
+      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+          <div className="text-xs text-text-muted">As of {fmtDate(s.asOfDate)}</div>
+      </div>
+        {!isEditingKpi && !isEditingLayout && (
+          <button
+            type="button"
+            className="dash-kpi-edit-btn shrink-0 mt-0.5"
+            aria-label="Customize KPI cards"
+            onClick={startEditKpi}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {isModified && (
@@ -210,60 +321,39 @@ export function Dashboard() {
           <span className="dash-filter-bar-label">
             Viewing:{' '}
             <strong>
-              {kpi.weekday && kpi.weekday !== '-' ? `${kpi.weekday} (${selectedDate})` : selectedDate}
+              {weekday && weekday !== '-' ? `${weekday} (${selectedDate})` : selectedDate}
             </strong>
             {statusFilter !== 'All' && <span> / {statusFilter}</span>}
+            {shiftFilter !== 'All' && <span> / {shiftFilter} Shift</span>}
           </span>
           <button type="button" className="btn-primary btn-sm" onClick={resetView}>
             Reset to Default View
           </button>
-        </div>
+                  </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
-        <DashboardStatCard
-          label="Total Active"
-          value={fmtNumber(kpi.total)}
-          sub="across active employees"
-          accent="primary"
-          selected={activeTile === null}
-          onClick={() => clickTile('total')}
-        />
-        <DashboardStatCard
-          label={kpi.weekday && kpi.weekday !== '-' ? `Present ${kpi.weekday}` : 'Present Today'}
-          value={fmtNumber(kpi.present)}
-          sub={kpi.total > 0 ? `${((kpi.present / kpi.total) * 100).toFixed(1)}% attendance` : ''}
-          accent="green"
-          selected={activeTile === 'present'}
-          onClick={() => clickTile('present')}
-        />
-        <DashboardStatCard
-          label={kpi.weekday && kpi.weekday !== '-' ? `Absent ${kpi.weekday}` : 'Absent Today'}
-          value={fmtNumber(kpi.absent)}
-          sub={kpi.total > 0 ? `${((kpi.absent / kpi.total) * 100).toFixed(1)}% absence` : ''}
-          accent="red"
-          selected={activeTile === 'absent'}
-          onClick={() => clickTile('absent')}
-        />
-        <DashboardStatCard
-          label="Late Arrivals"
-          value={fmtNumber(kpi.late)}
-          sub="after shift start"
-          accent="amber"
-          selected={activeTile === 'late'}
-          onClick={() => clickTile('late')}
-        />
-      </div>
+      <DashboardKpiGrid
+        slots={displayKpiSlots}
+        values={kpiValues}
+        filterState={filterState}
+        isEditing={isEditingKpi}
+        onSlotsChange={setDraftKpiSlots}
+        onFilterChange={onFilterChange}
+        onCancelEdit={cancelEditKpi}
+        onSave={() => saveKpiMutation.mutate({ slots: draftKpiSlots })}
+        canSave={kpiChanged}
+        isSaving={saveKpiMutation.isPending}
+      />
 
-      <div className="flex flex-wrap justify-end gap-2 mb-3 dash-layout-toolbar">
+      <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-3 dash-layout-toolbar">
         {isEditingLayout ? (
           <>
-            <button type="button" className="btn-outline btn-sm" onClick={cancelEditLayout}>
+            <button type="button" className="btn-outline btn-sm dash-layout-toolbar-btn" onClick={cancelEditLayout}>
               Cancel
             </button>
             <button
               type="button"
-              className="btn-primary btn-sm"
+              className="btn-primary btn-sm dash-layout-toolbar-btn"
               onClick={saveEditLayout}
               disabled={!layoutChanged || saveLayoutMutation.isPending}
             >
@@ -271,7 +361,12 @@ export function Dashboard() {
             </button>
           </>
         ) : (
-          <button type="button" className="btn-outline btn-sm" onClick={startEditLayout}>
+          <button
+            type="button"
+            className="btn-outline btn-sm dash-layout-toolbar-btn"
+            onClick={startEditLayout}
+            disabled={isEditingKpi}
+          >
             Edit layout
           </button>
         )}
@@ -284,41 +379,11 @@ export function Dashboard() {
       <DashboardLayoutEditor
         isEditing={isEditingLayout}
         rows={isEditingLayout ? draftRows : savedRows}
+        mobileChart={isEditingLayout ? draftMobileChart : savedMobileChart}
         onRowsChange={setDraftRows}
+        onMobileChartChange={setDraftMobileChart}
         renderBlock={renderBlock}
       />
     </div>
-  );
-}
-
-function DashboardStatCard({
-  label,
-  value,
-  sub,
-  accent,
-  selected,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  accent: 'primary' | 'green' | 'red' | 'amber';
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={`dash-stat-card accent-${accent} text-left w-full ${selected ? 'selected' : ''}`}
-      onClick={(e) => {
-        onClick();
-        (e.currentTarget as HTMLButtonElement).blur();
-      }}
-    >
-      <div className="dash-stat-hint">Filters table + chart</div>
-      <div className="text-[11px] text-text-subtle font-semibold uppercase tracking-wider">{label}</div>
-      <div className="text-3xl font-bold my-1.5 leading-none">{value}</div>
-      {sub && <div className="text-xs text-text-muted">{sub}</div>}
-    </button>
   );
 }

@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import plugin from 'tailwindcss/plugin';
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -22,7 +23,17 @@ export default {
       },
       boxShadow: {
         card: '0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04)',
+        floating: '0 4px 16px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06)',
       },
     },
   },
+  plugins: [
+    plugin(({ addUtilities, theme }) => {
+      addUtilities({
+        '.shadow-floating': {
+          boxShadow: theme('boxShadow.floating'),
+        },
+      });
+    }),
+  ],
 } satisfies Config;

@@ -40,7 +40,9 @@ export function DashboardDonutChartCard({
           : '…'}
         {' · '}Click segments or legend to filter
       </p>
-      <div className={`relative flex flex-1 items-center justify-center gap-6 ${BAR_CHART_HEIGHT}`}>
+      <div
+        className={`relative flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0 ${BAR_CHART_HEIGHT}`}
+      >
         {isInitialLoad && (
           <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">
             Loading chart…
@@ -55,7 +57,7 @@ export function DashboardDonutChartCard({
           </div>
         )}
         {donutChart && donutMeta && (
-          <div className={`relative ${DONUT_CHART_SIZE} shrink-0`}>
+          <div className={`relative ${DONUT_CHART_SIZE} max-w-[min(100%,160px)] shrink-0`}>
             <Doughnut data={donutChart.data} options={donutChart.options} />
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <div
@@ -68,7 +70,7 @@ export function DashboardDonutChartCard({
           </div>
         )}
         {donutMeta && (
-          <div className="flex flex-col gap-1 min-w-[120px]">
+          <div className="flex flex-col gap-1 w-full md:w-auto md:min-w-[120px] items-stretch md:items-start">
             <button
               type="button"
               className={`dash-donut-legend-item ${statusFilter === 'Present' ? 'active' : ''}`}

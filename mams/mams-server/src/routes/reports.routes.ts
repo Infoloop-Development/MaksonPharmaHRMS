@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel } from '../models/Employee.js';
 import { requireAuth } from '../middleware/auth.js';
+import { SettingsModel } from '../models/Settings.js';
+import { buildExportFileName } from '../services/exportFileName.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -272,8 +274,22 @@ router.get('/daily.csv', async (req, res, next) => {
       csv.push(row.join(','));
     }
 
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'dailyReportCsv',
+      {
+        department: q.department,
+        location: q.location,
+        startDate: q.startDate,
+        endDate: q.endDate,
+        companyName: settingsDoc?.companyName,
+      },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="mams-daily-${Date.now()}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(csv.join('\n'));
   } catch (err) {
     next(err);
