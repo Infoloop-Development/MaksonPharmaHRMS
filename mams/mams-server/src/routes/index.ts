@@ -11,6 +11,7 @@ import usersRoutes from './users.routes.js';
 import csvImportRoutes from './csvImport.routes.js';
 import goLiveRoutes from './goLive.routes.js';
 import activityRoutes from './activity.routes.js';
+import leaveRoutes from './leave.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
@@ -25,6 +26,7 @@ apiRouter.use('/reports', reportsRoutes);
 apiRouter.use('/users', usersRoutes);
 apiRouter.use('/go-live', goLiveRoutes);
 apiRouter.use('/activity', activityRoutes);
+apiRouter.use('/leave', leaveRoutes);
 
 apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });

@@ -6,6 +6,7 @@ const SECTION_LABELS: Record<string, string> = {
   shifts: 'Shifts',
   smart_anchor: 'Smart Anchor v2',
   confidentiality: 'Confidentiality Notice',
+  export_naming: 'Export filename formats',
   settings: 'Settings',
 };
 
@@ -25,6 +26,17 @@ const SETTINGS_FIELD_LABELS: Record<string, string> = {
   smartAnchorEnabled: 'Smart Anchor',
   confidentialityNoticeEnabled: 'Confidentiality notice',
   confidentialityNoticeText: 'Confidentiality notice text',
+  exportNaming: 'Export filename formats',
+};
+
+const MOBILE_CHART_LABELS: Record<string, string> = {
+  both: 'Both charts',
+  bar: 'Bar only',
+  donut: 'Donut only',
+};
+
+const PERMISSION_LABELS: Record<string, string> = {
+  'manage.export_naming': 'export filename formats',
 };
 
 const MAX_VALUE_PREVIEW = 40;
@@ -39,6 +51,40 @@ function labelForField(key: string): string {
   return SETTINGS_FIELD_LABELS[key] ?? key;
 }
 
+function formatExportNamingDiff(before: unknown, after: unknown): string {
+  const b = (before && typeof before === 'object' ? before : {}) as Record<string, unknown>;
+  const a = (after && typeof after === 'object' ? after : {}) as Record<string, unknown>;
+  const parts: string[] = [];
+  if (b.companyCode !== a.companyCode) {
+    parts.push(`company code “${truncatePreview(a.companyCode)}”`);
+  }
+  if (b.dateFormat !== a.dateFormat) {
+    parts.push(`date format ${String(a.dateFormat ?? '')}`);
+  }
+  if (b.includeGeneratedTimestamp !== a.includeGeneratedTimestamp) {
+    parts.push(a.includeGeneratedTimestamp ? 'timestamp on' : 'timestamp off');
+  }
+  const bPatterns = (b.patterns ?? {}) as Record<string, string>;
+  const aPatterns = (a.patterns ?? {}) as Record<string, string>;
+  for (const key of ['dailyReportCsv', 'dashboardAttendanceXlsx']) {
+    if (bPatterns[key] !== aPatterns[key]) {
+      parts.push(`${key} pattern updated`);
+    }
+  }
+  return parts.length > 0 ? parts.join(', ') : 'export filename settings';
+}
+
+function permissionDiffNote(added?: string[], removed?: string[]): string {
+  const bits: string[] = [];
+  for (const p of added ?? []) {
+    if (PERMISSION_LABELS[p]) bits.push(`granted ${PERMISSION_LABELS[p]}`);
+  }
+  for (const p of removed ?? []) {
+    if (PERMISSION_LABELS[p]) bits.push(`revoked ${PERMISSION_LABELS[p]}`);
+  }
+  return bits.length > 0 ? ` (${bits.join('; ')})` : '';
+}
+
 function formatSettingsChanged(payload: Record<string, unknown>): string {
   const section = SECTION_LABELS[String(payload.section)] ?? 'Settings';
   const fields = (payload.changedFields as string[] | undefined) ?? [];
@@ -46,6 +92,10 @@ function formatSettingsChanged(payload: Record<string, unknown>): string {
   const after = (payload.after as Record<string, unknown> | undefined) ?? {};
 
   if (fields.length === 0) return `Updated ${section}`;
+
+  if (fields.length === 1 && fields[0] === 'exportNaming') {
+    return `Updated ${section}: ${formatExportNamingDiff(before.exportNaming, after.exportNaming)}`;
+  }
 
   if (fields.length === 1) {
     const key = fields[0]!;
@@ -111,6 +161,14 @@ export function activityPageBadge(eventType: string, payload: Record<string, unk
   if (eventType.startsWith('ui.devices') || eventType.startsWith('device_')) return 'Devices';
   if (eventType === 'settings_changed') return 'Settings';
   if (eventType.startsWith('user_')) return 'Settings';
+  if (
+    eventType.startsWith('ui.dashboard') ||
+    eventType === 'dashboard_layout_saved' ||
+    eventType === 'dashboard_kpi_saved'
+  ) {
+    return 'Dashboard';
+  }
+  if (eventType.startsWith('leave_') || eventType === 'holiday_created') return 'Leave';
   if (['login', 'logout', 'password_changed'].includes(eventType)) return 'Auth';
   return 'System';
 }
@@ -153,6 +211,30 @@ export function formatActivityDescription(item: ActivityListItem): string {
       const parts = filterParts(p, ['vendor', 'department', 'location', 'network', 'connection']);
       return parts ? `Device filters: ${parts}` : 'Updated device filters';
     }
+    case 'ui.dashboard.filter': {
+      const parts = filterParts(p, ['date', 'statusFilter', 'shiftFilter', 'department', 'search']);
+      return parts ? `Dashboard filters: ${parts}` : 'Updated dashboard filters';
+    }
+    case 'ui.dashboard.export_xlsx': {
+      const parts = filterParts(p, ['date', 'department', 'status', 'timeShift', 'search']);
+      return `Exported dashboard attendance Excel${parts ? ` (${parts})` : ''}`;
+    }
+    case 'dashboard_layout_saved': {
+      const mobile = MOBILE_CHART_LABELS[String(p.mobileChart)] ?? String(p.mobileChart ?? 'both');
+      const tablePos = p.tablePosition === 'top' ? 'table on top' : 'charts on top';
+      const fields = (p.changedFields as string[] | undefined) ?? [];
+      const detail = fields.includes('mobileChart') && fields.includes('rows')
+        ? `${tablePos}; mobile: ${mobile}`
+        : fields.includes('mobileChart')
+          ? `mobile chart: ${mobile}`
+          : tablePos;
+      return `Saved dashboard layout (${detail})`;
+    }
+    case 'dashboard_kpi_saved': {
+      const slots = (p.slotsAfter as string[] | undefined) ?? (p.slots as string[] | undefined) ?? [];
+      const labels = slots.slice(0, 4).join(', ');
+      return labels ? `Customized KPI cards (${labels})` : 'Customized KPI cards';
+    }
     case 'device_registered':
       return `Registered device ${p.serialNumber ?? ''} (${p.vendor ?? 'eSSL'})`.trim();
     case 'devices_synced_all':
@@ -161,12 +243,36 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return 'Synced device';
     case 'device_updated':
       return `Updated device (${(p.changedFields as string[] | undefined)?.join(', ') ?? 'fields'})`;
+    case 'leave_applied':
+      return `Applied leave (${p.status ?? 'submitted'}, ${p.totalDays ?? '?'} day(s))`;
+    case 'leave_approved':
+      return 'Approved leave request';
+    case 'leave_rejected':
+      return `Rejected leave request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
+    case 'leave_cancelled':
+      return 'Cancelled leave request';
+    case 'leave_quota_adjusted':
+      return `Adjusted leave quota (${p.delta ?? '?'} day(s))`;
+    case 'holiday_created':
+      return `Added holiday “${p.name ?? ''}” (${p.date ?? ''})`;
     case 'settings_changed':
       return formatSettingsChanged(p);
-    case 'user_created':
-      return `Added user ${p.email ?? ''} (${p.role ?? ''})`.trim();
-    case 'user_updated':
-      return p.self ? 'Updated own profile' : `Updated user permissions/settings`;
+    case 'user_created': {
+      const base = `Added user ${p.email ?? ''} (${p.role ?? ''})`.trim();
+      const perms = p.permissions as string[] | undefined;
+      const exportNaming = perms?.includes('manage.export_naming')
+        ? '; can configure export filenames'
+        : '';
+      return `${base}${exportNaming}`;
+    }
+    case 'user_updated': {
+      if (p.self) return 'Updated own profile';
+      const added = p.permissionsAdded as string[] | undefined;
+      const removed = p.permissionsRemoved as string[] | undefined;
+      const note = permissionDiffNote(added, removed);
+      if (note) return `Updated user permissions${note}`;
+      return 'Updated user permissions/settings';
+    }
     case 'unmask_succeeded': {
       const label = String(p.fieldLabel ?? p.field ?? 'field');
       return `Unmasked ${label} for ${unmaskEmployeeRef(p)}${unmaskReasonSuffix(p)}`;

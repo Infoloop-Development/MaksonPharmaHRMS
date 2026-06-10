@@ -91,6 +91,7 @@ describe('activity.service', () => {
     expect(settingsSectionFromChangedFields(['companyName'])).toBe('company');
     expect(settingsSectionFromChangedFields(['smartAnchorEnabled'])).toBe('smart_anchor');
     expect(settingsSectionFromChangedFields(['cin'])).toBe('compliance');
+    expect(settingsSectionFromChangedFields(['exportNaming'])).toBe('export_naming');
   });
 
   it('diffSettingsValues records only keys whose values changed', () => {

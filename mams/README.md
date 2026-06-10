@@ -16,7 +16,8 @@ cp mams-server/.env.example mams-server/.env
 cp mams-web/.env.example mams-web/.env
 # Edit JWT secrets in mams-server/.env (generate with: openssl rand -base64 32)
 
-# 4. Seed the database (1,800 mock employees + 7 days of attendance)
+# 4. Seed the database (1,800 mock employees + 7 days of attendance + leave demo data)
+#    Run from the mams/ folder (not the repo root). Seeds leave types, 3 holidays, and sample leave requests.
 npm run seed
 
 # 5. Run dev servers (in two terminals)
@@ -24,8 +25,11 @@ npm run dev:server   # http://localhost:3001
 npm run dev:web      # http://localhost:5173
 
 # 6. Login
-# hr.admin@makson-group.com / makson2026   (real view, 12-hour shifts)
-# hr.compliance@makson-group.com / makson2026  (compliant view, 8-hour shifts)
+# hr.admin@makson-group.com / makson2026   (real view, 12-hour shifts; manage.leave for holidays/quotas)
+# hr.compliance@makson-group.com / makson2026  (compliant view, 8-hour shifts; read-only leave)
+#
+# Leave module: sidebar → Leave → Holidays (national/company holidays), Quotas, Leave Settings.
+# App-wide settings (users, devices): sidebar → Settings. A link card on Settings points to Leave.
 
 # Optional — welcome email when creating users (Settings → Add User)
 # Set MAIL_ENABLED=true and SMTP_* in mams-server/.env (on-prem relay in prod; Mailtrap or local Mailhog on 1025 for dev).

@@ -11,6 +11,7 @@ import { fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 import { EmployeeCardList } from '../components/employees/EmployeeCardList';
+import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
@@ -56,14 +57,17 @@ export function Employees() {
 
       {canManage && <BiometricIdBanner />}
 
-      <div className="card p-4 mb-4 flex gap-3">
-        <input
-          className="input flex-1"
-          placeholder="Search by name, employee code, biometric ID..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-        />
-      </div>
+      <MobileFilterBar
+        search={
+          <input
+            className="input flex-1"
+            placeholder="Search by name, employee code, biometric ID..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        }
+        desktopClassName="hidden md:flex gap-3"
+      />
 
       <EmployeeCardList items={data?.items} isLoading={isLoading} error={!!error} />
 
@@ -276,7 +280,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
       {result && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="dash-stat-grid">
             <ResultStat label="Total Rows" value={result.totalRows} />
             <ResultStat label="Imported" value={result.successCount} tone="green" />
             <ResultStat label="Duplicates" value={result.duplicateCount} tone="amber" />

@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { DashboardAttendanceRow, DashboardAttendanceStatusFilter } from '@mams/types';
 import { dashboardApi } from '../../api/dashboard';
+import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
 import { fmtHours, fmtWeekdayShort } from '../../lib/format';
 import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
@@ -11,6 +12,8 @@ import {
   AttendanceStatusPill,
   displayAttendanceCell,
 } from './dashboardAttendanceUi';
+import { MobileFilterBar } from '../ui/MobileFilterBar';
+import { countActiveFilters } from '../../lib/countActiveFilters';
 
 type ShiftFilter = 'All' | 'Day' | 'Night';
 type StatusFilter = DashboardAttendanceStatusFilter;
@@ -71,16 +74,21 @@ export function DashboardAttendanceTable({
   selectedDate,
   statusFilter,
   onStatusFilterChange,
+  shiftFilter,
+  onShiftFilterChange,
 }: {
   selectedDate: string;
   statusFilter: StatusFilter;
   onStatusFilterChange: (s: StatusFilter) => void;
+  shiftFilter: ShiftFilter;
+  onShiftFilterChange: (s: ShiftFilter) => void;
 }) {
   const toast = useToast((s) => s.push);
+  const { logDashboardAction } = useActivityLog();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [department, setDepartment] = useState('');
-  const [shift, setShift] = useState<ShiftFilter>('All');
+  const shift = shiftFilter;
   const status = statusFilter;
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
@@ -134,10 +142,8 @@ export function DashboardAttendanceTable({
     Boolean(debouncedSearch.trim()) || Boolean(department) || shift !== 'All' || status !== 'All';
 
   const clearFilters = () => {
-    setSearch('');
-    setDebouncedSearch('');
     setDepartment('');
-    setShift('All');
+    onShiftFilterChange('All');
     onStatusFilterChange('All');
     setPage(1);
   };
@@ -167,6 +173,13 @@ export function DashboardAttendanceTable({
         timeShift: shift === 'All' ? undefined : shift,
         status,
       });
+      logDashboardAction('ui.dashboard.export_xlsx', {
+        date: selectedDate,
+        search: debouncedSearch.trim() || undefined,
+        department: department || undefined,
+        timeShift: shift === 'All' ? undefined : shift,
+        status,
+      });
       toast('Attendance export downloaded', 'success');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'error');
@@ -177,6 +190,60 @@ export function DashboardAttendanceTable({
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
+  const filterDefaults = { department: '', shift: 'All' as ShiftFilter, status: 'All' as StatusFilter };
+  const activeCount = countActiveFilters({ department, shift, status }, filterDefaults);
+
+  const exportButton = (
+    <button
+      type="button"
+      className="btn-green"
+      onClick={onExport}
+      disabled={exporting || isInitialLoad}
+    >
+      <DownloadIcon />
+      {exporting ? 'Exporting…' : 'Export'}
+    </button>
+  );
+
+  const searchField = (
+    <input
+      className="w-full"
+      placeholder="Search name or ID..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+  );
+
+  const filterFields = (
+    <>
+      <select className="w-full" value={department} onChange={(e) => setDepartment(e.target.value)}>
+        <option value="">All Depts</option>
+        {(departmentsData?.departments ?? []).map((d) => (
+          <option key={d} value={d}>
+            {d}
+          </option>
+        ))}
+      </select>
+      <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+        <option value="All">All Time Shifts</option>
+        <option value="Day">Day (6AM-6PM)</option>
+        <option value="Night">Night (6PM-6AM)</option>
+      </select>
+      <select
+        className="w-full"
+        value={status}
+        onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}
+      >
+        <option value="All">All Status</option>
+        <option value="Present">Present</option>
+        <option value="On Time">On Time</option>
+        <option value="Absent">Absent</option>
+        <option value="Late">Late</option>
+        <option value="Weekly Off">Weekly Off</option>
+        <option value="Half Day">Half Day</option>
+      </select>
+    </>
+  );
 
   if (!selectedDate) {
     return null;
@@ -189,7 +256,18 @@ export function DashboardAttendanceTable({
           Attendance - {selectedDate}
           {weekday !== '-' && ` (${weekday})`}
         </h3>
-        <div className="dash-table-filters">
+        <MobileFilterBar
+          noCard
+          search={searchField}
+          activeCount={activeCount}
+          onClear={clearFilters}
+          actions={exportButton}
+          desktopClassName="hidden"
+          className="w-full md:hidden"
+        >
+          {filterFields}
+        </MobileFilterBar>
+        <div className="dash-table-filters hidden md:flex">
           <input
             placeholder="Search name or ID..."
             value={search}
@@ -204,7 +282,7 @@ export function DashboardAttendanceTable({
               </option>
             ))}
           </select>
-          <select value={shift} onChange={(e) => setShift(e.target.value as ShiftFilter)}>
+          <select value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
             <option value="All">All Time Shifts</option>
             <option value="Day">Day (6AM-6PM)</option>
             <option value="Night">Night (6PM-6AM)</option>
@@ -215,18 +293,13 @@ export function DashboardAttendanceTable({
           >
             <option value="All">All Status</option>
             <option value="Present">Present</option>
+            <option value="On Time">On Time</option>
             <option value="Absent">Absent</option>
             <option value="Late">Late</option>
+            <option value="Weekly Off">Weekly Off</option>
+            <option value="Half Day">Half Day</option>
           </select>
-          <button
-            type="button"
-            className="btn-green"
-            onClick={onExport}
-            disabled={exporting || isInitialLoad}
-          >
-            <DownloadIcon />
-            {exporting ? 'Exporting…' : 'Export'}
-          </button>
+          {exportButton}
         </div>
       </div>
 
@@ -340,7 +413,7 @@ export function DashboardAttendanceTable({
             </button>
           )}
           {shift !== 'All' && (
-            <button type="button" className="dash-filter-tag" onClick={() => setShift('All')}>
+            <button type="button" className="dash-filter-tag" onClick={() => onShiftFilterChange('All')}>
               {shift} Shift ×
             </button>
           )}

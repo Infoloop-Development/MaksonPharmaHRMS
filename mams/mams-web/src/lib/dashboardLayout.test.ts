@@ -11,6 +11,7 @@ import {
   dragOverLayoutRows,
   flipTablePosition,
   layoutEquals,
+  mobileChartVisibilityClass,
   setTablePosition,
   swapChartsInLayout,
 } from './dashboardLayout';
@@ -76,7 +77,10 @@ describe('normalizeToStrictLayout', () => {
 
 describe('migrateDashboardLayout', () => {
   it('passes through strict rows', () => {
-    const layout = { rows: [{ items: ['table'] as const }, { items: ['donut', 'bar'] as const }] };
+    const layout = {
+      rows: [{ items: ['table'] as const }, { items: ['donut', 'bar'] as const }],
+      mobileChart: 'both' as const,
+    };
     expect(migrateDashboardLayout(layout)).toEqual(layout);
   });
 
@@ -102,8 +106,33 @@ describe('layoutEquals', () => {
     expect(
       layoutEquals(DEFAULT_DASHBOARD_LAYOUT, {
         rows: [{ items: ['table'] }, { items: ['bar', 'donut'] }],
+        mobileChart: 'both',
       })
     ).toBe(false);
+  });
+
+  it('returns false when mobileChart differs', () => {
+    expect(
+      layoutEquals(DEFAULT_DASHBOARD_LAYOUT, {
+        ...DEFAULT_DASHBOARD_LAYOUT,
+        mobileChart: 'bar',
+      })
+    ).toBe(false);
+  });
+});
+
+describe('mobileChartVisibilityClass', () => {
+  it('hides donut when bar only', () => {
+    expect(mobileChartVisibilityClass('donut', 'bar')).toBe('max-lg:hidden');
+    expect(mobileChartVisibilityClass('bar', 'bar')).toBe('');
+  });
+
+  it('hides bar when donut only', () => {
+    expect(mobileChartVisibilityClass('bar', 'donut')).toBe('max-lg:hidden');
+  });
+
+  it('shows edit preview class when editing single-chart mode', () => {
+    expect(mobileChartVisibilityClass('donut', 'bar', true)).toContain('dash-layout-chart--hidden-mobile');
   });
 });
 

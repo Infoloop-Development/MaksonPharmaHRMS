@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { goLiveApi } from '../../api/goLive';
+import { ReadinessEmployeeCardList } from './ReadinessEmployeeCardList';
 
 export function GoLiveReadinessPanel() {
   const [days, setDays] = useState(7);
@@ -56,7 +57,9 @@ export function GoLiveReadinessPanel() {
           </div>
 
           {data.employeesWithoutPunch.length > 0 && (
-            <div className="max-h-48 overflow-y-auto border border-border rounded">
+            <>
+            <ReadinessEmployeeCardList items={data.employeesWithoutPunch} />
+            <div className="max-h-48 overflow-y-auto border border-border rounded hidden md:block">
               <table className="w-full text-xs">
                 <thead className="bg-surface2 sticky top-0">
                   <tr className="text-left text-text-muted">
@@ -82,6 +85,7 @@ export function GoLiveReadinessPanel() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
           {data.withoutRecentPunch > data.employeesWithoutPunch.length && (
             <p className="text-[11px] text-text-subtle">

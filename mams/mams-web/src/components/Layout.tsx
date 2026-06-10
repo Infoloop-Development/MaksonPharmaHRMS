@@ -1,13 +1,22 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { ToastContainer } from './ui/Toast';
+import { authApi } from '../api/auth';
+import { useAuth } from '../store/auth';
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
+  const accessToken = useAuth((s) => s.accessToken);
+  const setUser = useAuth((s) => s.setUser);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    authApi.me().then(({ user }) => setUser(user)).catch(() => { /* session refresh handles invalid tokens */ });
+  }, [accessToken, setUser]);
 
   return (
     <div className="flex min-h-screen overflow-x-hidden">

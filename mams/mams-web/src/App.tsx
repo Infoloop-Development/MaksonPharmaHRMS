@@ -9,6 +9,7 @@ import { EmployeeDetail } from './pages/EmployeeDetail';
 import { AttendanceLog } from './pages/AttendanceLog';
 import { Reports } from './pages/Reports';
 import { Adjustments } from './pages/Adjustments';
+import { Leave } from './pages/Leave';
 import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
 import { isAutogenDemoEnabled } from './config/featureFlags';
@@ -60,6 +61,7 @@ export function App() {
           <Route path="autogeneration-demo" element={<AutogenerationDemo />} />
         )}
         <Route path="adjustments" element={<Adjustments />} />
+        <Route path="leave" element={<Leave />} />
         <Route path="devices" element={<Devices />} />
         <Route path="settings" element={<Settings />} />
       </Route>

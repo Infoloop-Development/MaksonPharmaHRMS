@@ -7,6 +7,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   setAuth: (auth: { user: UserPublic; accessToken: string; refreshToken: string }) => void;
+  setUser: (user: UserPublic) => void;
   clear: () => void;
 }
 
@@ -17,6 +18,7 @@ export const useAuth = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       setAuth: ({ user, accessToken, refreshToken }) => set({ user, accessToken, refreshToken }),
+      setUser: (user) => set({ user }),
       clear: () => set({ user: null, accessToken: null, refreshToken: null }),
     }),
     { name: 'mams-auth' }

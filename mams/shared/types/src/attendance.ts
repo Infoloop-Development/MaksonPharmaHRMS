@@ -43,6 +43,29 @@ export const AttendanceRawListResponseSchema = z.object({
 });
 export type AttendanceRawListResponse = z.infer<typeof AttendanceRawListResponseSchema>;
 
+/** Query for raw punch KPI stats (excludes punchType so tiles show full breakdown). */
+export const AttendanceRawStatsQuerySchema = z.object({
+  search: z.string().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+export type AttendanceRawStatsQuery = z.infer<typeof AttendanceRawStatsQuerySchema>;
+
+export const AttendanceRawStatsScopeSchema = z.enum(['today', 'date', 'range', 'all']);
+export type AttendanceRawStatsScope = z.infer<typeof AttendanceRawStatsScopeSchema>;
+
+export const AttendanceRawStatsSchema = z.object({
+  total: z.number().int().nonnegative(),
+  in: z.number().int().nonnegative(),
+  out: z.number().int().nonnegative(),
+  other: z.number().int().nonnegative(),
+  uniqueEmployees: z.number().int().nonnegative(),
+  scope: AttendanceRawStatsScopeSchema,
+  scopeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+export type AttendanceRawStats = z.infer<typeof AttendanceRawStatsSchema>;
+
 // REAL view payload (hr.admin sees this)
 export const AttendanceDerivedRealSchema = z.object({
   id: z.string(),

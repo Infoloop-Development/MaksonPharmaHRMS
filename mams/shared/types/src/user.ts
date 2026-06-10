@@ -16,6 +16,9 @@ export const PermissionSchema = z.enum([
   'manage.users',
   'manage.devices',
   'manage.settings',
+  'manage.export_naming',
+  'read.leave',
+  'manage.leave',
 ]);
 export type Permission = z.infer<typeof PermissionSchema>;
 

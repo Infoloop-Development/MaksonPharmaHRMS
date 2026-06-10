@@ -12,10 +12,12 @@ import { isMailEnabled } from '../config/mail.js';
 import type { Permission, Role } from '@mams/types';
 import {
   PERMISSIONS_BY_ROLE,
+  PermissionSchema,
   RoleSchema,
   UnmaskFieldGrantsSchema,
   UserUpdateBodySchema,
   canRoleHaveUnmaskFieldGrants,
+  dedupePermissions,
   dedupeUnmaskFieldGrants,
   permissionsWithUnmaskGrants,
   validatePermissionsForRole,
@@ -77,6 +79,7 @@ const UserCreateSchema = z.object({
   role: RoleSchema,
   password: PasswordSchema,
   unmaskFieldGrants: UnmaskFieldGrantsSchema.optional().default([]),
+  permissions: z.array(PermissionSchema).optional(),
 });
 
 function rejectUnmaskGrantsWhenDisabled(grants: SensitiveUnmaskField[]): void {
@@ -115,9 +118,21 @@ router.post('/', requirePermission('manage.users'), async (req, res, next) => {
     const unmaskFieldGrants = isUnmaskEnabled()
       ? normalizeUnmaskGrantsForRole(body.role, body.unmaskFieldGrants)
       : [];
-    const permissions = isUnmaskEnabled()
-      ? permissionsWithUnmaskGrants(body.role, unmaskFieldGrants)
-      : permissionsWithUnmaskGrants(body.role, []);
+    let permissions: Permission[];
+    if (body.permissions && body.permissions.length > 0) {
+      const withoutUnmask = body.permissions.filter((p) => p !== 'unmask.sensitive') as Permission[];
+      const validated = validatePermissionsForRole(body.role, withoutUnmask);
+      if (!validated.ok) throw new ApiError(400, 'invalid_permissions', validated.message);
+      permissions = validated.permissions;
+      const grants = isUnmaskEnabled() ? unmaskFieldGrants : [];
+      if (body.role === 'hr.admin' && grants.length > 0) {
+        permissions = dedupePermissions([...permissions.filter((p) => p !== 'unmask.sensitive'), 'unmask.sensitive']);
+      }
+    } else {
+      permissions = isUnmaskEnabled()
+        ? permissionsWithUnmaskGrants(body.role, unmaskFieldGrants)
+        : permissionsWithUnmaskGrants(body.role, []);
+    }
     const created = await UserModel.create({
       email: body.email,
       passwordHash,
@@ -133,7 +148,16 @@ router.post('/', requirePermission('manage.users'), async (req, res, next) => {
     await audit(
       'user_created',
       { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
-      { entityType: 'user', entityId: created._id, payload: { email: created.email, role: created.role } }
+      {
+        entityType: 'user',
+        entityId: created._id,
+        payload: {
+          email: created.email,
+          role: created.role,
+          permissions: created.permissions,
+          customPermissions: Boolean(body.permissions && body.permissions.length > 0),
+        },
+      }
     );
 
     let emailSent = false;
@@ -284,6 +308,9 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
       await revokeRefreshTokensForUser(targetIdStr);
     }
 
+    const permissionsAdded = nextPermissions.filter((p) => !prevPerms.includes(p));
+    const permissionsRemoved = prevPerms.filter((p) => !nextPermissions.includes(p));
+
     await audit(
       'user_updated',
       { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
@@ -295,6 +322,8 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
           role: body.role !== undefined,
           isActive: body.isActive !== undefined,
           permissionsChanged: permissionsActuallyChanged,
+          permissionsAdded: permissionsActuallyChanged ? permissionsAdded : undefined,
+          permissionsRemoved: permissionsActuallyChanged ? permissionsRemoved : undefined,
         },
       }
     );
