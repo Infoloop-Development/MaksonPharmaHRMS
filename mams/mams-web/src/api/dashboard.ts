@@ -3,8 +3,10 @@ import type {
   DashboardAttendanceStatusFilter,
   DashboardAttendanceTimeShift,
   DashboardDepartmentsResponse,
+  DashboardKpiConfig,
   DashboardLayout,
 } from '@mams/types';
+import { parseContentDispositionFilename } from '@mams/types';
 import { api } from './client';
 import { useAuth } from '../store/auth';
 
@@ -51,6 +53,10 @@ export interface DashboardCharts {
     present: number[];
     absent: number[];
     late: number[];
+    weeklyOff: number[];
+    halfDay: number[];
+    dayShiftPresent: number[];
+    nightShiftPresent: number[];
   };
   weekPunctuality: {
     date: string;
@@ -64,6 +70,8 @@ export interface DashboardCharts {
 export const dashboardApi = {
   getLayout: () => api.get<DashboardLayout>('/dashboard/layout'),
   saveLayout: (layout: DashboardLayout) => api.put<DashboardLayout>('/dashboard/layout', layout),
+  getKpi: () => api.get<DashboardKpiConfig>('/dashboard/kpi'),
+  saveKpi: (config: DashboardKpiConfig) => api.put<DashboardKpiConfig>('/dashboard/kpi', config),
   stats: () => api.get<DashboardStats>('/dashboard/stats'),
   weekTrend: () => api.get<WeekTrend>('/dashboard/week-trend'),
   charts: (date?: string) =>
@@ -84,7 +92,9 @@ export const dashboardApi = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Attendance_${q.date}.xlsx`;
+    a.download =
+      parseContentDispositionFilename(res.headers.get('Content-Disposition')) ??
+      `Attendance_${q.date}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   },

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { ExportNamingSettingsSchema, LeaveQuotaResetPolicySchema } from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
 import { diffSettingsValues, settingsSectionFromChangedFields } from '../services/activity.service.js';
 
@@ -41,11 +42,51 @@ const SettingsPatchSchema = z.object({
   smartAnchorEnabled: z.boolean().optional(),
   confidentialityNoticeEnabled: z.boolean().optional(),
   confidentialityNoticeText: z.string().optional(),
+  exportNaming: ExportNamingSettingsSchema.optional(),
+  leaveQuotaResetPolicy: LeaveQuotaResetPolicySchema.optional(),
+  financialYearStartMonth: z.number().int().min(1).max(12).optional(),
 });
 
-router.patch('/', requirePermission('manage.settings'), async (req, res, next) => {
+const MANAGE_SETTINGS_FIELDS = new Set([
+  'companyName',
+  'cin',
+  'gstin',
+  'pfRegistrationNumber',
+  'esiRegistrationNumber',
+  'factoryLicenceNumber',
+  'registeredAddress',
+  'signatoryName',
+  'signatoryDesignation',
+  'weeklyOffDefault',
+  'realShifts',
+  'complianceShifts',
+  'smartAnchorEnabled',
+  'confidentialityNoticeEnabled',
+  'confidentialityNoticeText',
+]);
+
+router.patch('/', async (req, res, next) => {
   try {
     const patch = SettingsPatchSchema.parse(req.body);
+    const changedKeys = Object.entries(patch)
+      .filter(([, value]) => value !== undefined)
+      .map(([key]) => key);
+    if (changedKeys.length < 1) {
+      res.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+
+    const perms = req.auth!.permissions;
+    const touchesSettings = changedKeys.some((k) => MANAGE_SETTINGS_FIELDS.has(k));
+    const touchesExportNaming = changedKeys.includes('exportNaming');
+    if (touchesSettings && !perms.includes('manage.settings')) {
+      res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.settings' });
+      return;
+    }
+    if (touchesExportNaming && !perms.includes('manage.export_naming')) {
+      res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.export_naming' });
+      return;
+    }
     let doc = await SettingsModel.findOne();
     if (!doc) doc = await SettingsModel.create({});
 

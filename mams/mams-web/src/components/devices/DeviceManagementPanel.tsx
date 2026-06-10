@@ -19,6 +19,8 @@ import {
 } from './deviceConnectionState';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
+import { MobileFilterBar } from '../ui/MobileFilterBar';
+import { countActiveFilters } from '../../lib/countActiveFilters';
 
 export function DeviceManagementPanel({
   canManage,
@@ -111,6 +113,42 @@ export function DeviceManagementPanel({
   const online = allDevices.filter((d) => d.isOnline).length;
   const recentPunches = allDevices.reduce((sum, d) => sum + d.recentPunchCount, 0);
 
+  const filterDefaults = {
+    vendorFilter: 'all',
+    deptFilter: 'all',
+    locFilter: 'all',
+    onlineFilter: 'all',
+    connectionFilter: 'all',
+  };
+  const activeCount = countActiveFilters(
+    { vendorFilter, deptFilter, locFilter, onlineFilter, connectionFilter },
+    filterDefaults
+  );
+
+  const clearFilters = () => {
+    setVendorFilter('all');
+    setDeptFilter('all');
+    setLocFilter('all');
+    setOnlineFilter('all');
+    setConnectionFilter('all');
+  };
+
+  const manageActions = canManage ? (
+    <>
+      <button
+        type="button"
+        className="btn-outline btn-sm"
+        onClick={() => syncAllMutation.mutate()}
+        disabled={syncAllMutation.isPending}
+      >
+        {syncAllMutation.isPending ? 'Syncing…' : 'Sync All'}
+      </button>
+      <button type="button" className="btn-primary btn-sm" onClick={() => setAddOpen(true)}>
+        + Register
+      </button>
+    </>
+  ) : undefined;
+
   const handleTest = async (id: string) => {
     try {
       const r = await devicesApi.test(id);
@@ -127,7 +165,7 @@ export function DeviceManagementPanel({
       {showSetupGuide && canManage && <DeviceSetupGuide />}
 
       {showStats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="dash-stat-grid mb-0">
           <StatCard label="Total" value={allDevices.length} accent="primary" />
           <StatCard label="Online" value={online} accent="green" />
           <StatCard label="Offline" value={allDevices.length - online} accent="red" />
@@ -135,45 +173,52 @@ export function DeviceManagementPanel({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-wrap xl:items-end gap-3">
-        <label className="text-xs text-text-muted min-w-0">
+      <MobileFilterBar
+        activeCount={activeCount}
+        onClear={clearFilters}
+        actions={manageActions}
+        noCard
+        className="mb-0"
+        desktopClassName="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-3 items-end"
+      >
+        <label className="text-xs text-text-muted min-w-0 block">
           Vendor
-          <select className="input block mt-1 text-sm" value={vendorFilter} onChange={(e) => { setVendorFilter(e.target.value); logDeviceFilters({ vendor: e.target.value }); }}>
+          <select className="input block mt-1 text-sm w-full" value={vendorFilter} onChange={(e) => { setVendorFilter(e.target.value); logDeviceFilters({ vendor: e.target.value }); }}>
             <option value="all">All</option>
             <option value="eSSL">eSSL</option>
             <option value="Hanvon">Hanvon</option>
           </select>
         </label>
-        <label className="text-xs text-text-muted">
+        <label className="text-xs text-text-muted block">
           Department
-          <select className="input block mt-1 text-sm" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); logDeviceFilters({ department: e.target.value }); }}>
+          <select className="input block mt-1 text-sm w-full" value={deptFilter} onChange={(e) => { setDeptFilter(e.target.value); logDeviceFilters({ department: e.target.value }); }}>
             <option value="all">All</option>
             {MAKSON_DEPARTMENTS.map((d) => (
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </label>
-        <label className="text-xs text-text-muted">
+        <label className="text-xs text-text-muted block">
           Location
-          <select className="input block mt-1 text-sm" value={locFilter} onChange={(e) => { setLocFilter(e.target.value); logDeviceFilters({ location: e.target.value }); }}>
+          <select className="input block mt-1 text-sm w-full" value={locFilter} onChange={(e) => { setLocFilter(e.target.value); logDeviceFilters({ location: e.target.value }); }}>
             <option value="all">All</option>
             {MAKSON_FACTORY_LOCATIONS.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
         </label>
-        <label className="text-xs text-text-muted">
+        <label className="text-xs text-text-muted block">
           Network
-          <select className="input block mt-1 text-sm" value={onlineFilter} onChange={(e) => { setOnlineFilter(e.target.value); logDeviceFilters({ network: e.target.value }); }}>
+          <select className="input block mt-1 text-sm w-full" value={onlineFilter} onChange={(e) => { setOnlineFilter(e.target.value); logDeviceFilters({ network: e.target.value }); }}>
             <option value="all">All</option>
             <option value="online">Online</option>
             <option value="offline">Offline</option>
           </select>
         </label>
-        <label className="text-xs text-text-muted">
+        <label className="text-xs text-text-muted block">
           Connection
           <select
-            className="input block mt-1 text-sm"
+            className="input block mt-1 text-sm w-full"
             value={connectionFilter}
             onChange={(e) => { setConnectionFilter(e.target.value); logDeviceFilters({ connection: e.target.value }); }}
           >
@@ -186,7 +231,7 @@ export function DeviceManagementPanel({
           </select>
         </label>
         {canManage && (
-          <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-3 xl:ml-auto">
+          <div className="hidden md:flex flex-wrap gap-2 lg:col-span-5 lg:justify-end">
             <button
               type="button"
               className="btn-outline"
@@ -200,7 +245,7 @@ export function DeviceManagementPanel({
             </button>
           </div>
         )}
-      </div>
+      </MobileFilterBar>
 
       <DeviceTable
         devices={filtered}

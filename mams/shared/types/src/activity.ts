@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-export const ActivityPageSchema = z.enum(['employees', 'attendance', 'reports', 'devices', 'settings', 'auth']);
+export const ActivityPageSchema = z.enum([
+  'employees',
+  'attendance',
+  'reports',
+  'devices',
+  'settings',
+  'auth',
+  'dashboard',
+]);
 export type ActivityPage = z.infer<typeof ActivityPageSchema>;
 
 /** Client-only UI events (POST /activity/log). Must start with `ui.`. */

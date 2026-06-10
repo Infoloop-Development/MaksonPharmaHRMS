@@ -22,6 +22,28 @@ const userSchema = new Schema(
           },
         ],
         order: { type: [String], enum: ['bar', 'donut', 'table'] },
+        mobileChart: { type: String, enum: ['both', 'bar', 'donut'] },
+      },
+      required: false,
+      default: undefined,
+    },
+    dashboardKpi: {
+      type: {
+        slots: {
+          type: [String],
+          enum: [
+            'total_active',
+            'present',
+            'absent',
+            'late',
+            'on_time',
+            'attendance_rate',
+            'weekly_off',
+            'half_day',
+            'day_shift',
+            'night_shift',
+          ],
+        },
       },
       required: false,
       default: undefined,

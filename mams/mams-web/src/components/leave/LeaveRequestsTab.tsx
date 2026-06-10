@@ -1,0 +1,320 @@
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { LeaveStatus } from '@mams/types';
+import { leaveApi, type LeaveApplicationItem, type LeaveTypeItem } from '../../api/leave';
+import type { LeaveSummary } from '../../api/leave';
+import { StatCard } from '../ui/StatCard';
+import { Badge } from '../ui/Badge';
+import { Input, Select } from '../ui/Field';
+import { MobileFilterBar } from '../ui/MobileFilterBar';
+import { countActiveFilters } from '../../lib/countActiveFilters';
+import { fmtDate } from '../../lib/format';
+import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils';
+import { LeaveApplicationCardList } from './LeaveApplicationCardList';
+
+export function LeaveRequestsTab({
+  canManage,
+  summary,
+  types,
+  onView,
+  onApprove,
+  onReject,
+  onAddLeave,
+  onGoToSettings,
+}: {
+  canManage: boolean;
+  summary?: LeaveSummary;
+  types: LeaveTypeItem[];
+  onView: (item: LeaveApplicationItem) => void;
+  onApprove: (item: LeaveApplicationItem) => void;
+  onReject: (item: LeaveApplicationItem) => void;
+  onAddLeave: () => void;
+  onGoToSettings: () => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'All'>('All');
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [page, setPage] = useState(1);
+  const [expandedReason, setExpandedReason] = useState<string | null>(null);
+
+  const filterDefaults = { statusFilter: 'All' as const, typeFilter: '', startDate: '', endDate: '' };
+  const activeCount = countActiveFilters(
+    { statusFilter, typeFilter, startDate, endDate },
+    filterDefaults
+  );
+
+  const clearFilters = () => {
+    setStatusFilter('All');
+    setTypeFilter('');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+  };
+
+  const { data: applications, isLoading } = useQuery({
+    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate, page }],
+    queryFn: () =>
+      leaveApi.listApplications({
+        status: statusFilter === 'All' ? undefined : statusFilter,
+        search: search || undefined,
+        leaveTypeId: typeFilter || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        page,
+        pageSize: 50,
+      }),
+  });
+
+  const items = applications?.items ?? [];
+  const totalPages = Math.max(1, Math.ceil((applications?.total ?? 0) / (applications?.pageSize ?? 50)));
+
+  const searchField = (
+    <Input
+      className="md:max-w-xs"
+      placeholder="Search employee…"
+      value={search}
+      onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+    />
+  );
+
+  const filterFields = (
+    <>
+      <Select
+        className="md:max-w-[160px]"
+        value={statusFilter}
+        onChange={(e) => { setStatusFilter(e.target.value as LeaveStatus | 'All'); setPage(1); }}
+      >
+        <option value="All">All statuses</option>
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Rejected">Rejected</option>
+        <option value="Cancelled">Cancelled</option>
+      </Select>
+      <Select
+        className="md:max-w-[180px]"
+        value={typeFilter}
+        onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+      >
+        <option value="">All types</option>
+        {types.map((t) => (
+          <option key={t.id} value={t.id}>{t.name}</option>
+        ))}
+      </Select>
+      <Input
+        type="date"
+        className="md:max-w-[160px]"
+        value={startDate}
+        onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+        title="From date"
+      />
+      <Input
+        type="date"
+        className="md:max-w-[160px]"
+        value={endDate}
+        min={startDate || undefined}
+        onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+        title="To date"
+      />
+    </>
+  );
+
+  return (
+    <div>
+      {types.length === 0 && (
+        <div className="mb-4 p-4 rounded-md bg-surface2 border border-border text-sm">
+          <p className="font-medium mb-1">No leave types configured yet</p>
+          <p className="text-text-muted">
+            Open{' '}
+            <button type="button" className="text-primary underline" onClick={onGoToSettings}>
+              Leave Settings
+            </button>
+            {canManage ? ' and click Seed defaults to create Paid Leave, Casual Leave, Sick Leave, and more.' : ' (admin required to seed defaults).'}
+          </p>
+        </div>
+      )}
+
+      <div className="dash-stat-grid mb-6">
+        <div title={summary?.leavesTodayNames?.join(', ') || 'No one on leave today'}>
+          <StatCard
+            label="Leaves Today"
+            value={String(summary?.leavesToday ?? 0)}
+            accent="primary"
+            sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : undefined}
+          />
+        </div>
+        <StatCard
+          label="Pending Approvals"
+          value={String(summary?.pendingApprovals ?? 0)}
+          accent="amber"
+          selected={statusFilter === 'Pending'}
+          onClick={() => { setStatusFilter('Pending'); setPage(1); }}
+        />
+        <StatCard
+          label="Upcoming (7 days)"
+          value={String(summary?.upcomingLeaves7Days ?? 0)}
+          accent="green"
+        />
+        <StatCard
+          label="Leaves This Month"
+          value={String(summary?.leavesThisMonth ?? 0)}
+          accent="primary"
+          sub="Total days consumed"
+        />
+      </div>
+
+      <MobileFilterBar
+        search={searchField}
+        activeCount={activeCount}
+        onClear={clearFilters}
+        desktopClassName="hidden md:flex flex-wrap gap-3 items-center"
+        actions={
+          <>
+            <a
+              className="btn-outline btn-sm"
+              href={leaveApi.exportCsvUrl({
+                status: statusFilter === 'All' ? undefined : statusFilter,
+                search: search || undefined,
+                leaveTypeId: typeFilter || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+              })}
+              download
+            >
+              Export CSV
+            </a>
+            {canManage && (
+              <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
+                + Add Leave
+              </button>
+            )}
+          </>
+        }
+      >
+        {filterFields}
+        <div className="hidden md:flex gap-2 lg:ml-auto">
+          <a
+            className="btn-outline btn-sm"
+            href={leaveApi.exportCsvUrl({
+              status: statusFilter === 'All' ? undefined : statusFilter,
+              search: search || undefined,
+              leaveTypeId: typeFilter || undefined,
+              startDate: startDate || undefined,
+              endDate: endDate || undefined,
+            })}
+            download
+          >
+            Export CSV
+          </a>
+          {canManage && (
+            <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
+              + Add Leave
+            </button>
+          )}
+        </div>
+      </MobileFilterBar>
+
+      <LeaveApplicationCardList
+        items={items}
+        isLoading={isLoading}
+        canManage={canManage}
+        onView={onView}
+        onApprove={onApprove}
+        onReject={onReject}
+        onAddLeave={onAddLeave}
+      />
+
+      <div className="card tbl-scroll hidden md:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
+              <th className="px-4 py-3">Employee</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Dates</th>
+              <th className="px-4 py-3">Days</th>
+              <th className="px-4 py-3">Reason</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-text-muted">Loading…</td></tr>
+            )}
+            {!isLoading && items.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
+                  No leave applications match your filters.
+                  {canManage && (
+                    <>
+                      {' '}
+                      <button type="button" className="text-primary underline" onClick={onAddLeave}>Add leave</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            )}
+            {items.map((row) => {
+              const emp = row.employeeId;
+              const reasonExpanded = expandedReason === row._id;
+              return (
+                <tr key={row._id} className="border-b border-border/60 hover:bg-surface2/50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary-bg text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                        {emp?.name ? employeeInitials(emp.name) : '?'}
+                      </div>
+                      <div>
+                        <div className="font-medium">{emp?.name ?? '—'}</div>
+                        <div className="text-xs font-mono text-text-muted">{emp?.empCode}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">{leaveTypeLabel(row)}</td>
+                  <td className="px-4 py-3 text-xs whitespace-nowrap">
+                    {fmtDate(row.fromDate)}
+                    {row.fromDate !== row.toDate && <> — {fmtDate(row.toDate)}</>}
+                  </td>
+                  <td className="px-4 py-3 font-mono">{row.totalDays}</td>
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <span className={reasonExpanded ? '' : 'line-clamp-2'}>{row.reason}</span>
+                    {row.reason.length > 80 && (
+                      <button
+                        type="button"
+                        className="text-xs text-primary ml-1"
+                        onClick={() => setExpandedReason(reasonExpanded ? null : row._id)}
+                      >
+                        {reasonExpanded ? 'Less' : 'More'}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-4 py-3"><Badge tone={leaveStatusTone(row.status)}>{row.status}</Badge></td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      <button type="button" className="btn-outline btn-sm" onClick={() => onView(row)}>View</button>
+                      {canManage && row.status === 'Pending' && (
+                        <>
+                          <button type="button" className="btn-primary btn-sm" onClick={() => onApprove(row)}>Approve</button>
+                          <button type="button" className="btn-outline btn-sm text-red" onClick={() => onReject(row)}>Reject</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between mt-4 text-sm">
+        <span className="text-text-muted">Page {page} of {totalPages} · {applications?.total ?? 0} total</span>
+        <div className="flex gap-2">
+          <button type="button" className="btn-outline btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
+          <button type="button" className="btn-outline btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -6,4 +6,5 @@ export const authApi = {
   logout: (refreshToken: string) => api.post<void>('/auth/logout', { refreshToken }),
   changePassword: (body: ChangePasswordRequest) =>
     api.post<{ user: UserPublic }>('/auth/change-password', body),
+  me: () => api.get<{ user: UserPublic }>('/auth/me'),
 };

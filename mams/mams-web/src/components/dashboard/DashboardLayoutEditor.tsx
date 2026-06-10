@@ -4,6 +4,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -15,8 +16,8 @@ import {
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import type { DashboardBlockId, DashboardLayoutRow } from '@mams/types';
-import { dragOverLayoutRows, isChartBlock } from '../../lib/dashboardLayout';
+import type { DashboardBlockId, DashboardLayoutRow, DashboardMobileChart } from '@mams/types';
+import { dragOverLayoutRows, isChartBlock, mobileChartVisibilityClass } from '../../lib/dashboardLayout';
 import { DashboardLayoutBlock } from './DashboardLayoutBlock';
 import { DashboardLayoutGuide } from './DashboardLayoutGuide';
 
@@ -24,16 +25,19 @@ function LayoutRow({
   rowIndex,
   row,
   isEditing,
+  mobileChart,
   renderBlock,
   highlight,
 }: {
   rowIndex: number;
   row: DashboardLayoutRow;
   isEditing: boolean;
+  mobileChart: DashboardMobileChart;
   renderBlock: (id: DashboardBlockId) => ReactNode;
   highlight: boolean;
 }) {
   const solo = row.items.length === 1;
+  const isChartsRow = row.items.includes('bar') && row.items.includes('donut');
 
   return (
     <div
@@ -41,13 +45,22 @@ function LayoutRow({
       data-row-index={rowIndex}
     >
       <SortableContext items={row.items} strategy={horizontalListSortingStrategy}>
-        {row.items.map((id) => (
-          <div key={id} className={`h-full ${solo ? 'lg:col-span-1' : ''}`}>
-            <DashboardLayoutBlock id={id} isEditing={isEditing}>
-              {renderBlock(id)}
-            </DashboardLayoutBlock>
-          </div>
-        ))}
+        {row.items.map((id) => {
+          const visibilityClass =
+            isChartsRow && (id === 'bar' || id === 'donut')
+              ? mobileChartVisibilityClass(id, mobileChart, isEditing)
+              : '';
+          return (
+            <div key={id} className={`h-full relative ${solo ? 'lg:col-span-1' : ''} ${visibilityClass}`}>
+              {isEditing && visibilityClass.includes('dash-layout-chart--hidden-mobile') && (
+                <span className="dash-layout-mobile-hidden-badge">Hidden on mobile</span>
+              )}
+              <DashboardLayoutBlock id={id} isEditing={isEditing}>
+                {renderBlock(id)}
+              </DashboardLayoutBlock>
+            </div>
+          );
+        })}
       </SortableContext>
     </div>
   );
@@ -56,12 +69,16 @@ function LayoutRow({
 export function DashboardLayoutEditor({
   isEditing,
   rows,
+  mobileChart,
   onRowsChange,
+  onMobileChartChange,
   renderBlock,
 }: {
   isEditing: boolean;
   rows: DashboardLayoutRow[];
+  mobileChart: DashboardMobileChart;
   onRowsChange: (rows: DashboardLayoutRow[]) => void;
+  onMobileChartChange: (chart: DashboardMobileChart) => void;
   renderBlock: (id: DashboardBlockId) => ReactNode;
 }) {
   const [activeId, setActiveId] = useState<DashboardBlockId | null>(null);
@@ -69,6 +86,7 @@ export function DashboardLayoutEditor({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -137,6 +155,7 @@ export function DashboardLayoutEditor({
           rowIndex={i}
           row={row}
           isEditing={isEditing}
+          mobileChart={mobileChart}
           renderBlock={renderBlock}
           highlight={rowHighlight(i, row)}
         />
@@ -157,7 +176,12 @@ export function DashboardLayoutEditor({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <DashboardLayoutGuide rows={rows} onRowsChange={onRowsChange} />
+      <DashboardLayoutGuide
+        rows={rows}
+        mobileChart={mobileChart}
+        onRowsChange={onRowsChange}
+        onMobileChartChange={onMobileChartChange}
+      />
       {dragBlockedMsg && <p className="dash-layout-blocked-msg">{dragBlockedMsg}</p>}
       {content}
     </DndContext>

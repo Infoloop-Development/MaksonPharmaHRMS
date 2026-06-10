@@ -117,6 +117,47 @@ describe('listDashboardAttendance', () => {
     expect(result.items[0]?.displayStatus).toBe('Late');
   });
 
+  it('filters by status On Time', async () => {
+    const result = await listDashboardAttendance(
+      { date: baseDate, status: 'On Time', page: 1, pageSize: 50 },
+      'real'
+    );
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.displayStatus).toBe('Present');
+  });
+
+  it('filters by status Weekly Off', async () => {
+    findMock.mockResolvedValue([
+      makeDoc({
+        status: 'Weekly Off',
+        realEntryAt: null,
+        realExitAt: null,
+        realNetHours: null,
+      }),
+    ]);
+    const result = await listDashboardAttendance(
+      { date: baseDate, status: 'Weekly Off', page: 1, pageSize: 50 },
+      'real'
+    );
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.displayStatus).toBe('Weekly Off');
+  });
+
+  it('filters by status Half Day', async () => {
+    findMock.mockResolvedValue([
+      makeDoc({
+        status: 'Half Day',
+        realNetHours: 4,
+      }),
+    ]);
+    const result = await listDashboardAttendance(
+      { date: baseDate, status: 'Half Day', page: 1, pageSize: 50 },
+      'real'
+    );
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.displayStatus).toBe('Half Day');
+  });
+
   it('filters by search on name or code', async () => {
     const result = await listDashboardAttendance(
       { date: baseDate, search: 'priya', status: 'All', page: 1, pageSize: 50 },

@@ -3,9 +3,9 @@ import { dedupeUnmaskFieldGrants, type SensitiveUnmaskField } from './sensitiveU
 
 /** Default permission set assigned when creating a user for a role. */
 export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
-  'hr.admin': ['read.real', 'write.adjust', 'unmask.sensitive', 'manage.users', 'manage.devices', 'manage.settings'],
-  'hr.compliance': ['read.compliant', 'approve.adjust'],
-  'it.admin': ['read.real', 'manage.users', 'manage.devices', 'manage.settings'],
+  'hr.admin': ['read.real', 'write.adjust', 'unmask.sensitive', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave'],
+  'hr.compliance': ['read.compliant', 'approve.adjust', 'read.leave'],
+  'it.admin': ['read.real', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave'],
 };
 
 /** Maximum permissions assignable per role (PATCH validation + Settings UI caps). */
@@ -19,9 +19,12 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'manage.users',
     'manage.devices',
     'manage.settings',
+    'manage.export_naming',
+    'read.leave',
+    'manage.leave',
   ],
-  'hr.compliance': ['read.compliant', 'approve.adjust'],
-  'it.admin': ['read.real', 'manage.users', 'manage.devices', 'manage.settings'],
+  'hr.compliance': ['read.compliant', 'approve.adjust', 'read.leave'],
+  'it.admin': ['read.real', 'manage.users', 'manage.devices', 'manage.settings', 'manage.export_naming', 'read.leave', 'manage.leave'],
 };
 
 const capSets: Record<Role, Set<string>> = {

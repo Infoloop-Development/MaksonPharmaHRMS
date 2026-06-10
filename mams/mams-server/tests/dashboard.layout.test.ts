@@ -38,6 +38,7 @@ describe('DashboardLayoutSchema', () => {
       })
     ).toEqual({
       rows: [{ items: ['donut', 'bar'] }, { items: ['table'] }],
+      mobileChart: 'both',
     });
     expect(
       DashboardLayoutSchema.parse({
@@ -45,6 +46,7 @@ describe('DashboardLayoutSchema', () => {
       })
     ).toEqual({
       rows: [{ items: ['table'] }, { items: ['bar', 'donut'] }],
+      mobileChart: 'both',
     });
     expect(
       DashboardLayoutSchema.parse({
@@ -52,6 +54,19 @@ describe('DashboardLayoutSchema', () => {
       })
     ).toEqual({
       rows: [{ items: ['table'] }, { items: ['donut', 'bar'] }],
+      mobileChart: 'both',
+    });
+  });
+
+  it('accepts mobileChart preference', () => {
+    expect(
+      DashboardLayoutSchema.parse({
+        rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+        mobileChart: 'bar',
+      })
+    ).toEqual({
+      rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+      mobileChart: 'bar',
     });
   });
 
@@ -103,6 +118,18 @@ describe('migrateDashboardLayout', () => {
       migrateDashboardLayout({ rows: [{ items: ['bar', 'table'] }, { items: ['donut'] }] })
     ).toEqual(DEFAULT_DASHBOARD_LAYOUT);
   });
+
+  it('preserves mobileChart when migrating loose rows', () => {
+    expect(
+      migrateDashboardLayout({
+        rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+        mobileChart: 'donut',
+      })
+    ).toEqual({
+      rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+      mobileChart: 'donut',
+    });
+  });
 });
 
 describe('dashboardLayout.service', () => {
@@ -125,6 +152,21 @@ describe('dashboardLayout.service', () => {
     const result = await getDashboardLayout('user1');
     expect(result).toEqual({
       rows: [{ items: ['table'] }, { items: ['bar', 'donut'] }],
+      mobileChart: 'both',
+    });
+  });
+
+  it('returns saved mobileChart preference', async () => {
+    findById.mockResolvedValue({
+      dashboardLayout: {
+        rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+        mobileChart: 'bar',
+      },
+    });
+    const result = await getDashboardLayout('user1');
+    expect(result).toEqual({
+      rows: [{ items: ['bar', 'donut'] }, { items: ['table'] }],
+      mobileChart: 'bar',
     });
   });
 
@@ -145,6 +187,7 @@ describe('dashboardLayout.service', () => {
     const result = await getDashboardLayout('user1');
     expect(result).toEqual({
       rows: [{ items: ['table'] }, { items: ['bar', 'donut'] }],
+      mobileChart: 'both',
     });
   });
 
@@ -152,14 +195,17 @@ describe('dashboardLayout.service', () => {
     findByIdAndUpdate.mockResolvedValue({});
     const layout = {
       rows: [{ items: ['donut', 'bar'] as const }, { items: ['table'] as const }],
+      mobileChart: 'bar' as const,
     };
     const result = await saveDashboardLayout('user1', layout);
     expect(result).toEqual({
       rows: [{ items: ['donut', 'bar'] }, { items: ['table'] }],
+      mobileChart: 'bar',
     });
     expect(findByIdAndUpdate).toHaveBeenCalledWith('user1', {
       dashboardLayout: {
         rows: [{ items: ['donut', 'bar'] }, { items: ['table'] }],
+        mobileChart: 'bar',
       },
     });
   });

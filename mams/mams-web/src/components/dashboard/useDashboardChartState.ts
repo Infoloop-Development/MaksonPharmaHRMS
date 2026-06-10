@@ -9,7 +9,7 @@ import type {
 import type { DashboardAttendanceStatusFilter } from '@mams/types';
 import '../../lib/chartSetup';
 import type { DashboardCharts as DashboardChartsPayload } from '../../api/dashboard';
-import type { BarMetric } from '../../pages/Dashboard';
+import type { BarMetric } from '../../lib/dashboardKpiRegistry';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../lib/format';
 
 export const BAR_CHART_HEIGHT = 'h-[200px]';
@@ -271,9 +271,16 @@ export function useDashboardChartState({
     } else if (statusFilter === 'Late') {
       centerValue = dayLate;
       centerSub = 'Late';
-    } else if (statusFilter === 'Present') {
-      centerValue = presentCount;
-      centerSub = 'Present';
+    } else if (statusFilter === 'Present' || statusFilter === 'On Time') {
+      centerValue = statusFilter === 'On Time' ? onTime : presentCount;
+      centerSub = statusFilter === 'On Time' ? 'On Time' : 'Present';
+    } else if (statusFilter === 'Weekly Off' || statusFilter === 'Half Day') {
+      const idx = selectedDayIndex;
+      centerValue =
+        statusFilter === 'Weekly Off'
+          ? (data.last7Days.weeklyOff[idx] ?? 0)
+          : (data.last7Days.halfDay[idx] ?? 0);
+      centerSub = statusFilter;
     }
 
     return { onTime, delay, onLeave, presentCount, dayAbsent, dayLate, centerValue, centerSub };
@@ -287,16 +294,22 @@ export function useDashboardChartState({
 
     const all = statusFilter === 'All';
     const isPresent = statusFilter === 'Present';
+    const isOnTime = statusFilter === 'On Time';
     const isAbsent = statusFilter === 'Absent';
     const isLate = statusFilter === 'Late';
+    const isLeave = statusFilter === 'Weekly Off' || statusFilter === 'Half Day';
 
     const bgColors = [
-      all || isPresent ? CHART_COLORS.navy : dimColor(CHART_COLORS.navy),
+      all || isPresent || isOnTime ? CHART_COLORS.navy : dimColor(CHART_COLORS.navy),
       all || isLate || isPresent ? CHART_COLORS.amber : dimColor(CHART_COLORS.amber),
-      all || isAbsent ? CHART_COLORS.red : dimColor(CHART_COLORS.red),
+      all || isAbsent || isLeave ? CHART_COLORS.red : dimColor(CHART_COLORS.red),
     ];
     const hoverColors = ['#141f5c', '#d97706', '#c41f1f'];
-    const offsets = [isPresent ? 10 : 0, isLate ? 10 : isPresent ? 8 : 0, isAbsent ? 10 : 0];
+    const offsets = [
+      isOnTime || isPresent ? 10 : 0,
+      isLate ? 10 : isPresent ? 8 : 0,
+      isAbsent || isLeave ? 10 : 0,
+    ];
 
     return {
       data: {
@@ -322,7 +335,7 @@ export function useDashboardChartState({
         onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
           const idx = elements[0]?.index;
           if (idx === 0) {
-            onStatusFilterChange(statusFilter === 'Present' ? 'All' : 'Present');
+            onStatusFilterChange(statusFilter === 'On Time' ? 'All' : 'On Time');
           } else if (idx === 1) {
             onStatusFilterChange(statusFilter === 'Late' ? 'All' : 'Late');
           } else if (idx === 2) {

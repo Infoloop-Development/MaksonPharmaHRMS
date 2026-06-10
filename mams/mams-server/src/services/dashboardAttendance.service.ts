@@ -101,8 +101,11 @@ function matchesStatusFilter(
 ): boolean {
   if (!status || status === 'All') return true;
   if (status === 'Present') return row.displayStatus === 'Present';
+  if (status === 'On Time') return row.displayStatus === 'Present';
   if (status === 'Late') return row.displayStatus === 'Late';
   if (status === 'Absent') return row.displayStatus === 'Absent';
+  if (status === 'Weekly Off') return row.displayStatus === 'Weekly Off';
+  if (status === 'Half Day') return row.displayStatus === 'Half Day';
   return true;
 }
 

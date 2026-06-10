@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
-import { AttendanceRawListQuerySchema } from '@mams/types';
+import { AttendanceRawListQuerySchema, AttendanceRawStatsQuerySchema } from '@mams/types';
 import { requireAuth } from '../middleware/auth.js';
 import { listRawPunches } from '../services/attendanceRawList.service.js';
+import { getRawPunchStats } from '../services/attendanceRawStats.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -52,6 +53,15 @@ router.get('/', async (req, res, next) => {
       page: q.page,
       pageSize: q.pageSize,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/raw/stats', async (req, res, next) => {
+  try {
+    const q = AttendanceRawStatsQuerySchema.parse(req.query);
+    res.json(await getRawPunchStats(q));
   } catch (err) {
     next(err);
   }

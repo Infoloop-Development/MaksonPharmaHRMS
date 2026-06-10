@@ -1,5 +1,11 @@
 import { arrayMove } from '@dnd-kit/sortable';
-import type { DashboardBlockId, DashboardLayout, DashboardLayoutRow, TablePosition } from '@mams/types';
+import type {
+  DashboardBlockId,
+  DashboardLayout,
+  DashboardLayoutRow,
+  DashboardMobileChart,
+  TablePosition,
+} from '@mams/types';
 import {
   DashboardLayoutSchema,
   getChartsRow,
@@ -11,12 +17,36 @@ import {
 export type { DashboardLayoutRow, TablePosition };
 
 export function layoutEquals(a: DashboardLayout, b: DashboardLayout): boolean {
+  if ((a.mobileChart ?? 'both') !== (b.mobileChart ?? 'both')) return false;
   if (a.rows.length !== b.rows.length) return false;
   return a.rows.every((row, i) => {
     const other = b.rows[i];
     if (!other || row.items.length !== other.items.length) return false;
     return row.items.every((id, j) => id === other.items[j]);
   });
+}
+
+export function mobileChartVisibilityClass(
+  blockId: 'bar' | 'donut',
+  mobileChart: DashboardMobileChart,
+  isEditing = false
+): string {
+  const classes: string[] = [];
+  if (mobileChart === 'bar' && blockId === 'donut') {
+    classes.push('max-lg:hidden');
+  }
+  if (mobileChart === 'donut' && blockId === 'bar') {
+    classes.push('max-lg:hidden');
+  }
+  if (isEditing && mobileChart !== 'both') {
+    const hiddenOnMobile =
+      (mobileChart === 'bar' && blockId === 'donut') ||
+      (mobileChart === 'donut' && blockId === 'bar');
+    if (hiddenOnMobile) {
+      classes.push('dash-layout-chart--hidden-mobile');
+    }
+  }
+  return classes.join(' ');
 }
 
 export function normalizeLayout(layout: DashboardLayout): DashboardLayout {

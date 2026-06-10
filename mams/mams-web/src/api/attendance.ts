@@ -1,3 +1,4 @@
+import type { AttendanceRawStats } from '@mams/types';
 import { api } from './client';
 
 export interface AttendanceListResponse {
@@ -48,6 +49,11 @@ export const attendanceApi = {
     const params = new URLSearchParams();
     Object.entries(q).forEach(([k, v]) => v !== undefined && v !== '' && params.set(k, String(v)));
     return api.get<RawPunchListResponse>(`/attendance/raw?${params.toString()}`);
+  },
+  rawStats: (q: Pick<RawPunchListQuery, 'search' | 'date' | 'startDate' | 'endDate'> = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => v !== undefined && v !== '' && params.set(k, String(v)));
+    return api.get<AttendanceRawStats>(`/attendance/raw/stats?${params.toString()}`);
   },
   recentRaw: (limit = 50) => api.get<RawPunchResponse>(`/attendance/raw/recent?limit=${limit}`),
 };

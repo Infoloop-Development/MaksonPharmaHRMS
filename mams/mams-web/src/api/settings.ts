@@ -1,3 +1,4 @@
+import type { ExportNamingSettings } from '@mams/types';
 import { api } from './client';
 
 export interface ShiftWindow {
@@ -25,6 +26,7 @@ export interface Settings {
   smartAnchorVersion: string;
   confidentialityNoticeEnabled: boolean;
   confidentialityNoticeText: string;
+  exportNaming?: ExportNamingSettings;
 }
 
 export const settingsApi = {

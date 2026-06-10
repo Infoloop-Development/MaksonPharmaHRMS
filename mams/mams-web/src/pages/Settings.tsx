@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsApi, type Settings as SettingsT } from '../api/settings';
 import { ApiError } from '../api/client';
@@ -7,10 +8,20 @@ import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
+import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
 import { fmtIstTime } from '../lib/format';
-import type { Permission, Role, SensitiveUnmaskField, UserPublic } from '@mams/types';
-import { PERMISSIONS_BY_ROLE, ROLE_PERMISSION_CAP } from '@mams/types';
+import type { ExportNamingSettings, Permission, Role, SensitiveUnmaskField, UserPublic } from '@mams/types';
+import {
+  DEFAULT_EXPORT_NAMING,
+  EXPORT_NAMING_TOKENS,
+  EXPORT_TYPE_LABELS,
+  PERMISSIONS_BY_ROLE,
+  ROLE_PERMISSION_CAP,
+  buildExportFileName,
+  normalizeExportNaming,
+  type ExportTypeKey,
+} from '@mams/types';
 import { UnmaskFieldGrantsSection } from '../components/settings/UnmaskFieldGrantsSection';
 import { isUnmaskEnabled } from '../config/featureFlags';
 import { z } from 'zod';
@@ -37,6 +48,9 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'manage.users': 'Manage users',
   'manage.devices': 'Manage biometric devices',
   'manage.settings': 'Manage settings',
+  'manage.export_naming': 'Configure export filename formats',
+  'read.leave': 'View leave management data',
+  'manage.leave': 'Manage leave, quotas, and holidays',
 };
 const ADD_USER_PASSWORD_SPECIALS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`' as const;
 
@@ -81,6 +95,7 @@ function validateAddUserForm(values: { name: string; email: string; password: st
 export function Settings() {
   const user = useAuth((s) => s.user);
   const canManage = user?.permissions.includes('manage.settings') ?? false;
+  const canManageExportNaming = user?.permissions.includes('manage.export_naming') ?? false;
   const canManageUsers = user?.permissions.includes('manage.users') ?? false;
 
   const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
@@ -91,25 +106,53 @@ export function Settings() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
         <div className="text-sm text-text-muted">
           {canManage ? 'Edits are audit-logged.' : 'Read-only view (you do not have manage.settings permission).'}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <CompanyInfoCard settings={data} canManage={canManage} />
-        <ComplianceCard settings={data} canManage={canManage} />
-        <ShiftsCard settings={data} canManage={canManage} />
-        <SmartAnchorCard settings={data} canManage={canManage} />
-        <ConfidentialityCard settings={data} canManage={canManage} />
-        {canManageUsers && <UsersCard />}
+      <div className="card p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-sm">Leave management</h2>
+          <p className="text-sm text-text-muted mt-1">
+            National holidays, leave types, quotas, and leave requests are configured on the Leave page — not here.
+          </p>
+        </div>
+        <Link to="/leave" className="btn-primary btn-sm shrink-0 self-start sm:self-center">
+          Open Leave →
+        </Link>
       </div>
 
-      <div className="mt-6">
-        <SectionCard title="Activity">
-          <ActivityLogPanel />
-        </SectionCard>
+      <div className="settings-layout">
+        <SettingsLayoutCell>
+          <CompanyInfoCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
+        <SettingsLayoutCell>
+          <ComplianceCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
+        <SettingsLayoutCell>
+          <SmartAnchorCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
+        <SettingsLayoutCell>
+          <ConfidentialityCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
+        <SettingsLayoutCell full>
+          <ShiftsCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
+        <SettingsLayoutCell full>
+          <ExportNamingCard settings={data} canManage={canManageExportNaming} />
+        </SettingsLayoutCell>
+        {canManageUsers && (
+          <SettingsLayoutCell full>
+            <UsersCard />
+          </SettingsLayoutCell>
+        )}
+        <SettingsLayoutCell full>
+          <SectionCard title="Activity">
+            <ActivityLogPanel />
+          </SectionCard>
+        </SettingsLayoutCell>
       </div>
     </div>
   );
@@ -117,6 +160,16 @@ export function Settings() {
 
 function invalidateActivity(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+}
+
+function SettingsLayoutCell({
+  children,
+  full = false,
+}: {
+  children: React.ReactNode;
+  full?: boolean;
+}) {
+  return <div className={full ? 'settings-layout__full settings-layout__cell' : 'settings-layout__cell'}>{children}</div>;
 }
 
 function SectionCard({
@@ -131,13 +184,15 @@ function SectionCard({
   headerRight?: React.ReactNode;
 }) {
   return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between gap-2 mb-4">
+    <div className="card p-5 h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between gap-2 mb-4 shrink-0">
         <h2 className="text-base font-bold">{title}</h2>
         {headerRight}
       </div>
-      <div className="space-y-3">{children}</div>
-      {footer && <div className="mt-4 pt-4 border-t border-border flex justify-end gap-2">{footer}</div>}
+      <div className="space-y-3 flex-1 min-h-0">{children}</div>
+      {footer && (
+        <div className="mt-4 pt-4 border-t border-border settings-section-footer shrink-0">{footer}</div>
+      )}
     </div>
   );
 }
@@ -146,7 +201,7 @@ function EditSectionIconButton({ label, onClick }: { label: string; onClick: () 
   return (
     <button
       type="button"
-      className="shrink-0 p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-surface2 -mt-0.5"
+      className="shrink-0 inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 sm:p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-surface2 -mt-0.5 touch-target-sm"
       aria-label={label}
       onClick={onClick}
     >
@@ -333,23 +388,25 @@ function ComplianceCard({ settings, canManage }: { settings: SettingsT; canManag
 function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
   return (
     <SectionCard title="Time Shifts">
-      <div>
-        <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
-        {settings.realShifts.map((s) => (
-          <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-            <span className="font-medium">{s.label}</span>
-            <span className="font-mono text-sm">{s.start} - {s.end}</span>
-          </div>
-        ))}
-      </div>
-      <div className="pt-3 border-t border-border">
-        <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
-        {settings.complianceShifts.map((s) => (
-          <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-            <span className="font-medium">{s.label}</span>
-            <span className="font-mono text-sm">{s.start} - {s.end}</span>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
+          {settings.realShifts.map((s) => (
+            <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <span className="font-medium">{s.label}</span>
+              <span className="font-mono text-sm">{s.start} - {s.end}</span>
+            </div>
+          ))}
+        </div>
+        <div className="min-w-0 md:border-l md:border-border md:pl-4">
+          <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
+          {settings.complianceShifts.map((s) => (
+            <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <span className="font-medium">{s.label}</span>
+              <span className="font-mono text-sm">{s.start} - {s.end}</span>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="pt-3 border-t border-border">
         <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
@@ -384,8 +441,8 @@ function SmartAnchorCard({ settings, canManage }: { settings: SettingsT; canMana
 
   return (
     <SectionCard title="Smart Anchor v2">
-      <div className="flex items-center justify-between py-2">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
+        <div className="min-w-0">
           <div className="font-medium">Enable Smart Anchor</div>
           <div className="text-xs text-text-muted">Generate compliance punches within the 8-hour window. Deterministic per (employee, date).</div>
         </div>
@@ -403,6 +460,189 @@ function SmartAnchorCard({ settings, canManage }: { settings: SettingsT; canMana
           <span className="text-sm text-text-muted">Engine version</span>
           <span className="font-mono text-sm">{settings.smartAnchorVersion}</span>
         </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+const EXPORT_PREVIEW_CONTEXT = {
+  dailyReportCsv: {
+    department: 'Production',
+    location: 'Surendranagar',
+    startDate: '2026-03-14',
+    endDate: '2026-03-20',
+  },
+  dashboardAttendanceXlsx: {
+    department: 'Production',
+    asOfDate: '2026-06-09',
+  },
+} as const;
+
+function PermissionCheckboxList({
+  role,
+  selectedPerms,
+  onToggle,
+}: {
+  role: Role;
+  selectedPerms: Permission[];
+  onToggle: (p: Permission) => void;
+}) {
+  const cap = ROLE_PERMISSION_CAP[role];
+  return (
+    <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-md p-3">
+      {cap
+        .filter((p) => !(role === 'hr.admin' && p === 'unmask.sensitive'))
+        .map((p) => (
+          <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={selectedPerms.includes(p)}
+              onChange={() => onToggle(p)}
+            />
+            <span>{PERMISSION_LABELS[p]}</span>
+          </label>
+        ))}
+    </div>
+  );
+}
+
+function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
+  const initial = normalizeExportNaming(settings.exportNaming ?? DEFAULT_EXPORT_NAMING);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, set, reset, dirty] = useDirtyForm<ExportNamingSettings>(initial);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: () => settingsApi.patch({ exportNaming: draft }),
+    onSuccess: () => {
+      toast('Export filename formats saved', 'success');
+      qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
+      setIsEditing(false);
+    },
+    onError: (e: unknown) => toast(e instanceof Error ? e.message : 'Save failed', 'error'),
+  });
+
+  const fieldsLocked = !canManage || !isEditing;
+
+  const previewFor = (type: ExportTypeKey) =>
+    buildExportFileName(
+      type,
+      EXPORT_PREVIEW_CONTEXT[type],
+      draft,
+      settings.companyName
+    );
+
+  const setPattern = (type: ExportTypeKey, value: string) => {
+    set({ patterns: { ...draft.patterns, [type]: value } });
+  };
+
+  return (
+    <SectionCard
+      title="Export filename formats"
+      headerRight={
+        canManage && !isEditing ? (
+          <EditSectionIconButton label="Edit export filename formats" onClick={() => setIsEditing(true)} />
+        ) : null
+      }
+      footer={
+        canManage &&
+        isEditing && (
+          <>
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => {
+                reset();
+                setIsEditing(false);
+              }}
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!dirty || mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? 'Saving...' : 'Save'}
+            </button>
+          </>
+        )
+      }
+    >
+      {!canManage && (
+        <p className="text-xs text-text-muted -mt-1 mb-1">
+          Read-only — you do not have permission to change export filenames.
+        </p>
+      )}
+      <p className="text-xs text-text-muted">
+        Configure how downloaded CSV and Excel files are named. Changes apply to the next export only.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Field label="Company code (optional override)">
+          <Input
+            value={draft.companyCode}
+            onChange={(e) => set({ companyCode: e.target.value.slice(0, 20) })}
+            disabled={fieldsLocked}
+            placeholder="Auto from company name if empty"
+          />
+        </Field>
+        <Field label="Date format in filenames">
+          <Select
+            value={draft.dateFormat}
+            onChange={(e) => set({ dateFormat: e.target.value as ExportNamingSettings['dateFormat'] })}
+            disabled={fieldsLocked}
+          >
+            <option value="YYYYMMDD">YYYYMMDD (20260314)</option>
+            <option value="DDMMYY">DDMMYY (140326)</option>
+          </Select>
+        </Field>
+        <div className="flex items-end pb-1 sm:col-span-2 lg:col-span-1">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={draft.includeGeneratedTimestamp}
+              onChange={(e) => set({ includeGeneratedTimestamp: e.target.checked })}
+              disabled={fieldsLocked}
+            />
+            <span>Append download timestamp</span>
+          </label>
+        </div>
+      </div>
+      <div className="rounded-lg border border-border bg-surface2/60 px-3 py-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-1.5">
+          Available tokens
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {EXPORT_NAMING_TOKENS.map((token) => (
+            <span
+              key={token}
+              className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-white border border-border text-text-muted"
+            >
+              {`{${token}}`}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {(Object.keys(EXPORT_TYPE_LABELS) as ExportTypeKey[]).map((type) => (
+          <div key={type} className="space-y-1.5 rounded-lg border border-border bg-surface2/40 p-3 min-w-0">
+            <Field label={EXPORT_TYPE_LABELS[type]}>
+              <Input
+                value={draft.patterns[type]}
+                onChange={(e) => setPattern(type, e.target.value)}
+                disabled={fieldsLocked}
+                className="font-mono text-xs"
+              />
+            </Field>
+            <div className="text-xs text-text-muted break-all">
+              Preview: <span className="font-mono text-text">{previewFor(type)}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </SectionCard>
   );
@@ -438,7 +678,7 @@ function ConfidentialityCard({ settings, canManage }: { settings: SettingsT; can
         </>
       )}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="text-sm">Show confidentiality notice on exports</div>
         <Toggle
           checked={draft.confidentialityNoticeEnabled}
@@ -504,7 +744,13 @@ function UsersCard() {
         <button className="btn-primary" onClick={() => setOpenAdd(true)}>+ Add User</button>
       }
     >
-      <div className="tbl-scroll">
+      <UserCardList
+        items={paginatedItems}
+        isLoading={isLoading}
+        sessionUserId={sessionUser?.id}
+        onEdit={setEditUser}
+      />
+      <div className="tbl-scroll hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
@@ -526,7 +772,7 @@ function UsersCard() {
                 <td className="py-2 text-right">
                   <button
                     type="button"
-                    className="btn-outline text-xs px-2 py-1"
+                    className="btn-outline text-xs px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1"
                     onClick={() => setEditUser(u)}
                   >
                     {sessionUser?.id === u._id ? 'Profile' : 'Edit'}
@@ -573,6 +819,9 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<Role>('hr.admin');
+  const [selectedPerms, setSelectedPerms] = useState<Permission[]>(
+    () => [...PERMISSIONS_BY_ROLE['hr.admin']].filter((p) => p !== 'unmask.sensitive')
+  );
   const [unmaskFieldGrants, setUnmaskFieldGrants] = useState<SensitiveUnmaskField[]>([]);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -588,6 +837,10 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
         password,
         unmaskFieldGrants:
           isUnmaskEnabled() && role === 'hr.admin' ? unmaskFieldGrants : [],
+        permissions:
+          role === 'hr.compliance'
+            ? undefined
+            : selectedPerms.filter((p) => p !== 'unmask.sensitive'),
       }),
     onSuccess: (created) => {
       if (created.emailSent) {
@@ -615,6 +868,17 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
       if (!prev[key]) return prev;
       const next = { ...prev };
       delete next[key];
+      return next;
+    });
+  };
+
+  const cap = ROLE_PERMISSION_CAP[role];
+
+  const togglePerm = (p: Permission) => {
+    setSelectedPerms((prev) => {
+      if (!cap.includes(p)) return prev;
+      const next = prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p];
+      if (next.length < 1) return prev;
       return next;
     });
   };
@@ -675,6 +939,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => {
               const r = e.target.value as Role;
               setRole(r);
+              setSelectedPerms([...PERMISSIONS_BY_ROLE[r]].filter((p) => p !== 'unmask.sensitive'));
               if (r !== 'hr.admin') setUnmaskFieldGrants([]);
             }}
           >
@@ -683,6 +948,16 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             <option value="it.admin">IT Admin</option>
           </Select>
         </Field>
+        {role !== 'hr.compliance' && (
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted">Permissions</div>
+            <PermissionCheckboxList
+              role={role}
+              selectedPerms={selectedPerms}
+              onToggle={togglePerm}
+            />
+          </div>
+        )}
         {isUnmaskEnabled() && role === 'hr.admin' && (
           <UnmaskFieldGrantsSection grants={unmaskFieldGrants} onChange={setUnmaskFieldGrants} />
         )}
@@ -859,21 +1134,11 @@ function EditUserModal({
             )}
             <div className="space-y-2">
               <div className="text-xs font-semibold uppercase tracking-wider text-text-muted">Permissions</div>
-              <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-md p-3">
-                {cap
-                  .filter((p) => !(role === 'hr.admin' && p === 'unmask.sensitive'))
-                  .map((p) => (
-                    <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={selectedPerms.includes(p)}
-                        onChange={() => togglePerm(p)}
-                      />
-                      <span>{PERMISSION_LABELS[p]}</span>
-                    </label>
-                  ))}
-              </div>
+              <PermissionCheckboxList
+                role={role}
+                selectedPerms={selectedPerms}
+                onToggle={togglePerm}
+              />
             </div>
           </>
         )}

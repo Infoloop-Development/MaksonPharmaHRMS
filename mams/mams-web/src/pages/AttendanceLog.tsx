@@ -1,11 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import type { AttendanceRawStats } from '@mams/types';
 import { attendanceApi } from '../api/attendance';
-import { fmtIstTime, fmtDate } from '../lib/format';
+import { fmtIstTime, fmtDate, fmtNumber } from '../lib/format';
 import { PunchCardList } from '../components/attendance/PunchCardList';
+import { DashboardStatCard } from '../components/ui/DashboardStatCard';
 import { useActivityLog } from '../hooks/useActivityLog';
+import { MobileFilterBar } from '../components/ui/MobileFilterBar';
+import { countActiveFilters } from '../lib/countActiveFilters';
 
 type PunchTypeFilter = 'all' | 'IN' | 'OUT' | 'OTHER';
+type PunchTile = 'all' | 'in' | 'out' | 'other';
+
+function punchTypeToTile(punchType: PunchTypeFilter): PunchTile {
+  if (punchType === 'IN') return 'in';
+  if (punchType === 'OUT') return 'out';
+  if (punchType === 'OTHER') return 'other';
+  return 'all';
+}
+
+function tileToPunchType(tile: PunchTile): PunchTypeFilter {
+  if (tile === 'in') return 'IN';
+  if (tile === 'out') return 'OUT';
+  if (tile === 'other') return 'OTHER';
+  return 'all';
+}
+
+function statsScopeLabel(stats: AttendanceRawStats | undefined, hasSearch: boolean): string {
+  if (!stats) return '';
+  if (hasSearch) return 'filtered';
+  if (stats.scope === 'today') return 'today';
+  if (stats.scope === 'date' && stats.scopeDate) return stats.scopeDate;
+  if (stats.scope === 'range') return 'date range';
+  return 'all';
+}
+
+function filterBarLabel(
+  activeTile: PunchTile,
+  search: string,
+  date: string
+): string {
+  const parts: string[] = [];
+  if (activeTile === 'in') parts.push('IN punches only');
+  else if (activeTile === 'out') parts.push('OUT punches only');
+  else if (activeTile === 'other') parts.push('OTHER punches only');
+  if (date) parts.push(date);
+  if (search.trim()) parts.push(`"${search.trim()}"`);
+  return parts.join(' / ');
+}
 
 export function AttendanceLog() {
   const { logFilter, logFilterDebounced } = useActivityLog();
@@ -13,10 +55,21 @@ export function AttendanceLog() {
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('');
   const [punchType, setPunchType] = useState<PunchTypeFilter>('all');
+  const [activeTile, setActiveTile] = useState<PunchTile>('all');
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
   const isLiveMode = !search.trim() && !date && punchType === 'all';
+
+  const statsQuery = useQuery({
+    queryKey: ['attendance', 'raw', 'stats', { search, date }],
+    queryFn: () =>
+      attendanceApi.rawStats({
+        search: search.trim() || undefined,
+        date: date || undefined,
+      }),
+    refetchInterval: isLiveMode ? 5000 : false,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['attendance', 'raw', { search, date, punchType, page, isLiveMode }],
@@ -40,7 +93,14 @@ export function AttendanceLog() {
     refetchInterval: isLiveMode ? 5000 : false,
   });
 
+  const stats = statsQuery.data;
+  const scopeLabel = statsScopeLabel(stats, Boolean(search.trim()));
+  const totalSub = stats
+    ? `${fmtNumber(stats.uniqueEmployees)} employees · ${scopeLabel}`
+    : '';
+
   const hasFilters = !isLiveMode;
+  const isModified = activeTile !== 'all' || Boolean(search.trim()) || Boolean(date);
   const emptyMessage = hasFilters
     ? 'No punches match your filters.'
     : 'No punches yet. Run the eSSL simulator (scripts/essl-sim.js) to generate some.';
@@ -49,7 +109,19 @@ export function AttendanceLog() {
     setSearch('');
     setDate('');
     setPunchType('all');
+    setActiveTile('all');
     setPage(1);
+  };
+
+  const clickTile = (tile: PunchTile) => {
+    const next: PunchTile = activeTile === tile && tile !== 'all' ? 'all' : tile;
+    const nextPunchType = tileToPunchType(next);
+    setActiveTile(next);
+    setPunchType(nextPunchType);
+    setPage(1);
+    if (next !== 'all') {
+      logAttendanceFilter({ punchType: nextPunchType });
+    }
   };
 
   useEffect(() => {
@@ -83,7 +155,7 @@ export function AttendanceLog() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div className="mb-3 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Live Attendance Log</h1>
           <div className="text-sm text-text-muted">
@@ -102,16 +174,80 @@ export function AttendanceLog() {
         )}
       </div>
 
-      <div className="card p-4 mb-4 flex flex-col sm:flex-row gap-3 flex-wrap">
-        <input
-          className="input flex-1 min-w-[200px]"
-          placeholder="Search by name, employee code, biometric ID..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+      <div className="dash-stat-grid">
+        <DashboardStatCard
+          label="Total Punches"
+          value={stats ? fmtNumber(stats.total) : '—'}
+          sub={totalSub}
+          accent="primary"
+          selected={activeTile === 'all'}
+          onClick={() => clickTile('all')}
+          hint="Filters punch list"
         />
+        <DashboardStatCard
+          label="IN Punches"
+          value={stats ? fmtNumber(stats.in) : '—'}
+          sub="recorded"
+          accent="green"
+          selected={activeTile === 'in'}
+          onClick={() => clickTile('in')}
+          hint="Filters punch list"
+        />
+        <DashboardStatCard
+          label="OUT Punches"
+          value={stats ? fmtNumber(stats.out) : '—'}
+          sub="recorded"
+          accent="amber"
+          selected={activeTile === 'out'}
+          onClick={() => clickTile('out')}
+          hint="Filters punch list"
+        />
+        <DashboardStatCard
+          label="OTHER Punches"
+          value={stats ? fmtNumber(stats.other) : '—'}
+          sub="non IN/OUT"
+          accent="red"
+          selected={activeTile === 'other'}
+          onClick={() => clickTile('other')}
+          hint="Filters punch list"
+        />
+      </div>
+
+      {isModified && (
+        <div className="dash-filter-bar">
+          <span className="dash-filter-bar-label">
+            Viewing: <strong>{filterBarLabel(activeTile, search, date)}</strong>
+          </span>
+          <button type="button" className="btn-primary btn-sm" onClick={clearFilters}>
+            Reset to Default View
+          </button>
+        </div>
+      )}
+
+      <MobileFilterBar
+        search={
+          <input
+            className="input flex-1 min-w-[200px]"
+            placeholder="Search by name, employee code, biometric ID..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
+        }
+        activeCount={countActiveFilters(
+          { date, punchType },
+          { date: '', punchType: 'all' }
+        )}
+        onClear={() => {
+          setDate('');
+          setPunchType('all');
+          setActiveTile('all');
+          setPage(1);
+        }}
+        desktopClassName="hidden md:flex flex-row gap-3 flex-wrap"
+      >
         <input
           type="date"
           className="input w-full sm:w-auto"
@@ -130,6 +266,7 @@ export function AttendanceLog() {
           onChange={(e) => {
             const v = e.target.value as PunchTypeFilter;
             setPunchType(v);
+            setActiveTile(punchTypeToTile(v));
             setPage(1);
             logAttendanceFilter({ punchType: v });
           }}
@@ -141,11 +278,11 @@ export function AttendanceLog() {
           <option value="OTHER">OTHER</option>
         </select>
         {hasFilters && (
-          <button type="button" className="btn-outline shrink-0" onClick={clearFilters}>
+          <button type="button" className="btn-outline shrink-0 hidden md:inline-flex" onClick={clearFilters}>
             Clear filters
           </button>
         )}
-      </div>
+      </MobileFilterBar>
 
       <PunchCardList
         items={data?.items}
