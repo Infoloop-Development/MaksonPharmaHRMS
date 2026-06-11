@@ -22,7 +22,7 @@ function parseHolidayCsv(text: string): HolidayCreate[] {
   return rows;
 }
 
-export function LeaveHolidaysTab({ canManage }: { canManage: boolean }) {
+export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const year = String(new Date().getFullYear());
@@ -49,7 +49,7 @@ export function LeaveHolidaysTab({ canManage }: { canManage: boolean }) {
 
   return (
     <div>
-      {canManage && (
+      {canConfigure && (
         <div className="card p-4 mb-4 flex flex-wrap gap-2">
           <button type="button" className="btn-primary btn-sm" onClick={() => setAddOpen(true)}>+ Add holiday</button>
           <button type="button" className="btn-outline btn-sm" onClick={() => setImportOpen(true)}>Import CSV</button>
@@ -59,7 +59,7 @@ export function LeaveHolidaysTab({ canManage }: { canManage: boolean }) {
       {!isLoading && holidayItems.length === 0 && (
         <div className="card p-6 mb-4 text-center text-sm">
           <p className="font-semibold text-base mb-1">No holidays for {year}</p>
-          {canManage ? (
+          {canConfigure ? (
             <>
               <p className="text-text-muted mb-4">
                 Add national holidays so leave day counts exclude them automatically.
@@ -75,7 +75,7 @@ export function LeaveHolidaysTab({ canManage }: { canManage: boolean }) {
       <LeaveHolidayCardList
         items={holidayItems}
         isLoading={isLoading}
-        canManage={canManage}
+        canConfigure={canConfigure}
         onEdit={setEditHoliday}
         onDelete={(id) => deleteMu.mutate(id)}
       />
@@ -88,11 +88,11 @@ export function LeaveHolidaysTab({ canManage }: { canManage: boolean }) {
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Scope</th>
-              {canManage && <th className="px-4 py-3" />}
+              {canConfigure && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={canManage ? 5 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
+            {isLoading && <tr><td colSpan={canConfigure ? 5 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
             {holidayItems.map((h) => (
               <tr key={h.id} className="border-b border-border/60">
                 <td className="px-4 py-3 font-medium">{h.name}</td>
@@ -103,7 +103,7 @@ export function LeaveHolidaysTab({ canManage }: { canManage: boolean }) {
                     ? `${h.departments.join(', ') || 'All depts'} / ${h.locations.join(', ') || 'All locs'}`
                     : 'All employees'}
                 </td>
-                {canManage && (
+                {canConfigure && (
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       <button type="button" className="btn-outline btn-sm" onClick={() => setEditHoliday(h)}>Edit</button>

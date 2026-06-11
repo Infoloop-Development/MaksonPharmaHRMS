@@ -6,7 +6,8 @@ import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils'
 export function LeaveApplicationCardList({
   items,
   isLoading,
-  canManage,
+  canApply,
+  canApprove,
   onView,
   onApprove,
   onReject,
@@ -14,7 +15,8 @@ export function LeaveApplicationCardList({
 }: {
   items: LeaveApplicationItem[];
   isLoading: boolean;
-  canManage: boolean;
+  canApply: boolean;
+  canApprove: boolean;
   onView: (item: LeaveApplicationItem) => void;
   onApprove: (item: LeaveApplicationItem) => void;
   onReject: (item: LeaveApplicationItem) => void;
@@ -27,7 +29,7 @@ export function LeaveApplicationCardList({
     return (
       <div className="card p-6 text-center text-text-muted text-sm md:hidden">
         No leave applications match your filters.
-        {canManage && (
+        {canApply && (
           <>
             {' '}
             <button type="button" className="text-primary underline" onClick={onAddLeave}>Add leave</button>
@@ -80,7 +82,7 @@ export function LeaveApplicationCardList({
             </dl>
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn-outline btn-sm" onClick={() => onView(row)}>View</button>
-              {canManage && row.status === 'Pending' && (
+              {canApprove && row.status === 'Pending' && (
                 <>
                   <button type="button" className="btn-primary btn-sm" onClick={() => onApprove(row)}>Approve</button>
                   <button type="button" className="btn-outline btn-sm text-red" onClick={() => onReject(row)}>Reject</button>

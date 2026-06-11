@@ -4,10 +4,32 @@ import { ROLE_PERMISSION_CAP, validatePermissionsForRole } from '@mams/types';
 
 describe('validatePermissionsForRole', () => {
   it('accepts compliant role defaults', () => {
-    const r = validatePermissionsForRole('hr.compliance', ['read.compliant', 'approve.adjust']);
+    const r = validatePermissionsForRole('hr.compliance', [
+      'read.compliant',
+      'approve.adjust',
+      'approve.regularization',
+      'approve.leave',
+      'read.leave',
+    ]);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.permissions).toEqual(['read.compliant', 'approve.adjust']);
+    expect(r.permissions).toEqual([
+      'read.compliant',
+      'approve.adjust',
+      'approve.regularization',
+      'approve.leave',
+      'read.leave',
+    ]);
+  });
+
+  it('accepts HR request-raiser profile for hr.admin', () => {
+    const r = validatePermissionsForRole('hr.admin', ['read.leave', 'write.leave', 'write.regularization']);
+    expect(r.ok).toBe(true);
+  });
+
+  it('rejects write.leave for compliance role', () => {
+    const r = validatePermissionsForRole('hr.compliance', ['read.compliant', 'write.leave']);
+    expect(r.ok).toBe(false);
   });
 
   it('rejects forbidden permission for compliance', () => {
@@ -60,12 +82,16 @@ describe('ROLE_PERMISSION_CAP', () => {
       'read.compliant',
       'write.adjust',
       'approve.adjust',
+      'write.regularization',
+      'approve.regularization',
       'unmask.sensitive',
       'manage.users',
       'manage.devices',
       'manage.settings',
       'manage.export_naming',
       'read.leave',
+      'write.leave',
+      'approve.leave',
       'manage.leave',
     ];
     for (const p of all) {

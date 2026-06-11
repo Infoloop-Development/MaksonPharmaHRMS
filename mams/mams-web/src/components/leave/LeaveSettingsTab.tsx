@@ -7,7 +7,7 @@ import { Field, Input, Select } from '../ui/Field';
 import { LeaveTypeFormModal } from './LeaveTypeFormModal';
 import { LeaveTypeCardList } from './LeaveTypeCardList';
 
-export function LeaveSettingsTab({ canManage }: { canManage: boolean }) {
+export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const { data: types } = useQuery({ queryKey: ['leave', 'types'], queryFn: leaveApi.listTypes });
@@ -45,17 +45,17 @@ export function LeaveSettingsTab({ canManage }: { canManage: boolean }) {
         <p className="text-sm text-text-muted mb-4">Controls how annual leave entitlements are calculated per employee.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <Field label="Reset cycle">
-            <Select value={resetPolicy} disabled={!canManage} onChange={(e) => setResetPolicy(e.target.value as LeaveQuotaResetPolicy)}>
+            <Select value={resetPolicy} disabled={!canConfigure} onChange={(e) => setResetPolicy(e.target.value as LeaveQuotaResetPolicy)}>
               <option value="calendar_year">Calendar year</option>
               <option value="financial_year">Financial year</option>
               <option value="joining_anniversary">Joining anniversary</option>
             </Select>
           </Field>
           <Field label="FY start month (1–12)">
-            <Input type="number" min={1} max={12} value={fyMonth} disabled={!canManage} onChange={(e) => setFyMonth(Number(e.target.value))} />
+            <Input type="number" min={1} max={12} value={fyMonth} disabled={!canConfigure} onChange={(e) => setFyMonth(Number(e.target.value))} />
           </Field>
         </div>
-        {canManage && (
+        {canConfigure && (
           <button type="button" className="btn-primary btn-sm mt-4" onClick={() => policyMu.mutate()} disabled={policyMu.isPending}>
             {policyMu.isPending ? 'Saving…' : 'Save policy'}
           </button>
@@ -68,7 +68,7 @@ export function LeaveSettingsTab({ canManage }: { canManage: boolean }) {
             <h3 className="text-base font-bold">Leave types</h3>
             <p className="text-sm text-text-muted">Paid leave, casual, sick, LWP, and custom types.</p>
           </div>
-          {canManage && (
+          {canConfigure && (
             <div className="flex gap-2">
               {(types?.items.length ?? 0) === 0 && (
                 <button type="button" className="btn-outline btn-sm" onClick={() => seedMu.mutate()} disabled={seedMu.isPending}>
@@ -81,7 +81,7 @@ export function LeaveSettingsTab({ canManage }: { canManage: boolean }) {
         </div>
         <LeaveTypeCardList
           items={types?.items ?? []}
-          canManage={canManage}
+          canConfigure={canConfigure}
           onEdit={setEditType}
         />
         <div className="tbl-scroll border border-border rounded-md hidden md:block">
@@ -93,12 +93,12 @@ export function LeaveSettingsTab({ canManage }: { canManage: boolean }) {
                 <th className="px-4 py-3">Half day</th>
                 <th className="px-4 py-3">Default quota</th>
                 <th className="px-4 py-3">Active</th>
-                {canManage && <th className="px-4 py-3" />}
+                {canConfigure && <th className="px-4 py-3" />}
               </tr>
             </thead>
             <tbody>
               {(types?.items ?? []).length === 0 && (
-                <tr><td colSpan={canManage ? 6 : 5} className="px-4 py-8 text-center text-text-muted">No leave types. Seed defaults to get started.</td></tr>
+                <tr><td colSpan={canConfigure ? 6 : 5} className="px-4 py-8 text-center text-text-muted">No leave types. Seed defaults to get started.</td></tr>
               )}
               {(types?.items ?? []).map((t) => (
                 <tr key={t.id} className="border-b border-border/60">
@@ -107,7 +107,7 @@ export function LeaveSettingsTab({ canManage }: { canManage: boolean }) {
                   <td className="px-4 py-3">{t.halfDayEligible ? 'Yes' : 'No'}</td>
                   <td className="px-4 py-3 font-mono">{t.annualQuotaDefault}</td>
                   <td className="px-4 py-3">{t.active ? 'Yes' : 'No'}</td>
-                  {canManage && (
+                  {canConfigure && (
                     <td className="px-4 py-3">
                       <button type="button" className="btn-outline btn-sm" onClick={() => setEditType(t)}>Edit</button>
                     </td>

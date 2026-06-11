@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  canApproveLeave,
+  canConfigureLeave,
+  canViewLeave,
+  canWriteLeave,
+} from '@mams/types';
 import { leaveApi, type LeaveApplicationItem } from '../api/leave';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
@@ -17,7 +23,13 @@ import type { LeaveTab } from '../components/leave/leaveUtils';
 
 export function Leave() {
   const user = useAuth((s) => s.user);
-  const canManage = user?.permissions.includes('manage.leave') ?? false;
+  const perms = user?.permissions ?? [];
+  const canView = canViewLeave(perms);
+  const canApply = canWriteLeave(perms);
+  const canApprove = canApproveLeave(perms);
+  const canConfigure = canConfigureLeave(perms);
+  const readOnly = canView && !canApply && !canApprove && !canConfigure;
+
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
 
@@ -26,13 +38,27 @@ export function Leave() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [decideItem, setDecideItem] = useState<{ item: LeaveApplicationItem; action: 'approve' | 'reject' } | null>(null);
 
+  useEffect(() => {
+    if (!canConfigure && (tab === 'holidays' || tab === 'settings')) {
+      setTab('requests');
+    }
+  }, [canConfigure, tab]);
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leave'] });
     qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
   };
 
-  const { data: summary } = useQuery({ queryKey: ['leave', 'summary'], queryFn: leaveApi.summary });
-  const { data: types } = useQuery({ queryKey: ['leave', 'types'], queryFn: leaveApi.listTypes });
+  const { data: summary } = useQuery({
+    queryKey: ['leave', 'summary'],
+    queryFn: leaveApi.summary,
+    enabled: canView,
+  });
+  const { data: types } = useQuery({
+    queryKey: ['leave', 'types'],
+    queryFn: leaveApi.listTypes,
+    enabled: canView,
+  });
 
   const approveMu = useMutation({
     mutationFn: ({ id, note }: { id: string; note?: string }) => leaveApi.approve(id, note),
@@ -56,15 +82,25 @@ export function Leave() {
 
   const openApply = () => setApplyOpen(true);
 
+  if (!canView) {
+    return (
+      <div className="card p-12 text-center text-text-muted">
+        You do not have permission to view leave management. Ask an admin for <em>View leave</em> access in Settings → Users.
+      </div>
+    );
+  }
+
   return (
     <div>
-      <LeavePageHeader canManage={canManage} onAddLeave={openApply} />
-      <LeaveTabBar tab={tab} onTabChange={setTab} />
-      {!canManage && <LeaveReadOnlyBanner />}
+      <LeavePageHeader canApply={canApply} onAddLeave={openApply} />
+      <LeaveTabBar tab={tab} onTabChange={setTab} canConfigure={canConfigure} />
+      {readOnly && <LeaveReadOnlyBanner />}
 
       {tab === 'requests' && (
         <LeaveRequestsTab
-          canManage={canManage}
+          canApply={canApply}
+          canApprove={canApprove}
+          canConfigure={canConfigure}
           summary={summary}
           types={types?.items ?? []}
           onView={(item) => setDetailId(item._id)}
@@ -74,12 +110,13 @@ export function Leave() {
           onGoToSettings={() => setTab('settings')}
         />
       )}
-      {tab === 'holidays' && <LeaveHolidaysTab canManage={canManage} />}
-      {tab === 'settings' && <LeaveSettingsTab canManage={canManage} />}
+      {tab === 'holidays' && canConfigure && <LeaveHolidaysTab canConfigure={canConfigure} />}
+      {tab === 'settings' && canConfigure && <LeaveSettingsTab canConfigure={canConfigure} />}
 
-      {applyOpen && canManage && (
+      {applyOpen && canApply && (
         <ApplyLeaveModal
           types={types?.items ?? []}
+          canApprove={canApprove}
           onClose={() => setApplyOpen(false)}
           onSuccess={() => {
             setApplyOpen(false);

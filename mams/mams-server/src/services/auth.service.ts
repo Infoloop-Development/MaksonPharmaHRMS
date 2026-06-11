@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import type { Permission, Role } from '@mams/types';
 import { PasswordSchema } from '../utils/passwordPolicy.js';
 import { filterPermissionsForSession, isUnmaskEnabled } from '../config/featureFlags.js';
+import { ensureUserRoleDefaultPermissions } from './userPermissionBackfill.service.js';
 
 export { PERMISSIONS_BY_ROLE } from '@mams/types';
 
@@ -41,6 +42,7 @@ export async function login(email: string, password: string, ctx: { ipAddress: s
   user.lockedUntil = null;
   user.lastLoginAt = new Date();
   await user.save();
+  await ensureUserRoleDefaultPermissions(user);
 
   const sessionPerms = filterPermissionsForSession((user.permissions ?? []) as Permission[]);
   const accessToken = signAccessToken({
@@ -76,6 +78,7 @@ export async function rotateRefresh(token: string, ctx: { ipAddress: string | nu
   if (!user || !user.isActive) {
     throw new ApiError(401, 'invalid_refresh_token', 'User no longer active');
   }
+  await ensureUserRoleDefaultPermissions(user);
 
   const sessionPerms = filterPermissionsForSession((user.permissions ?? []) as Permission[]);
   const accessToken = signAccessToken({

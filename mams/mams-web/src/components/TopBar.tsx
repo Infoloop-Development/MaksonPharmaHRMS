@@ -12,6 +12,8 @@ function pageTitle(pathname: string): string {
   if (pathname === '/attendance') return 'Attendance Log';
   if (pathname === '/reports') return 'Reports';
   if (pathname === '/adjustments') return 'Adjustments';
+  if (pathname === '/regularization') return 'Regularization';
+  if (pathname === '/leave') return 'Leave';
   if (pathname === '/devices') return 'Devices';
   if (pathname === '/settings') return 'Settings';
   if (pathname === '/autogeneration-demo' && isAutogenDemoEnabled()) return 'Auto Genrated Shift Demo';

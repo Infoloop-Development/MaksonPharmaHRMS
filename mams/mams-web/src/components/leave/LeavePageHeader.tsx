@@ -1,8 +1,8 @@
 export function LeavePageHeader({
-  canManage,
+  canApply,
   onAddLeave,
 }: {
-  canManage: boolean;
+  canApply: boolean;
   onAddLeave: () => void;
 }) {
   return (
@@ -13,7 +13,7 @@ export function LeavePageHeader({
           HR leave requests, quotas, and holiday calendar. Employee self-service is planned for a later release.
         </p>
       </div>
-      {canManage && (
+      {canApply && (
         <button type="button" className="btn-primary" onClick={onAddLeave}>
           + Add Leave
         </button>

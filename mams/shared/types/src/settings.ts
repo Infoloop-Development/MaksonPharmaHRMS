@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CompanyLogoSchema, FaviconSchema } from './brandAssets.js';
 import { ExportNamingSettingsSchema } from './exportNaming.js';
 import { LeaveQuotaResetPolicySchema } from './leave.js';
 
@@ -31,5 +32,7 @@ export const SettingsPublicSchema = z.object({
   exportNaming: ExportNamingSettingsSchema,
   leaveQuotaResetPolicy: LeaveQuotaResetPolicySchema,
   financialYearStartMonth: z.number().int().min(1).max(12),
+  companyLogo: CompanyLogoSchema.default(null),
+  favicon: FaviconSchema.default(null),
 });
 export type SettingsPublic = z.infer<typeof SettingsPublicSchema>;

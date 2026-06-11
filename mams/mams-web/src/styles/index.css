@@ -440,11 +440,18 @@ input, select, textarea {
   color: white;
 }
 
+/* Hidden on screen; shown when printing report letterhead (logo + company name). */
+.print-only {
+  display: none;
+}
+
 /* Print styles - used by Reports page when user clicks "Print to PDF".
  * Hides the chrome (sidebar, top bar, filters, action buttons) so the
- * report table prints cleanly on A4. Plain print, no enterprise letterhead
- * (which is Phase 2 per SoW §3). */
+ * report table prints cleanly on A4 with optional brand letterhead. */
 @media print {
+  .print-only {
+    display: block !important;
+  }
   body {
     background: white;
   }
