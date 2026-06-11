@@ -71,3 +71,17 @@ export function requirePermission(permission: Permission) {
     next();
   };
 }
+
+export function requireAnyPermission(...permissions: Permission[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.auth) {
+      res.status(401).json({ error: 'unauthenticated' });
+      return;
+    }
+    if (!permissions.some((p) => req.auth!.permissions.includes(p))) {
+      res.status(403).json({ error: 'forbidden', requiredPermissions: permissions });
+      return;
+    }
+    next();
+  };
+}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ChangePasswordRequestSchema, LoginRequestSchema, RefreshRequestSchema } from '@mams/types';
 import { UserModel } from '../models/User.js';
 import { changePassword, login, logout, rotateRefresh, userPublic } from '../services/auth.service.js';
+import { ensureUserRoleDefaultPermissions } from '../services/userPermissionBackfill.service.js';
 import { PasswordSchema } from '../utils/passwordPolicy.js';
 import { requireAuth } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
@@ -62,6 +63,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
     if (!doc || !(doc.isActive ?? true)) {
       return res.status(401).json({ error: 'session_invalid', message: 'Account is inactive or unavailable' });
     }
+    await ensureUserRoleDefaultPermissions(doc);
     res.json({ auth: req.auth, user: userPublic(doc) });
   } catch (err) {
     next(err);

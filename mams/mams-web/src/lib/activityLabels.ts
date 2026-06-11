@@ -7,6 +7,7 @@ const SECTION_LABELS: Record<string, string> = {
   smart_anchor: 'Smart Anchor v2',
   confidentiality: 'Confidentiality Notice',
   export_naming: 'Export filename formats',
+  brand_assets: 'Brand Assets',
   settings: 'Settings',
 };
 
@@ -27,6 +28,8 @@ const SETTINGS_FIELD_LABELS: Record<string, string> = {
   confidentialityNoticeEnabled: 'Confidentiality notice',
   confidentialityNoticeText: 'Confidentiality notice text',
   exportNaming: 'Export filename formats',
+  companyLogo: 'Company logo',
+  favicon: 'Favicon',
 };
 
 const MOBILE_CHART_LABELS: Record<string, string> = {
@@ -92,6 +95,15 @@ function formatSettingsChanged(payload: Record<string, unknown>): string {
   const after = (payload.after as Record<string, unknown> | undefined) ?? {};
 
   if (fields.length === 0) return `Updated ${section}`;
+
+  const brandFields = fields.filter((f) => f === 'companyLogo' || f === 'favicon');
+  if (brandFields.length > 0) {
+    const parts = brandFields.map((f) => {
+      const label = f === 'companyLogo' ? 'company logo' : 'favicon';
+      return after[f] == null || after[f] === '' ? `removed ${label}` : `updated ${label}`;
+    });
+    return `Updated Brand Assets: ${parts.join(', ')}`;
+  }
 
   if (fields.length === 1 && fields[0] === 'exportNaming') {
     return `Updated ${section}: ${formatExportNamingDiff(before.exportNaming, after.exportNaming)}`;
@@ -169,6 +181,7 @@ export function activityPageBadge(eventType: string, payload: Record<string, unk
     return 'Dashboard';
   }
   if (eventType.startsWith('leave_') || eventType === 'holiday_created') return 'Leave';
+  if (eventType.startsWith('regularization_')) return 'Regularization';
   if (['login', 'logout', 'password_changed'].includes(eventType)) return 'Auth';
   return 'System';
 }
@@ -255,6 +268,12 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return `Adjusted leave quota (${p.delta ?? '?'} day(s))`;
     case 'holiday_created':
       return `Added holiday “${p.name ?? ''}” (${p.date ?? ''})`;
+    case 'regularization_created':
+      return `Created regularization request (${p.type ?? 'unknown'}, ${p.date ?? ''})`;
+    case 'regularization_approved':
+      return 'Approved regularization request — raw punches inserted';
+    case 'regularization_rejected':
+      return `Rejected regularization request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
     case 'settings_changed':
       return formatSettingsChanged(p);
     case 'user_created': {

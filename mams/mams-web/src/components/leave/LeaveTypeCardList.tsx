@@ -3,11 +3,11 @@ import type { LeaveTypeItem } from '../../api/leave';
 
 export function LeaveTypeCardList({
   items,
-  canManage,
+  canConfigure,
   onEdit,
 }: {
   items: LeaveTypeItem[];
-  canManage: boolean;
+  canConfigure: boolean;
   onEdit: (t: LeaveTypeItem) => void;
 }) {
   if (items.length === 0) {
@@ -40,7 +40,7 @@ export function LeaveTypeCardList({
               <dd className="font-mono">{t.annualQuotaDefault} days</dd>
             </div>
           </dl>
-          {canManage && (
+          {canConfigure && (
             <button type="button" className="btn-outline btn-sm w-full mt-3 min-h-[44px]" onClick={() => onEdit(t)}>
               Edit
             </button>
