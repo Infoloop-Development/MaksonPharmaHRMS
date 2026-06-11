@@ -14,7 +14,9 @@ import {
   LeaveTypeCreateSchema,
   LeaveTypePatchSchema,
 } from '@mams/types';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import type { Permission } from '@mams/types';
+import { resolveLeaveAdminApply } from '@mams/types';
+import { requireAuth, requireAnyPermission, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import { LeaveApplicationModel } from '../models/LeaveApplication.js';
@@ -372,9 +374,15 @@ router.get('/applications/:id', async (req, res, next) => {
   }
 });
 
-router.post('/applications', requirePermission('manage.leave'), async (req, res, next) => {
+router.post('/applications', requireAnyPermission('write.leave', 'manage.leave'), async (req, res, next) => {
   try {
     const body = LeaveApplicationCreateSchema.parse(req.body);
+    const perms = req.auth!.permissions as Permission[];
+    const adminApplyResult = resolveLeaveAdminApply(perms, body.adminApply);
+    if ('error' in adminApplyResult) {
+      throw new ApiError(403, 'forbidden', 'You do not have permission to auto-approve leave applications');
+    }
+    const adminApply = adminApplyResult.adminApply;
     if (!Types.ObjectId.isValid(body.employeeId)) throw new ApiError(400, 'invalid_employee', 'Invalid employee');
     if (!Types.ObjectId.isValid(body.leaveTypeId)) throw new ApiError(400, 'invalid_type', 'Invalid leave type');
 
@@ -414,7 +422,7 @@ router.post('/applications', requirePermission('manage.leave'), async (req, res,
       throw new ApiError(400, 'no_leave_days', 'No chargeable leave days in selected range');
     }
 
-    const status = body.adminApply ? 'Approved' : 'Pending';
+    const status = adminApply ? 'Approved' : 'Pending';
 
     const created = await LeaveApplicationModel.create({
       employeeId: new Types.ObjectId(body.employeeId),
@@ -477,7 +485,7 @@ router.post('/applications', requirePermission('manage.leave'), async (req, res,
   }
 });
 
-router.patch('/applications/:id/approve', requirePermission('manage.leave'), async (req, res, next) => {
+router.patch('/applications/:id/approve', requireAnyPermission('approve.leave', 'manage.leave'), async (req, res, next) => {
   try {
     if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
     const body = LeaveDecisionSchema.parse(req.body);
@@ -516,7 +524,7 @@ router.patch('/applications/:id/approve', requirePermission('manage.leave'), asy
   }
 });
 
-router.patch('/applications/:id/reject', requirePermission('manage.leave'), async (req, res, next) => {
+router.patch('/applications/:id/reject', requireAnyPermission('approve.leave', 'manage.leave'), async (req, res, next) => {
   try {
     if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
     const body = LeaveRejectSchema.parse(req.body);
@@ -542,7 +550,7 @@ router.patch('/applications/:id/reject', requirePermission('manage.leave'), asyn
   }
 });
 
-router.patch('/applications/:id/cancel', requirePermission('manage.leave'), async (req, res, next) => {
+router.patch('/applications/:id/cancel', requireAnyPermission('approve.leave', 'manage.leave'), async (req, res, next) => {
   try {
     if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
     const body = LeaveDecisionSchema.parse(req.body);

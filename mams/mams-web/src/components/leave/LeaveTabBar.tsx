@@ -6,11 +6,22 @@ const TABS: { id: LeaveTab; label: string; shortLabel?: string }[] = [
   { id: 'settings', label: 'Leave Settings', shortLabel: 'Settings' },
 ];
 
-export function LeaveTabBar({ tab, onTabChange }: { tab: LeaveTab; onTabChange: (t: LeaveTab) => void }) {
+export function LeaveTabBar({
+  tab,
+  onTabChange,
+  canConfigure = false,
+}: {
+  tab: LeaveTab;
+  onTabChange: (t: LeaveTab) => void;
+  canConfigure?: boolean;
+}) {
+  const visibleTabs = TABS.filter((t) => t.id === 'requests' || canConfigure);
+  const colClass = visibleTabs.length === 1 ? 'grid-cols-1' : visibleTabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3';
+
   return (
     <div className="card mb-6 overflow-hidden">
-      <div className="grid grid-cols-3 md:flex md:flex-wrap border-b border-border">
-        {TABS.map((t) => (
+      <div className={`grid ${colClass} md:flex md:flex-wrap border-b border-border`}>
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             type="button"

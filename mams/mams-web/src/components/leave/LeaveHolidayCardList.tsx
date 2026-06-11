@@ -13,13 +13,13 @@ type HolidayItem = {
 export function LeaveHolidayCardList({
   items,
   isLoading,
-  canManage,
+  canConfigure,
   onEdit,
   onDelete,
 }: {
   items: HolidayItem[];
   isLoading: boolean;
-  canManage: boolean;
+  canConfigure: boolean;
   onEdit: (h: HolidayRow) => void;
   onDelete: (id: string) => void;
 }) {
@@ -46,7 +46,7 @@ export function LeaveHolidayCardList({
               ? `${h.departments.join(', ') || 'All depts'} / ${h.locations.join(', ') || 'All locs'}`
               : 'All employees'}
           </p>
-          {canManage && (
+          {canConfigure && (
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn-outline btn-sm" onClick={() => onEdit(h)}>Edit</button>
               <button type="button" className="btn-outline btn-sm text-red" onClick={() => onDelete(h.id)}>Delete</button>

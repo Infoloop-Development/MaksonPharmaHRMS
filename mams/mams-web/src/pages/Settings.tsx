@@ -26,6 +26,7 @@ import { UnmaskFieldGrantsSection } from '../components/settings/UnmaskFieldGran
 import { isUnmaskEnabled } from '../config/featureFlags';
 import { z } from 'zod';
 import { ActivityLogPanel } from '../components/activity/ActivityLogPanel';
+import { BrandAssetsCard } from '../components/settings/BrandAssetsCard';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -42,16 +43,29 @@ const EDIT_USER_FORM_ID = 'edit-user-form';
 const PERMISSION_LABELS: Record<Permission, string> = {
   'read.real': 'Read real (12h) attendance data',
   'read.compliant': 'Read compliant (8h) attendance data',
-  'write.adjust': 'Create/edit attendance adjustments',
+  'write.adjust': 'Submit attendance adjustments (pending approval)',
   'approve.adjust': 'Approve/reject adjustments',
+  'write.regularization': 'Submit regularization requests (pending approval)',
+  'approve.regularization': 'Approve/reject regularization requests',
   'unmask.sensitive': 'Unmask PAN, bank, Aadhaar, PF, ESI',
   'manage.users': 'Manage users',
   'manage.devices': 'Manage biometric devices',
   'manage.settings': 'Manage settings',
   'manage.export_naming': 'Configure export filename formats',
   'read.leave': 'View leave management data',
-  'manage.leave': 'Manage leave, quotas, and holidays',
+  'write.leave': 'Submit leave requests (pending approval)',
+  'approve.leave': 'Approve/reject/cancel leave requests',
+  'manage.leave': 'Full leave admin (setup, submit, and approve)',
 };
+
+const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
+  { label: 'Attendance data', permissions: ['read.real', 'read.compliant'] },
+  { label: 'Adjustments', permissions: ['write.adjust', 'approve.adjust'] },
+  { label: 'Regularization', permissions: ['write.regularization', 'approve.regularization'] },
+  { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
+  { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
+  { label: 'Administration', permissions: ['manage.users', 'manage.devices', 'manage.settings', 'manage.export_naming'] },
+];
 const ADD_USER_PASSWORD_SPECIALS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`' as const;
 
 function passwordPolicyScore(password: string): number {
@@ -125,6 +139,9 @@ export function Settings() {
       </div>
 
       <div className="settings-layout">
+        <SettingsLayoutCell full>
+          <BrandAssetsCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
         <SettingsLayoutCell>
           <CompanyInfoCard settings={data} canManage={canManage} />
         </SettingsLayoutCell>
@@ -488,21 +505,43 @@ function PermissionCheckboxList({
   onToggle: (p: Permission) => void;
 }) {
   const cap = ROLE_PERMISSION_CAP[role];
+  const capSet = new Set(cap);
+  const hideUnmask = role === 'hr.admin';
+
+  const grouped = PERMISSION_GROUPS.map((g) => ({
+    label: g.label,
+    items: g.permissions.filter((p) => capSet.has(p) && !(hideUnmask && p === 'unmask.sensitive')),
+  })).filter((g) => g.items.length > 0);
+
+  const groupedSet = new Set(grouped.flatMap((g) => g.items));
+  const ungrouped = cap.filter((p) => !groupedSet.has(p) && !(hideUnmask && p === 'unmask.sensitive'));
+
+  const renderItem = (p: Permission) => (
+    <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
+      <input
+        type="checkbox"
+        className="mt-0.5"
+        checked={selectedPerms.includes(p)}
+        onChange={() => onToggle(p)}
+      />
+      <span>{PERMISSION_LABELS[p]}</span>
+    </label>
+  );
+
   return (
-    <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-md p-3">
-      {cap
-        .filter((p) => !(role === 'hr.admin' && p === 'unmask.sensitive'))
-        .map((p) => (
-          <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={selectedPerms.includes(p)}
-              onChange={() => onToggle(p)}
-            />
-            <span>{PERMISSION_LABELS[p]}</span>
-          </label>
-        ))}
+    <div className="space-y-3 max-h-56 overflow-y-auto border border-border rounded-md p-3">
+      {grouped.map((g) => (
+        <div key={g.label}>
+          <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold mb-1.5">{g.label}</div>
+          <div className="space-y-2">{g.items.map(renderItem)}</div>
+        </div>
+      ))}
+      {ungrouped.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold mb-1.5">Other</div>
+          <div className="space-y-2">{ungrouped.map(renderItem)}</div>
+        </div>
+      )}
     </div>
   );
 }

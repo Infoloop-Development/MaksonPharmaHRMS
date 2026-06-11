@@ -27,6 +27,8 @@ export interface Settings {
   confidentialityNoticeEnabled: boolean;
   confidentialityNoticeText: string;
   exportNaming?: ExportNamingSettings;
+  companyLogo: string | null;
+  favicon: string | null;
 }
 
 export const settingsApi = {

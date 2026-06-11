@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { ExportNamingSettingsSchema, LeaveQuotaResetPolicySchema } from '@mams/types';
+import {
+  CompanyLogoSchema,
+  ExportNamingSettingsSchema,
+  FaviconSchema,
+  LeaveQuotaResetPolicySchema,
+} from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
 import { requireAuth } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
@@ -45,6 +50,8 @@ const SettingsPatchSchema = z.object({
   exportNaming: ExportNamingSettingsSchema.optional(),
   leaveQuotaResetPolicy: LeaveQuotaResetPolicySchema.optional(),
   financialYearStartMonth: z.number().int().min(1).max(12).optional(),
+  companyLogo: CompanyLogoSchema.optional(),
+  favicon: FaviconSchema.optional(),
 });
 
 const MANAGE_SETTINGS_FIELDS = new Set([
@@ -63,6 +70,8 @@ const MANAGE_SETTINGS_FIELDS = new Set([
   'smartAnchorEnabled',
   'confidentialityNoticeEnabled',
   'confidentialityNoticeText',
+  'companyLogo',
+  'favicon',
 ]);
 
 router.patch('/', async (req, res, next) => {

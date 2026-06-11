@@ -75,6 +75,8 @@ const settingsSchema = new Schema(
       default: 'calendar_year',
     },
     financialYearStartMonth: { type: Number, default: 4, min: 1, max: 12 },
+    companyLogo: { type: String, default: null },
+    favicon: { type: String, default: null },
   },
   { timestamps: true }
 );

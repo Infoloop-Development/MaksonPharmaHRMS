@@ -38,10 +38,12 @@ function getApplyValidationErrors(params: {
 
 export function ApplyLeaveModal({
   types,
+  canApprove,
   onClose,
   onSuccess,
 }: {
   types: { id: string; name: string; halfDayEligible: boolean }[];
+  canApprove: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -105,10 +107,10 @@ export function ApplyLeaveModal({
         halfDayPortion: halfDay && selectedType?.halfDayEligible ? halfPortion : undefined,
         reason: reason.trim(),
         notifyEmployee: notify,
-        adminApply: true,
+        adminApply: canApprove,
       }),
     onSuccess: () => {
-      toast('Leave applied and approved', 'success');
+      toast(canApprove ? 'Leave applied and approved' : 'Leave submitted for approval', 'success');
       onSuccess();
     },
     onError: (e: Error) => toast(e.message, 'error'),

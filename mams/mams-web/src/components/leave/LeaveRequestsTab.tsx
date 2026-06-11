@@ -13,7 +13,9 @@ import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils'
 import { LeaveApplicationCardList } from './LeaveApplicationCardList';
 
 export function LeaveRequestsTab({
-  canManage,
+  canApply,
+  canApprove,
+  canConfigure,
   summary,
   types,
   onView,
@@ -22,7 +24,9 @@ export function LeaveRequestsTab({
   onAddLeave,
   onGoToSettings,
 }: {
-  canManage: boolean;
+  canApply: boolean;
+  canApprove: boolean;
+  canConfigure: boolean;
   summary?: LeaveSummary;
   types: LeaveTypeItem[];
   onView: (item: LeaveApplicationItem) => void;
@@ -130,7 +134,7 @@ export function LeaveRequestsTab({
             <button type="button" className="text-primary underline" onClick={onGoToSettings}>
               Leave Settings
             </button>
-            {canManage ? ' and click Seed defaults to create Paid Leave, Casual Leave, Sick Leave, and more.' : ' (admin required to seed defaults).'}
+            {canConfigure ? ' and click Seed defaults to create Paid Leave, Casual Leave, Sick Leave, and more.' : ' (leave admin required to seed defaults).'}
           </p>
         </div>
       )}
@@ -184,7 +188,7 @@ export function LeaveRequestsTab({
             >
               Export CSV
             </a>
-            {canManage && (
+            {canApply && (
               <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
                 + Add Leave
               </button>
@@ -207,7 +211,7 @@ export function LeaveRequestsTab({
           >
             Export CSV
           </a>
-          {canManage && (
+          {canApply && (
             <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
               + Add Leave
             </button>
@@ -218,7 +222,8 @@ export function LeaveRequestsTab({
       <LeaveApplicationCardList
         items={items}
         isLoading={isLoading}
-        canManage={canManage}
+        canApply={canApply}
+        canApprove={canApprove}
         onView={onView}
         onApprove={onApprove}
         onReject={onReject}
@@ -246,7 +251,7 @@ export function LeaveRequestsTab({
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
                   No leave applications match your filters.
-                  {canManage && (
+                  {canApply && (
                     <>
                       {' '}
                       <button type="button" className="text-primary underline" onClick={onAddLeave}>Add leave</button>
@@ -293,7 +298,7 @@ export function LeaveRequestsTab({
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       <button type="button" className="btn-outline btn-sm" onClick={() => onView(row)}>View</button>
-                      {canManage && row.status === 'Pending' && (
+                      {canApprove && row.status === 'Pending' && (
                         <>
                           <button type="button" className="btn-primary btn-sm" onClick={() => onApprove(row)}>Approve</button>
                           <button type="button" className="btn-outline btn-sm text-red" onClick={() => onReject(row)}>Reject</button>

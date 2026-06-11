@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { reportsApi } from '../api/reports';
+import { settingsApi } from '../api/settings';
+import { ReportPrintHeader, formatReportDateRange } from '../components/reports/ReportPrintHeader';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
@@ -85,6 +87,8 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       location: (patch.location ?? location) || undefined,
     });
   };
+
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'daily', startDate, endDate, department, location],
@@ -174,6 +178,12 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       )}
 
       <div className="card overflow-hidden hidden md:block print:block">
+        <ReportPrintHeader
+          companyName={settings?.companyName ?? 'Company'}
+          companyLogo={settings?.companyLogo ?? null}
+          title="Daily Attendance Report"
+          subtitle={formatReportDateRange(startDate, endDate)}
+        />
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">

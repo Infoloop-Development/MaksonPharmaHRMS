@@ -1,7 +1,8 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../store/auth';
+import { settingsApi } from '../api/settings';
 import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
@@ -12,6 +13,7 @@ const BASE_NAV = [
   { to: '/attendance', label: 'Attendance Log' },
   { to: '/reports', label: 'Reports' },
   { to: '/adjustments', label: 'Adjustments' },
+  { to: '/regularization', label: 'Regularization' },
   { to: '/leave', label: 'Leave' },
   { to: '/devices', label: 'Devices' },
   { to: '/settings', label: 'Settings' },
@@ -31,6 +33,11 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const qc = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingsApi.get,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     onClose();
@@ -56,8 +63,15 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     >
       <div className="px-4 lg:px-6 py-4 lg:py-5 border-b border-white/10 flex items-start justify-between gap-2">
         <div>
+          {settings?.companyLogo && (
+            <img
+              src={settings.companyLogo}
+              alt="Company logo"
+              className="w-9 h-9 rounded-md object-contain bg-white p-0.5 mb-2"
+            />
+          )}
           <div className="text-[10px] tracking-[2px] uppercase opacity-60 mb-1">Attendance System</div>
-          <h1 className="text-base font-bold">Makson Group</h1>
+          <h1 className="text-base font-bold">{settings?.companyName ?? 'Makson Group'}</h1>
         </div>
         <button
           type="button"
