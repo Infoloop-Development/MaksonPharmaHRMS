@@ -5,6 +5,7 @@ import {
   ExportNamingSettingsSchema,
   FaviconSchema,
   LeaveQuotaResetPolicySchema,
+  TimeFormatSchema,
 } from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -50,6 +51,7 @@ const SettingsPatchSchema = z.object({
   exportNaming: ExportNamingSettingsSchema.optional(),
   leaveQuotaResetPolicy: LeaveQuotaResetPolicySchema.optional(),
   financialYearStartMonth: z.number().int().min(1).max(12).optional(),
+  timeFormat: TimeFormatSchema.optional(),
   companyLogo: CompanyLogoSchema.optional(),
   favicon: FaviconSchema.optional(),
 });
@@ -70,6 +72,7 @@ const MANAGE_SETTINGS_FIELDS = new Set([
   'smartAnchorEnabled',
   'confidentialityNoticeEnabled',
   'confidentialityNoticeText',
+  'timeFormat',
   'companyLogo',
   'favicon',
 ]);

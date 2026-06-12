@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { goLiveApi } from '../../api/goLive';
-import { fmtIstDate, fmtIstTime } from '../../lib/format';
+import { fmtIstDate } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 
 export function OrphanPunchesPanel() {
+  const { fmtTime } = useTimeDisplay();
   const [page, setPage] = useState(1);
   const [sinceDays, setSinceDays] = useState(14);
   const pageSize = 15;
@@ -57,7 +59,7 @@ export function OrphanPunchesPanel() {
             {data.items.map((row) => (
               <div key={row.id} className="border border-border rounded p-3 text-xs space-y-2">
                 <div className="font-mono text-text-muted">
-                  {fmtIstDate(row.occurredAt)} {fmtIstTime(row.occurredAt)}
+                  {fmtIstDate(row.occurredAt)} {fmtTime(row.occurredAt)}
                 </div>
                 <div>
                   <span className="text-text-subtle uppercase tracking-wider">Device </span>
@@ -92,7 +94,7 @@ export function OrphanPunchesPanel() {
                 {data.items.map((row) => (
                   <tr key={row.id}>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {fmtIstDate(row.occurredAt)} {fmtIstTime(row.occurredAt)}
+                      {fmtIstDate(row.occurredAt)} {fmtTime(row.occurredAt)}
                     </td>
                     <td className="px-3 py-2">
                       <div className="font-mono">{row.deviceSerial ?? '—'}</div>

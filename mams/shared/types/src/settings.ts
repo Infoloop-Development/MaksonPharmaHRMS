@@ -11,6 +11,9 @@ export const ShiftWindowSchema = z.object({
 });
 export type ShiftWindow = z.infer<typeof ShiftWindowSchema>;
 
+export const TimeFormatSchema = z.enum(['12h', '24h']);
+export type TimeFormat = z.infer<typeof TimeFormatSchema>;
+
 export const SettingsPublicSchema = z.object({
   id: z.string(),
   companyName: z.string(),
@@ -32,6 +35,7 @@ export const SettingsPublicSchema = z.object({
   exportNaming: ExportNamingSettingsSchema,
   leaveQuotaResetPolicy: LeaveQuotaResetPolicySchema,
   financialYearStartMonth: z.number().int().min(1).max(12),
+  timeFormat: TimeFormatSchema.default('12h'),
   companyLogo: CompanyLogoSchema.default(null),
   favicon: FaviconSchema.default(null),
 });

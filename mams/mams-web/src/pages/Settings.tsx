@@ -10,8 +10,9 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
-import { fmtIstTime } from '../lib/format';
-import type { ExportNamingSettings, Permission, Role, SensitiveUnmaskField, UserPublic } from '@mams/types';
+import type { ExportNamingSettings, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
+import { TIME_FORMAT_LABELS } from '../lib/timeFormat';
+import { useTimeDisplay } from '../store/timeFormat';
 import {
   DEFAULT_EXPORT_NAMING,
   EXPORT_NAMING_TOKENS,
@@ -20,6 +21,7 @@ import {
   ROLE_PERMISSION_CAP,
   buildExportFileName,
   normalizeExportNaming,
+  type ExportFileNameContext,
   type ExportTypeKey,
 } from '@mams/types';
 import { UnmaskFieldGrantsSection } from '../components/settings/UnmaskFieldGrantsSection';
@@ -56,6 +58,9 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'write.leave': 'Submit leave requests (pending approval)',
   'approve.leave': 'Approve/reject/cancel leave requests',
   'manage.leave': 'Full leave admin (setup, submit, and approve)',
+  'read.visitors': 'View visitor requests',
+  'approve.visitors': 'Approve/reject visitor requests',
+  'manage.visitors': 'Manage visitor forms, links, and QR codes',
 };
 
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
@@ -63,6 +68,7 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
   { label: 'Adjustments', permissions: ['write.adjust', 'approve.adjust'] },
   { label: 'Regularization', permissions: ['write.regularization', 'approve.regularization'] },
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
+  { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
   { label: 'Administration', permissions: ['manage.users', 'manage.devices', 'manage.settings', 'manage.export_naming'] },
 ];
@@ -139,6 +145,9 @@ export function Settings() {
       </div>
 
       <div className="settings-layout">
+        <SettingsLayoutCell full>
+          <TimeDisplayCard settings={data} canManage={canManage} />
+        </SettingsLayoutCell>
         <SettingsLayoutCell full>
           <BrandAssetsCard settings={data} canManage={canManage} />
         </SettingsLayoutCell>
@@ -248,6 +257,93 @@ function pickChanged<T extends object>(initial: T, draft: T): Partial<T> {
   return out;
 }
 
+function TimeDisplayCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const initial = { timeFormat: settings.timeFormat ?? '12h' };
+  const [draft, set, reset, dirty] = useDirtyForm(initial);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => settingsApi.patch(pickChanged(initial, draft)),
+    onSuccess: () => {
+      toast('Time display updated', 'success');
+      qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
+      setIsEditing(false);
+    },
+    onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
+  });
+
+  const fieldsLocked = !canManage || !isEditing;
+  const options: TimeFormat[] = ['24h', '12h'];
+
+  return (
+    <SectionCard
+      title="Time display"
+      headerRight={
+        canManage && !isEditing ? (
+          <EditSectionIconButton label="Edit time display" onClick={() => setIsEditing(true)} />
+        ) : undefined
+      }
+      footer={
+        canManage &&
+        isEditing &&
+        (dirty ? (
+          <>
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={() => {
+                reset();
+                setIsEditing(false);
+              }}
+            >
+              Discard
+            </button>
+            <button type="button" className="btn-primary" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? 'Saving...' : 'Save'}
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn-outline" onClick={() => setIsEditing(false)}>
+            Cancel
+          </button>
+        ))
+      }
+    >
+      <p className="text-sm text-text-muted">
+        Applies to all HR and manager users across the app — how times are shown and entered (clocks, attendance, reports, regularization).
+      </p>
+      <div className="space-y-2 pt-1">
+        {options.map((opt) => (
+          <label
+            key={opt}
+            className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition ${
+              draft.timeFormat === opt ? 'border-primary bg-primary/5' : 'border-border bg-surface2/40'
+            } ${fieldsLocked ? 'cursor-default opacity-90' : 'hover:bg-surface2'}`}
+          >
+            <input
+              type="radio"
+              name="timeFormat"
+              value={opt}
+              checked={draft.timeFormat === opt}
+              onChange={() => set({ timeFormat: opt })}
+              disabled={fieldsLocked}
+              className="shrink-0"
+            />
+            <span className="font-medium text-sm">{TIME_FORMAT_LABELS[opt]}</span>
+          </label>
+        ))}
+      </div>
+      {!isEditing && (
+        <div className="text-xs text-text-subtle pt-1">
+          Current: {TIME_FORMAT_LABELS[draft.timeFormat]}
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 function CompanyInfoCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
   const [isEditing, setIsEditing] = useState(false);
   const initial = {
@@ -312,6 +408,9 @@ function CompanyInfoCard({ settings, canManage }: { settings: SettingsT; canMana
       <Field label="Registered Address">
         <Textarea value={draft.registeredAddress} onChange={(e) => set({ registeredAddress: e.target.value })} disabled={fieldsLocked} />
       </Field>
+      <p className="text-xs text-text-muted -mt-1 mb-2">
+        Company name and address appear on all report printouts and export headers. Signatory details appear on printed reports and exported files.
+      </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Signatory Name">
           <Input value={draft.signatoryName} onChange={(e) => set({ signatoryName: e.target.value })} disabled={fieldsLocked} />
@@ -403,6 +502,8 @@ function ComplianceCard({ settings, canManage }: { settings: SettingsT; canManag
 }
 
 function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
+  const { fmtHhmm } = useTimeDisplay();
+
   return (
     <SectionCard title="Time Shifts">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -411,7 +512,7 @@ function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: b
           {settings.realShifts.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
               <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{s.start} - {s.end}</span>
+              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
             </div>
           ))}
         </div>
@@ -420,7 +521,7 @@ function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: b
           {settings.complianceShifts.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
               <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{s.start} - {s.end}</span>
+              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
             </div>
           ))}
         </div>
@@ -482,18 +583,30 @@ function SmartAnchorCard({ settings, canManage }: { settings: SettingsT; canMana
   );
 }
 
-const EXPORT_PREVIEW_CONTEXT = {
+const EXPORT_PREVIEW_CONTEXT: Record<ExportTypeKey, ExportFileNameContext> = {
   dailyReportCsv: {
     department: 'Production',
     location: 'Surendranagar',
     startDate: '2026-03-14',
     endDate: '2026-03-20',
   },
+  monthlyReportCsv: {
+    department: 'Production',
+    location: 'Surendranagar',
+    asOfDate: '2026-06-01',
+  },
+  departmentReportCsv: {
+    asOfDate: '2026-06-01',
+  },
+  locationReportCsv: {
+    asOfDate: '2026-06-01',
+  },
+  leaveApplicationsCsv: {},
   dashboardAttendanceXlsx: {
     department: 'Production',
     asOfDate: '2026-06-09',
   },
-} as const;
+};
 
 function PermissionCheckboxList({
   role,
@@ -517,29 +630,29 @@ function PermissionCheckboxList({
   const ungrouped = cap.filter((p) => !groupedSet.has(p) && !(hideUnmask && p === 'unmask.sensitive'));
 
   const renderItem = (p: Permission) => (
-    <label key={p} className="flex items-start gap-2 text-sm cursor-pointer">
+    <label key={p} className="user-perm-chip">
       <input
         type="checkbox"
-        className="mt-0.5"
+        className="mt-0.5 shrink-0"
         checked={selectedPerms.includes(p)}
         onChange={() => onToggle(p)}
       />
-      <span>{PERMISSION_LABELS[p]}</span>
+      <span className="leading-snug">{PERMISSION_LABELS[p]}</span>
     </label>
   );
 
   return (
-    <div className="space-y-3 max-h-56 overflow-y-auto border border-border rounded-md p-3">
+    <div className="border border-border rounded-lg p-3 bg-surface2/40 space-y-4">
       {grouped.map((g) => (
         <div key={g.label}>
-          <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold mb-1.5">{g.label}</div>
-          <div className="space-y-2">{g.items.map(renderItem)}</div>
+          <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold mb-2">{g.label}</div>
+          <div className="user-perm-grid">{g.items.map(renderItem)}</div>
         </div>
       ))}
       {ungrouped.length > 0 && (
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold mb-1.5">Other</div>
-          <div className="space-y-2">{ungrouped.map(renderItem)}</div>
+          <div className="text-[10px] uppercase tracking-wider text-text-subtle font-semibold mb-2">Other</div>
+          <div className="user-perm-grid">{ungrouped.map(renderItem)}</div>
         </div>
       )}
     </div>
@@ -935,7 +1048,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       title="Add User"
-      size="md"
+      size="lg"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose}>Cancel</button>
@@ -1118,7 +1231,7 @@ function EditUserModal({
       open
       onClose={onClose}
       title={selfMode ? 'Edit profile' : 'Edit user'}
-      size="md"
+      size="lg"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose}>Cancel</button>

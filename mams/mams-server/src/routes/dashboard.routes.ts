@@ -25,6 +25,11 @@ import {
 } from '../services/dashboardAttendance.service.js';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from '../services/exportFileName.service.js';
+import {
+  brandingFromSettingsDoc,
+  buildCsvFooter,
+  buildXlsxHeaderRows,
+} from '../services/exportBranding.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -165,19 +170,45 @@ router.get('/attendance.xlsx', async (req, res, next) => {
     const { page: _p, pageSize: _ps, ...exportQuery } = parsed;
     const rows = await listDashboardAttendanceForExport(exportQuery, req.auth!.viewMode);
 
-    const sheetRows = rows.map((r) => ({
-      Employee: r.employeeName,
-      ID: r.empCode,
-      Department: r.department,
-      Shift: shiftLabel(r.timeShift),
-      'Entry stamp': r.entryStamp,
-      'Exit stamp': r.exitStamp,
-      'Total Hours Worked': r.totalHoursWorked ?? '',
-      Status: r.displayStatus,
-    }));
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const branding = brandingFromSettingsDoc(settingsDoc);
+
+    const dataHeader = [
+      'Employee',
+      'ID',
+      'Department',
+      'Shift',
+      'Entry stamp',
+      'Exit stamp',
+      'Total Hours Worked',
+      'Status',
+    ];
+    const dataRows = rows.map((r) => [
+      r.employeeName,
+      r.empCode,
+      r.department,
+      shiftLabel(r.timeShift),
+      r.entryStamp,
+      r.exitStamp,
+      r.totalHoursWorked ?? '',
+      r.displayStatus,
+    ]);
+
+    const footerRows = buildCsvFooter(branding).map((line) => [line.replace(/^"|"$/g, '')]);
+    const sheetAoA = [
+      ...buildXlsxHeaderRows(branding, {
+        reportType: 'Dashboard Attendance Export',
+        period: parsed.date,
+      }),
+      [],
+      dataHeader,
+      ...dataRows,
+      [],
+      ...footerRows,
+    ];
 
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(sheetRows);
+    const ws = XLSX.utils.aoa_to_sheet(sheetAoA);
     XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
@@ -185,7 +216,6 @@ router.get('/attendance.xlsx', async (req, res, next) => {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
-    const settingsDoc = await SettingsModel.findOne().lean();
     const filename = buildExportFileName(
       'dashboardAttendanceXlsx',
       {

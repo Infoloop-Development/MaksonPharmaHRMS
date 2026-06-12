@@ -124,8 +124,10 @@ export function settingsSectionFromChangedFields(fields: string[]): string {
   const confidentiality = new Set(['confidentialityNoticeEnabled', 'confidentialityNoticeText']);
   const exportNaming = new Set(['exportNaming']);
   const brandAssets = new Set(['companyLogo', 'favicon']);
+  const timeDisplay = new Set(['timeFormat']);
 
   if (fields.some((f) => brandAssets.has(f))) return 'brand_assets';
+  if (fields.some((f) => timeDisplay.has(f))) return 'time_display';
   if (fields.some((f) => company.has(f))) return 'company';
   if (fields.some((f) => compliance.has(f))) return 'compliance';
   if (fields.some((f) => smartAnchor.has(f))) return 'smart_anchor';

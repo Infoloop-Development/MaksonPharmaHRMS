@@ -1,5 +1,5 @@
 import { Badge } from '../ui/Badge';
-import { fmtIstTime } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import type { Device } from '../../api/devices';
 import {
   getDeviceConnectionState,
@@ -22,6 +22,7 @@ function DeviceCard({
   onTest: (id: string) => void;
   onEdit: (device: Device) => void;
 }) {
+  const { fmtTime } = useTimeDisplay();
   const connState = getDeviceConnectionState(d);
 
   return (
@@ -73,7 +74,7 @@ function DeviceCard({
         )}
         <div>
           <dt className="text-text-subtle uppercase tracking-wider">Last ping</dt>
-          <dd className="font-mono">{d.lastPingAt ? fmtIstTime(d.lastPingAt) : '—'}</dd>
+          <dd className="font-mono">{d.lastPingAt ? fmtTime(d.lastPingAt) : '—'}</dd>
         </div>
         <div>
           <dt className="text-text-subtle uppercase tracking-wider">24h punches</dt>
@@ -83,7 +84,7 @@ function DeviceCard({
           <div className="col-span-2">
             <dt className="text-text-subtle uppercase tracking-wider">Last sync</dt>
             <dd className={d.lastSyncStatus === 'error' ? 'text-red' : 'text-text-muted'}>
-              {fmtIstTime(d.lastSyncAt)}
+              {fmtTime(d.lastSyncAt)}
               {d.lastSyncStatus === 'error' && d.lastSyncError && (
                 <span className="block text-red text-[11px] mt-0.5 truncate" title={d.lastSyncError}>
                   {d.lastSyncError}

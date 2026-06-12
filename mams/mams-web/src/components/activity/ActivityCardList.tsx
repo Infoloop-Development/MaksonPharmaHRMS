@@ -1,5 +1,5 @@
 import type { ActivityListItem } from '@mams/types';
-import { fmtIstDateTimeMs } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityDescription } from './ActivityDescription';
 
@@ -12,6 +12,8 @@ export function ActivityCardList({
   isLoading: boolean;
   emptyMessage?: string;
 }) {
+  const { fmtDateTimeMs } = useTimeDisplay();
+
   if (isLoading) {
     return <div className="card p-6 text-center text-text-muted text-sm md:hidden">Loading activity…</div>;
   }
@@ -33,7 +35,7 @@ export function ActivityCardList({
               {activityPageBadge(row.eventType, row.payload)}
             </span>
             <span className="font-mono text-xs text-text-muted text-right break-all">
-              {fmtIstDateTimeMs(row.occurredAt)}
+              {fmtDateTimeMs(row.occurredAt)}
             </span>
           </div>
           <p className="text-sm text-text break-words">

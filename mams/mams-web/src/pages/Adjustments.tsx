@@ -8,7 +8,8 @@ import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Field, Input, Select, Textarea } from '../components/ui/Field';
-import { fmtDate, fmtIstTime } from '../lib/format';
+import { fmtDate } from '../lib/format';
+import { useTimeDisplay } from '../store/timeFormat';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
@@ -184,6 +185,7 @@ function AdjustmentCard({
   const initiator = typeof item.initiatedBy === 'object' ? item.initiatedBy : null;
   const decider = typeof item.decidedBy === 'object' ? item.decidedBy : null;
   const statusTone = item.status === 'Approved' ? 'green' : item.status === 'Rejected' ? 'red' : 'amber';
+  const { fmtTime } = useTimeDisplay();
 
   return (
     <div className={`card p-5 ${selected ? 'ring-2 ring-primary' : ''}`}>
@@ -224,12 +226,12 @@ function AdjustmentCard({
             </div>
           </div>
           <div className="mt-3 text-xs text-text-muted">
-            Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> at {fmtIstTime(item.initiatedAt)}
+            Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> at {fmtTime(item.initiatedAt)}
             {decider && (
               <>
                 {' · '}
                 {item.status === 'Approved' ? 'Approved' : 'Rejected'} by{' '}
-                <span className="font-semibold">{decider.name}</span> at {fmtIstTime(item.decidedAt!)}
+                <span className="font-semibold">{decider.name}</span> at {fmtTime(item.decidedAt!)}
               </>
             )}
           </div>
@@ -421,6 +423,7 @@ function AdjustmentDetailModal({
     onError: (e: any) => toast(e?.message ?? 'Decision failed', 'error'),
   });
 
+  const { fmtTime } = useTimeDisplay();
   const showActions = canApprove && item.status === 'Pending';
 
   return (
@@ -471,12 +474,12 @@ function AdjustmentDetailModal({
         <div className="pt-3 border-t border-border">
           <div className="text-[10px] uppercase tracking-wider text-text-subtle mb-1">Audit trail</div>
           <div className="text-xs text-text-muted">
-            Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> ({initiator?.email ?? '—'}) at {fmtIstTime(item.initiatedAt)}
+            Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> ({initiator?.email ?? '—'}) at {fmtTime(item.initiatedAt)}
           </div>
           {decider && (
             <div className="text-xs text-text-muted">
               {item.status === 'Approved' ? 'Approved' : 'Rejected'} by{' '}
-              <span className="font-semibold">{decider.name}</span> ({decider.email}) at {fmtIstTime(item.decidedAt!)}
+              <span className="font-semibold">{decider.name}</span> ({decider.email}) at {fmtTime(item.decidedAt!)}
               {item.approverNote && (
                 <div className="mt-1 italic">Note: {item.approverNote}</div>
               )}

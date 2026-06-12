@@ -6,20 +6,22 @@ import { settingsApi } from '../api/settings';
 import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
+import { NavIcon, type NavIconName } from './navIcons';
 
-const BASE_NAV = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/employees', label: 'Employees' },
-  { to: '/attendance', label: 'Attendance Log' },
-  { to: '/reports', label: 'Reports' },
-  { to: '/adjustments', label: 'Adjustments' },
-  { to: '/regularization', label: 'Regularization' },
-  { to: '/leave', label: 'Leave' },
-  { to: '/devices', label: 'Devices' },
-  { to: '/settings', label: 'Settings' },
-] as const;
+const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
+  { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { to: '/employees', label: 'Employees', icon: 'employees' },
+  { to: '/attendance', label: 'Attendance Log', icon: 'attendance' },
+  { to: '/reports', label: 'Reports', icon: 'reports' },
+  { to: '/adjustments', label: 'Adjustments', icon: 'adjustments' },
+  { to: '/regularization', label: 'Regularization', icon: 'regularization' },
+  { to: '/leave', label: 'Leave', icon: 'leave' },
+  { to: '/visitors', label: 'Visitors', icon: 'visitors' },
+  { to: '/devices', label: 'Devices', icon: 'devices' },
+  { to: '/settings', label: 'Settings', icon: 'settings' },
+];
 
-const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo' } as const;
+const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
 
 function buildNav() {
   if (!isAutogenDemoEnabled()) return [...BASE_NAV];
@@ -82,19 +84,22 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           ✕
         </button>
       </div>
-      <nav className="flex-1 py-4 px-3 overflow-y-auto">
+      <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
         <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Navigation</div>
         {buildNav().map((n) => (
           <NavLink
             key={n.to}
             to={n.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
-                isActive ? 'bg-red/25 text-white font-semibold' : 'text-white/70 hover:bg-white/10 hover:text-white'
+              `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
+                isActive
+                  ? 'sidebar-nav-link--active bg-red/25 text-white font-semibold'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
               }`
             }
           >
-            {n.label}
+            <NavIcon name={n.icon} />
+            <span>{n.label}</span>
           </NavLink>
         ))}
       </nav>
@@ -111,9 +116,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         <button
           type="button"
           onClick={onLogout}
-          className="mt-2 text-[12px] text-white/60 hover:text-white px-2 py-2 touch-target"
+          className="mt-2 flex items-center gap-2.5 text-[12px] text-white/60 hover:text-white px-2 py-2 touch-target w-full rounded-md hover:bg-white/10 transition-colors"
         >
-          Sign out
+          <NavIcon name="signOut" />
+          <span>Sign out</span>
         </button>
       </div>
     </aside>

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { DashboardAttendanceRow } from '@mams/types';
 import { fmtHours } from '../../lib/format';
-import { AttendanceShiftPill, AttendanceStatusPill, displayAttendanceCell } from './dashboardAttendanceUi';
+import { AttendanceShiftPill, AttendanceStatusPill, useDisplayAttendanceCell } from './dashboardAttendanceUi';
 
 export function DashboardAttendanceCardList({
   rows,
@@ -12,6 +12,8 @@ export function DashboardAttendanceCardList({
   isInitialLoad: boolean;
   isRefreshing: boolean;
 }) {
+  const formatCell = useDisplayAttendanceCell();
+
   if (isInitialLoad) {
     return (
       <div className="px-4 py-8 text-center text-text-subtle text-sm md:hidden">Loading attendance…</div>
@@ -56,11 +58,11 @@ export function DashboardAttendanceCardList({
             </div>
             <div>
               <dt className="text-text-subtle uppercase tracking-wider">Entry</dt>
-              <dd className="dash-time">{displayAttendanceCell(row.entryStamp)}</dd>
+              <dd className="dash-time">{formatCell(row.entryStamp)}</dd>
             </div>
             <div>
               <dt className="text-text-subtle uppercase tracking-wider">Exit</dt>
-              <dd className="dash-time">{displayAttendanceCell(row.exitStamp)}</dd>
+              <dd className="dash-time">{formatCell(row.exitStamp)}</dd>
             </div>
             <div className="col-span-2">
               <dt className="text-text-subtle uppercase tracking-wider">Hours</dt>

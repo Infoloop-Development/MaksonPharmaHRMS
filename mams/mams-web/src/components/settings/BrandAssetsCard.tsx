@@ -200,7 +200,7 @@ export function BrandAssetsCard({ settings, canManage }: { settings: Settings; c
           formatHint="PNG, SVG, or JPG"
           specs="200–2000 px | Max 500 KB | PNG/SVG/JPG"
           recommended="400×400 px transparent PNG"
-          appearsIn="Sidebar, Report headers"
+          appearsIn="Sidebar, all report print headers"
           disabled={!canManage}
           busy={busy}
           onPick={saveLogo}

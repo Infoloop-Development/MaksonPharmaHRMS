@@ -1,5 +1,6 @@
 import { Badge } from '../ui/Badge';
-import { fmtDate, fmtHours, fmtIstTime } from '../../lib/format';
+import { fmtDate, fmtHours } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 
 type DailyRow = Record<string, any>;
 
@@ -20,6 +21,8 @@ export function DailyReportCardList({
   isCompliant: boolean;
   emptyMessage?: string;
 }) {
+  const { fmtTime } = useTimeDisplay();
+
   if (isLoading) {
     return (
       <div className="card p-6 text-center text-text-muted text-sm md:hidden print:hidden">Loading…</div>
@@ -61,11 +64,11 @@ export function DailyReportCardList({
             <div className={`grid gap-2 text-sm ${isCompliant ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">Entry</div>
-                <div className="font-mono text-xs">{entry ? fmtIstTime(entry) : '—'}</div>
+                <div className="font-mono text-xs">{entry ? fmtTime(entry) : '—'}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">Exit</div>
-                <div className="font-mono text-xs">{exit ? fmtIstTime(exit) : '—'}</div>
+                <div className="font-mono text-xs">{exit ? fmtTime(exit) : '—'}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">{hoursLabel}</div>

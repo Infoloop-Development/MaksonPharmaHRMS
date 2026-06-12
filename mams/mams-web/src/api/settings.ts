@@ -1,4 +1,4 @@
-import type { ExportNamingSettings } from '@mams/types';
+import type { ExportNamingSettings, TimeFormat } from '@mams/types';
 import { api } from './client';
 
 export interface ShiftWindow {
@@ -27,6 +27,7 @@ export interface Settings {
   confidentialityNoticeEnabled: boolean;
   confidentialityNoticeText: string;
   exportNaming?: ExportNamingSettings;
+  timeFormat: TimeFormat;
   companyLogo: string | null;
   favicon: string | null;
 }
