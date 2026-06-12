@@ -26,6 +26,13 @@ import { LeaveQuotaModel } from '../models/LeaveQuota.js';
 import { LeaveQuotaLedgerModel } from '../models/LeaveQuotaLedger.js';
 import { EmployeeModel } from '../models/Employee.js';
 import { SettingsModel } from '../models/Settings.js';
+import { buildExportFileName } from '../services/exportFileName.service.js';
+import {
+  brandingFromSettingsDoc,
+  buildCsvFooter,
+  buildCsvPreamble,
+  joinCsvDocument,
+} from '../services/exportBranding.service.js';
 import { calculateLeaveDays } from '../services/leave/leaveDayCalculator.service.js';
 import { hasOverlappingLeave } from '../services/leave/leaveOverlap.service.js';
 import {
@@ -333,7 +340,7 @@ router.get('/applications/export.csv', async (req, res, next) => {
       .limit(5000)
       .lean();
 
-    const lines = [
+    const dataLines = [
       'Employee,EmpCode,LeaveType,FromDate,ToDate,TotalDays,Status,Reason',
       ...items.map((row) => {
         const emp = row.employeeId as { name?: string; empCode?: string } | null;
@@ -342,9 +349,27 @@ router.get('/applications/export.csv', async (req, res, next) => {
         return `"${emp?.name ?? ''}","${emp?.empCode ?? ''}","${lt?.name ?? ''}","${row.fromDate}","${row.toDate}",${row.totalDays},"${row.status}","${reason}"`;
       }),
     ];
+
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const branding = brandingFromSettingsDoc(settingsDoc);
+    const csv = [
+      ...buildCsvPreamble(branding, { reportType: 'Leave Applications Report' }),
+      '',
+      ...dataLines,
+      '',
+      ...buildCsvFooter(branding),
+    ];
+
+    const filename = buildExportFileName(
+      'leaveApplicationsCsv',
+      { companyName: settingsDoc?.companyName },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="leave_applications.csv"');
-    res.send(lines.join('\n'));
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(joinCsvDocument(csv));
   } catch (err) {
     next(err);
   }

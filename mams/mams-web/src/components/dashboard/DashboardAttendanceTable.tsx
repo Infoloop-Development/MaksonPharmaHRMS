@@ -3,6 +3,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { DashboardAttendanceRow, DashboardAttendanceStatusFilter } from '@mams/types';
 import { dashboardApi } from '../../api/dashboard';
+import { settingsApi } from '../../api/settings';
+import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
 import { fmtHours, fmtWeekdayShort } from '../../lib/format';
@@ -10,7 +12,7 @@ import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
 import {
   AttendanceShiftPill,
   AttendanceStatusPill,
-  displayAttendanceCell,
+  useDisplayAttendanceCell,
 } from './dashboardAttendanceUi';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
@@ -85,6 +87,13 @@ export function DashboardAttendanceTable({
 }) {
   const toast = useToast((s) => s.push);
   const { logDashboardAction } = useActivityLog();
+  const formatCell = useDisplayAttendanceCell();
+  const { fmtHhmm } = useTimeDisplay();
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
+  const dayShift = settings?.realShifts.find((s) => s.id === 'Day');
+  const nightShift = settings?.realShifts.find((s) => s.id === 'Night');
+  const dayShiftLabel = dayShift ? `Day (${fmtHhmm(dayShift.start)}–${fmtHhmm(dayShift.end)})` : 'Day';
+  const nightShiftLabel = nightShift ? `Night (${fmtHhmm(nightShift.start)}–${fmtHhmm(nightShift.end)})` : 'Night';
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [department, setDepartment] = useState('');
@@ -226,8 +235,8 @@ export function DashboardAttendanceTable({
       </select>
       <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
         <option value="All">All Time Shifts</option>
-        <option value="Day">Day (6AM-6PM)</option>
-        <option value="Night">Night (6PM-6AM)</option>
+        <option value="Day">{dayShiftLabel}</option>
+        <option value="Night">{nightShiftLabel}</option>
       </select>
       <select
         className="w-full"
@@ -284,8 +293,8 @@ export function DashboardAttendanceTable({
           </select>
           <select value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
             <option value="All">All Time Shifts</option>
-            <option value="Day">Day (6AM-6PM)</option>
-            <option value="Night">Night (6PM-6AM)</option>
+            <option value="Day">{dayShiftLabel}</option>
+            <option value="Night">{nightShiftLabel}</option>
           </select>
           <select
             value={status}
@@ -383,8 +392,8 @@ export function DashboardAttendanceTable({
                   <td>
                     <AttendanceShiftPill shift={row.timeShift} />
                   </td>
-                  <td className="dash-time">{displayAttendanceCell(row.entryStamp)}</td>
-                  <td className="dash-time">{displayAttendanceCell(row.exitStamp)}</td>
+                  <td className="dash-time">{formatCell(row.entryStamp)}</td>
+                  <td className="dash-time">{formatCell(row.exitStamp)}</td>
                   <td className="dash-time">
                     {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
                   </td>

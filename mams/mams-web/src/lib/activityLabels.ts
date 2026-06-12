@@ -1,4 +1,5 @@
 import type { ActivityListItem } from '@mams/types';
+import { TIME_FORMAT_LABELS, type TimeFormat } from './timeFormat';
 
 const SECTION_LABELS: Record<string, string> = {
   company: 'Company Info',
@@ -8,6 +9,7 @@ const SECTION_LABELS: Record<string, string> = {
   confidentiality: 'Confidentiality Notice',
   export_naming: 'Export filename formats',
   brand_assets: 'Brand Assets',
+  time_display: 'Time display',
   settings: 'Settings',
 };
 
@@ -30,6 +32,7 @@ const SETTINGS_FIELD_LABELS: Record<string, string> = {
   exportNaming: 'Export filename formats',
   companyLogo: 'Company logo',
   favicon: 'Favicon',
+  timeFormat: 'Time format',
 };
 
 const MOBILE_CHART_LABELS: Record<string, string> = {
@@ -112,6 +115,11 @@ function formatSettingsChanged(payload: Record<string, unknown>): string {
   if (fields.length === 1) {
     const key = fields[0]!;
     const label = labelForField(key);
+    if (key === 'timeFormat') {
+      const from = TIME_FORMAT_LABELS[String(before.timeFormat) as TimeFormat] ?? String(before.timeFormat);
+      const to = TIME_FORMAT_LABELS[String(after.timeFormat) as TimeFormat] ?? String(after.timeFormat);
+      return `Updated ${section}: ${label} (“${from}” → “${to}”)`;
+    }
     return `Updated ${section}: ${label} (“${truncatePreview(before[key])}” → “${truncatePreview(after[key])}”)`;
   }
 
@@ -274,6 +282,18 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return 'Approved regularization request — raw punches inserted';
     case 'regularization_rejected':
       return `Rejected regularization request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
+    case 'visitor_request_submitted':
+      return 'Visitor request submitted (public form)';
+    case 'visitor_request_approved':
+      return 'Approved visitor request';
+    case 'visitor_request_rejected':
+      return `Rejected visitor request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
+    case 'visitor_form_created':
+      return `Created visitor form “${p.title ?? ''}”`;
+    case 'visitor_form_updated':
+      return 'Updated visitor form';
+    case 'visitor_form_slug_regenerated':
+      return 'Regenerated visitor form public link & QR code';
     case 'settings_changed':
       return formatSettingsChanged(p);
     case 'user_created': {

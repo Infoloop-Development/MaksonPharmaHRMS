@@ -1,3 +1,5 @@
+import { useTimeDisplay } from '../../store/timeFormat';
+
 export function AttendanceStatusPill({ status }: { status: string }) {
   if (status === 'Present') return <span className="dash-pill-green">Present</span>;
   if (status === 'Late') return <span className="dash-pill-amber">Late</span>;
@@ -11,7 +13,10 @@ export function AttendanceShiftPill({ shift }: { shift: 'Day' | 'Night' }) {
   );
 }
 
-export function displayAttendanceCell(value: string | null | undefined): string {
-  if (value == null || value === '' || value === '-') return '-';
-  return value;
+export function useDisplayAttendanceCell() {
+  const { fmtStamp } = useTimeDisplay();
+  return (value: string | null | undefined): string => {
+    if (value == null || value === '' || value === '-') return '-';
+    return fmtStamp(value);
+  };
 }

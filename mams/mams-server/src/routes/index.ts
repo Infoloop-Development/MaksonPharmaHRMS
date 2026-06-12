@@ -13,6 +13,7 @@ import goLiveRoutes from './goLive.routes.js';
 import activityRoutes from './activity.routes.js';
 import leaveRoutes from './leave.routes.js';
 import regularizationRoutes from './regularization.routes.js';
+import visitorsRoutes from './visitors.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
@@ -29,6 +30,7 @@ apiRouter.use('/go-live', goLiveRoutes);
 apiRouter.use('/activity', activityRoutes);
 apiRouter.use('/leave', leaveRoutes);
 apiRouter.use('/regularization', regularizationRoutes);
+apiRouter.use('/visitors', visitorsRoutes);
 
 apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });

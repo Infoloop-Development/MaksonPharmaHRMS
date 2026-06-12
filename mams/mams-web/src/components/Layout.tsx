@@ -7,6 +7,7 @@ import { ToastContainer } from './ui/Toast';
 import { authApi } from '../api/auth';
 import { settingsApi } from '../api/settings';
 import { useAuth } from '../store/auth';
+import { TimeFormatProvider } from '../store/timeFormat';
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,23 +63,25 @@ export function Layout() {
   }, [settings?.favicon]);
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden">
-      <Sidebar open={sidebarOpen} onClose={closeSidebar} />
-      {sidebarOpen && (
-        <button
-          type="button"
-          className="fixed inset-0 z-20 bg-black/40 lg:hidden"
-          aria-label="Close menu"
-          onClick={closeSidebar}
-        />
-      )}
-      <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[250px]">
-        <TopBar onOpenMenu={openSidebar} />
-        <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
-          <Outlet />
-        </main>
+    <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
+      <div className="flex min-h-screen overflow-x-hidden">
+        <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+        {sidebarOpen && (
+          <button
+            type="button"
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            aria-label="Close menu"
+            onClick={closeSidebar}
+          />
+        )}
+        <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[250px]">
+          <TopBar onOpenMenu={openSidebar} />
+          <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
+            <Outlet />
+          </main>
+        </div>
+        <ToastContainer />
       </div>
-      <ToastContainer />
-    </div>
+    </TimeFormatProvider>
   );
 }

@@ -11,19 +11,19 @@ export function DepartmentReportCardList({
   emptyMessage?: string;
 }) {
   if (isLoading) {
-    return <div className="card p-6 text-center text-text-muted text-sm md:hidden">Loading…</div>;
+    return <div className="card p-6 text-center text-text-muted text-sm md:hidden print:hidden">Loading…</div>;
   }
 
   if (!rows?.length) {
     return (
-      <div className="card p-6 text-center text-text-muted text-sm md:hidden">
+      <div className="card p-6 text-center text-text-muted text-sm md:hidden print:hidden">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 md:hidden max-h-[60vh] overflow-y-auto">
+    <div className="space-y-2 md:hidden print:hidden max-h-[60vh] overflow-y-auto">
       {rows.map((r) => (
         <div key={r.department} className="card p-4 flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">

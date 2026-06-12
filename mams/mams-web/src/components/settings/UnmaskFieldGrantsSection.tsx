@@ -24,7 +24,7 @@ export function UnmaskFieldGrantsSection({
   };
 
   return (
-    <div className="space-y-3 border border-border rounded-md p-3 bg-surface2">
+    <div className="space-y-3 border border-border rounded-lg p-3 bg-surface2/40">
       <div>
         <div className="text-sm font-semibold">Sensitive fields this user can unmask</div>
         <p className="text-xs text-text-muted mt-1 leading-relaxed">
@@ -32,10 +32,10 @@ export function UnmaskFieldGrantsSection({
           their login password and is audit-logged. Leave all off if they should not see unmasked data.
         </p>
       </div>
-      <div className="space-y-2 max-h-56 overflow-y-auto">
+      <div className="user-unmask-grid">
         {ALL_SENSITIVE_UNMASK_FIELDS.map((field) => (
-          <div key={field} className="flex items-center justify-between gap-3 py-1">
-            <span className="text-sm">{SENSITIVE_UNMASK_FIELD_LABELS[field]}</span>
+          <div key={field} className="user-unmask-chip">
+            <span className="text-sm font-medium leading-snug">{SENSITIVE_UNMASK_FIELD_LABELS[field]}</span>
             <Toggle
               checked={grants.includes(field)}
               onChange={(v) => setField(field, v)}

@@ -1,5 +1,6 @@
-import type { RegularizationStatus, RegularizationType } from '@mams/types';
+import type { RegularizationStatus, RegularizationType, TimeFormat } from '@mams/types';
 import { regularizationTypeNeedsIn, regularizationTypeNeedsOut } from '@mams/types';
+import { formatHhmm } from '../../lib/timeFormat';
 
 export const REGULARIZATION_TYPE_LABELS: Record<RegularizationType, string> = {
   missed_in: 'Missed IN punch',
@@ -18,11 +19,12 @@ export function statusTone(status: RegularizationStatus): 'green' | 'red' | 'amb
 export function formatRequestedTimes(
   type: RegularizationType,
   requestedInTime: string | null,
-  requestedOutTime: string | null
+  requestedOutTime: string | null,
+  format: TimeFormat = '12h'
 ): string {
   const parts: string[] = [];
-  if (regularizationTypeNeedsIn(type) && requestedInTime) parts.push(`IN ${requestedInTime}`);
-  if (regularizationTypeNeedsOut(type) && requestedOutTime) parts.push(`OUT ${requestedOutTime}`);
+  if (regularizationTypeNeedsIn(type) && requestedInTime) parts.push(`IN ${formatHhmm(requestedInTime, format)}`);
+  if (regularizationTypeNeedsOut(type) && requestedOutTime) parts.push(`OUT ${formatHhmm(requestedOutTime, format)}`);
   return parts.length > 0 ? parts.join(' · ') : '—';
 }
 

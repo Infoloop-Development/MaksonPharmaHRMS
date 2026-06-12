@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { activityApi, activityQueryKey, ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { useAuth } from '../../store/auth';
-import { fmtIstDateTimeMs } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityCardList } from './ActivityCardList';
 import { ActivityDescription } from './ActivityDescription';
@@ -10,6 +10,7 @@ import { ActivityDescription } from './ActivityDescription';
 const PAGE_SIZE = 50;
 
 export function ActivityLogPanel() {
+  const { fmtDateTimeMs } = useTimeDisplay();
   const user = useAuth((s) => s.user);
   const userId = user?.id;
   const [page, setPage] = useState(1);
@@ -66,7 +67,7 @@ export function ActivityLogPanel() {
             <tbody className="divide-y divide-border">
               {data.items.map((row) => (
                 <tr key={row.id} className="hover:bg-surface2/40">
-                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtIstDateTimeMs(row.occurredAt)}</td>
+                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
                   <td className="px-3 py-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
                       {activityPageBadge(row.eventType, row.payload)}
