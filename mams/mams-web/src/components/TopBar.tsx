@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../store/auth';
-import { fmtIstHeaderDate, fmtIstHeaderTime } from '../lib/format';
+import { fmtIstHeaderDate } from '../lib/format';
+import { useTimeDisplay } from '../store/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 
@@ -36,6 +37,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const badgeFull = isCompliant ? 'COMPLIANT VIEW (8-hour)' : 'REAL VIEW (12-hour)';
   const badgeShort = isCompliant ? 'COMPLIANT' : 'REAL';
   const title = pageTitle(location.pathname);
+  const { fmtTime } = useTimeDisplay();
 
   return (
     <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-2 sticky top-0 z-10">
@@ -78,7 +80,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
               className={isOnline ? 'live-dot' : 'live-dot live-dot-offline'}
               aria-label={isOnline ? 'Online' : 'Offline'}
             />
-            {fmtIstHeaderTime(now)}
+            {fmtTime(now)}
           </div>
           <div className="text-[11px] text-text-subtle mt-0.5">{fmtIstHeaderDate(now)}</div>
         </div>

@@ -61,6 +61,20 @@ describe('formatActivityDescription', () => {
     expect(text).toContain('dashboardAttendanceXlsx pattern updated');
   });
 
+  it('formats time display settings change', () => {
+    const text = formatActivityDescription(
+      item('settings_changed', {
+        section: 'time_display',
+        changedFields: ['timeFormat'],
+        before: { timeFormat: '12h' },
+        after: { timeFormat: '24h' },
+      })
+    );
+    expect(text).toContain('Time display');
+    expect(text).toContain('12-hour clock');
+    expect(text).toContain('24-hour clock');
+  });
+
   it('mentions export naming permission on user_created', () => {
     const text = formatActivityDescription(
       item('user_created', {

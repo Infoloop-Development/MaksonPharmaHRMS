@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { apiRouter } from './routes/index.js';
 import esslRouter from './routes/essl.routes.js';
 import hanvonRouter from './routes/hanvon.routes.js';
+import publicVisitorRouter from './routes/publicVisitor.routes.js';
 import { errorHandler } from './middleware/error.js';
 import { requestContext } from './middleware/requestContext.js';
 
@@ -58,6 +59,9 @@ export function buildApp() {
 
   // Hanvon SDK push receiver (token auth per device).
   app.use('/integrations/hanvon', hanvonRouter);
+
+  // Public visitor forms (no authentication).
+  app.use('/api/public/visitor-forms', publicVisitorRouter);
 
   // Authenticated REST API.
   app.use('/api', apiRouter);

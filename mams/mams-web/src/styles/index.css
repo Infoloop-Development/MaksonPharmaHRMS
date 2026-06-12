@@ -440,47 +440,124 @@ input, select, textarea {
   color: white;
 }
 
-/* Hidden on screen; shown when printing report letterhead (logo + company name). */
-.print-only {
-  display: none;
+/* Sidebar navigation icons */
+.sidebar-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.sidebar-nav-link {
+  position: relative;
+}
+.sidebar-nav-link--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+  border-radius: 0 3px 3px 0;
+  background: #fff;
+}
+.sidebar-nav-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+  scrollbar-gutter: stable;
+}
+.sidebar-nav-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+.sidebar-nav-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
 }
 
-/* Print styles - used by Reports page when user clicks "Print to PDF".
- * Hides the chrome (sidebar, top bar, filters, action buttons) so the
- * report table prints cleanly on A4 with optional brand letterhead. */
+/* Add/Edit user — permissions & unmask grids */
+.user-perm-grid,
+.user-unmask-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+@media (min-width: 640px) {
+  .user-perm-grid,
+  .user-unmask-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .user-perm-grid,
+  .user-unmask-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.user-perm-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  border: 1px solid theme('colors.border');
+  border-radius: 0.375rem;
+  background: #fff;
+  transition: background-color 0.15s;
+}
+.user-perm-chip:hover {
+  background: theme('colors.surface2');
+}
+.user-unmask-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border: 1px solid theme('colors.border');
+  border-radius: 0.375rem;
+  background: #fff;
+}
+
+/* Visitor form builder — insert dividers & drag */
+.form-field-insert-divider {
+  @apply relative flex flex-wrap items-center justify-center gap-2 py-3 my-1;
+}
+.form-field-insert-divider--prominent {
+  @apply py-6 my-2;
+}
+.form-field-insert-divider-line {
+  @apply hidden sm:block flex-1 h-px bg-border min-w-[24px];
+}
+.form-field-insert-btn {
+  @apply shrink-0 text-sm font-medium text-primary border border-primary/30 bg-primary-bg/40 hover:bg-primary-bg rounded-full px-4 py-1.5 transition-colors;
+}
+.form-field-type-picker {
+  @apply w-full basis-full grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 p-3 rounded-lg border border-border bg-surface2;
+}
+.form-field-type-chip {
+  @apply text-left text-sm px-3 py-2 rounded-md border border-border bg-white hover:border-primary hover:bg-primary-bg/30 hover:text-primary transition-colors;
+}
+.form-field-row--dragging {
+  @apply opacity-40 border-dashed border-primary/50 shadow-none;
+}
+.form-field-drag-overlay {
+  @apply cursor-grabbing max-w-md w-full;
+}
+.form-drag-handle {
+  @apply flex items-center justify-center w-8 h-8 rounded-md text-text-muted hover:text-primary hover:bg-surface2 cursor-grab active:cursor-grabbing transition-colors;
+  touch-action: none;
+}
+
+/* Optional: hide elements marked no-print if user prints the app page directly. */
 @media print {
-  .print-only {
-    display: block !important;
-  }
-  body {
-    background: white;
-  }
   .no-print {
     display: none !important;
-  }
-  /* Hide the layout chrome */
-  aside,
-  header,
-  nav {
-    display: none !important;
-  }
-  main {
-    margin-left: 0 !important;
-    padding: 0 !important;
-  }
-  .card {
-    box-shadow: none !important;
-    border: none !important;
-  }
-  table {
-    page-break-inside: auto;
-    font-size: 10px;
-  }
-  tr {
-    page-break-inside: avoid;
-  }
-  @page {
-    size: A4 landscape;
-    margin: 12mm;
   }
 }

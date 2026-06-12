@@ -11,6 +11,8 @@ import { Reports } from './pages/Reports';
 import { Adjustments } from './pages/Adjustments';
 import { Regularization } from './pages/Regularization';
 import { Leave } from './pages/Leave';
+import { Visitors } from './pages/Visitors';
+import { PublicVisitorForm } from './pages/PublicVisitorForm';
 import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
 import { isAutogenDemoEnabled } from './config/featureFlags';
@@ -36,6 +38,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/visit/:slug" element={<PublicVisitorForm />} />
       <Route
         path="/change-password"
         element={
@@ -64,6 +67,7 @@ export function App() {
         <Route path="adjustments" element={<Adjustments />} />
         <Route path="regularization" element={<Regularization />} />
         <Route path="leave" element={<Leave />} />
+        <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />
         <Route path="settings" element={<Settings />} />
       </Route>

@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { AttendanceRawStats } from '@mams/types';
 import { attendanceApi } from '../api/attendance';
-import { fmtIstTime, fmtDate, fmtNumber } from '../lib/format';
+import { fmtDate, fmtNumber } from '../lib/format';
+import { useTimeDisplay } from '../store/timeFormat';
 import { PunchCardList } from '../components/attendance/PunchCardList';
 import { DashboardStatCard } from '../components/ui/DashboardStatCard';
 import { useActivityLog } from '../hooks/useActivityLog';
@@ -50,6 +51,7 @@ function filterBarLabel(
 }
 
 export function AttendanceLog() {
+  const { fmtTime } = useTimeDisplay();
   const { logFilter, logFilterDebounced } = useActivityLog();
   const searchDebounceSkip = useRef(true);
   const [search, setSearch] = useState('');
@@ -313,7 +315,7 @@ export function AttendanceLog() {
               )}
               {data?.items.map((p) => (
                 <tr key={p._id} className="hover:bg-surface2/50">
-                  <td className="px-4 py-2.5 font-mono text-xs">{fmtIstTime(p.rawTimestamp)}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs">{fmtTime(p.rawTimestamp)}</td>
                   <td className="px-4 py-2.5 font-medium">{p.employeeId?.name ?? '-'}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{p.employeeId?.empCode ?? '-'}</td>
                   <td className="px-4 py-2.5 text-text-muted hidden lg:table-cell">{p.employeeId?.department ?? '-'}</td>

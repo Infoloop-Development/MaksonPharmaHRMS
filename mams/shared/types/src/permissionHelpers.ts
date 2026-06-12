@@ -29,6 +29,22 @@ export function canApproveRegularization(permissions: Permission[]): boolean {
   return permissions.includes('approve.regularization');
 }
 
+export function canViewVisitors(permissions: Permission[]): boolean {
+  return (
+    permissions.includes('read.visitors') ||
+    permissions.includes('approve.visitors') ||
+    permissions.includes('manage.visitors')
+  );
+}
+
+export function canApproveVisitors(permissions: Permission[]): boolean {
+  return permissions.includes('approve.visitors') || permissions.includes('manage.visitors');
+}
+
+export function canManageVisitorForms(permissions: Permission[]): boolean {
+  return permissions.includes('manage.visitors');
+}
+
 /** Resolve whether a leave application should be auto-approved on create. */
 export function resolveLeaveAdminApply(
   permissions: Permission[],

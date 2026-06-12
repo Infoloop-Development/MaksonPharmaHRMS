@@ -5,6 +5,8 @@ import { regularizationApi } from '../../api/regularization';
 import { useToast } from '../ui/Toast';
 import { Modal } from '../ui/Modal';
 import { Field, Input, Select, Textarea } from '../ui/Field';
+import { TimeInput } from '../ui/TimeInput';
+import { useTimeDisplay } from '../../store/timeFormat';
 import type { RegularizationType } from '@mams/types';
 import {
   regularizationTypeNeedsIn,
@@ -23,6 +25,7 @@ export function CreateRegularizationModal({ onClose }: { onClose: () => void }) 
   const [remarks, setRemarks] = useState('');
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const { fmtTime, inputHint } = useTimeDisplay();
 
   const empsQ = useQuery({
     queryKey: ['employees', { search: empSearch }],
@@ -128,13 +131,13 @@ export function CreateRegularizationModal({ onClose }: { onClose: () => void }) 
         {(needsIn || needsOut) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {needsIn && (
-              <Field label="Requested IN time (IST)" required hint="24-hour HH:mm">
-                <Input type="time" value={requestedInTime} onChange={(e) => setRequestedInTime(e.target.value)} />
+              <Field label="Requested IN time (IST)" required hint={inputHint}>
+                <TimeInput value={requestedInTime} onChange={setRequestedInTime} />
               </Field>
             )}
             {needsOut && (
-              <Field label="Requested OUT time (IST)" required hint="24-hour HH:mm">
-                <Input type="time" value={requestedOutTime} onChange={(e) => setRequestedOutTime(e.target.value)} />
+              <Field label="Requested OUT time (IST)" required hint={inputHint}>
+                <TimeInput value={requestedOutTime} onChange={setRequestedOutTime} />
               </Field>
             )}
           </div>
@@ -154,7 +157,8 @@ export function CreateRegularizationModal({ onClose }: { onClose: () => void }) 
                 <div>
                   <div className="text-xs text-text-muted">Current IN / OUT</div>
                   <div className="font-mono text-xs">
-                    {previewQ.data.derived?.realEntryAt ?? '—'} / {previewQ.data.derived?.realExitAt ?? '—'}
+                    {previewQ.data.derived?.realEntryAt ? fmtTime(previewQ.data.derived.realEntryAt) : '—'} /{' '}
+                    {previewQ.data.derived?.realExitAt ? fmtTime(previewQ.data.derived.realExitAt) : '—'}
                   </div>
                 </div>
                 <div>

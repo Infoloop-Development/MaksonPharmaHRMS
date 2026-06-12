@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-export const ExportTypeKeySchema = z.enum(['dailyReportCsv', 'dashboardAttendanceXlsx']);
+export const ExportTypeKeySchema = z.enum([
+  'dailyReportCsv',
+  'monthlyReportCsv',
+  'departmentReportCsv',
+  'locationReportCsv',
+  'leaveApplicationsCsv',
+  'dashboardAttendanceXlsx',
+]);
 export type ExportTypeKey = z.infer<typeof ExportTypeKeySchema>;
 
 export const ExportDateFormatSchema = z.enum(['YYYYMMDD', 'DDMMYY']);
@@ -8,16 +15,28 @@ export type ExportDateFormat = z.infer<typeof ExportDateFormatSchema>;
 
 export const EXPORT_TYPE_LABELS: Record<ExportTypeKey, string> = {
   dailyReportCsv: 'Daily report (CSV)',
+  monthlyReportCsv: 'Monthly summary (CSV)',
+  departmentReportCsv: 'Department report (CSV)',
+  locationReportCsv: 'Location report (CSV)',
+  leaveApplicationsCsv: 'Leave applications (CSV)',
   dashboardAttendanceXlsx: 'Dashboard attendance (Excel)',
 };
 
 export const EXPORT_REPORT_TYPE_CODES: Record<ExportTypeKey, string> = {
   dailyReportCsv: 'DailyAttendance',
+  monthlyReportCsv: 'MonthlySummary',
+  departmentReportCsv: 'DepartmentReport',
+  locationReportCsv: 'LocationReport',
+  leaveApplicationsCsv: 'LeaveApplications',
   dashboardAttendanceXlsx: 'AttendanceExport',
 };
 
 export const EXPORT_FILE_EXTENSIONS: Record<ExportTypeKey, string> = {
   dailyReportCsv: 'csv',
+  monthlyReportCsv: 'csv',
+  departmentReportCsv: 'csv',
+  locationReportCsv: 'csv',
+  leaveApplicationsCsv: 'csv',
   dashboardAttendanceXlsx: 'xlsx',
 };
 
@@ -55,6 +74,10 @@ export const ExportNamingSettingsSchema = z.object({
   includeGeneratedTimestamp: z.boolean().default(false),
   patterns: z.object({
     dailyReportCsv: patternSchema,
+    monthlyReportCsv: patternSchema,
+    departmentReportCsv: patternSchema,
+    locationReportCsv: patternSchema,
+    leaveApplicationsCsv: patternSchema,
     dashboardAttendanceXlsx: patternSchema,
   }),
 });
@@ -68,6 +91,10 @@ export const DEFAULT_EXPORT_NAMING: ExportNamingSettings = {
   patterns: {
     dailyReportCsv:
       '{company}_{reportType}_{department}_{location}_{startDate}-{endDate}.{extension}',
+    monthlyReportCsv: '{company}_{reportType}_{department}_{location}_{asOfDate}.{extension}',
+    departmentReportCsv: '{company}_{reportType}_{asOfDate}.{extension}',
+    locationReportCsv: '{company}_{reportType}_{asOfDate}.{extension}',
+    leaveApplicationsCsv: '{company}_{reportType}.{extension}',
     dashboardAttendanceXlsx: '{company}_{reportType}_{department}_{asOfDate}.{extension}',
   },
 };

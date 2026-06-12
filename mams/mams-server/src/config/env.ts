@@ -17,6 +17,7 @@ const EnvSchema = z.object({
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
   JWT_REFRESH_EXPIRES: z.string().default('7d'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  PUBLIC_APP_URL: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.string().default('info'),
   TZ: z.string().default('Asia/Kolkata'),
   SMART_ANCHOR_VERSION: z.string().default('v2.0.0'),

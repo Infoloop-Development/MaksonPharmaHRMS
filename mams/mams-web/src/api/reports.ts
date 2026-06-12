@@ -72,4 +72,10 @@ export const reportsApi = {
     api.get<LocationReport>(`/reports/location?${buildParams(q)}`),
   dailyCsvUrl: (q: { date?: string; startDate?: string; endDate?: string; department?: string; location?: string } = {}) =>
     `/api/reports/daily.csv?${buildParams(q)}`,
+  monthlyCsvUrl: (q: { yearMonth: string; department?: string; location?: string }) =>
+    `/api/reports/monthly.csv?${buildParams(q)}`,
+  departmentCsvUrl: (q: { yearMonth?: string } = {}) =>
+    `/api/reports/department.csv?${buildParams(q)}`,
+  locationCsvUrl: (q: { yearMonth?: string } = {}) =>
+    `/api/reports/location.csv?${buildParams(q)}`,
 };

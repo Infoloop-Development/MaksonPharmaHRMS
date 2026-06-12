@@ -1,5 +1,6 @@
 import { Badge } from '../ui/Badge';
-import { fmtDate, fmtIstTime } from '../../lib/format';
+import { fmtDate } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import type { RegularizationListItem } from '../../api/regularization';
 import {
   formatRequestedTimes,
@@ -35,6 +36,7 @@ function RegularizationRequestCard({
   const emp = typeof item.employeeId === 'object' ? item.employeeId : null;
   const initiator = typeof item.initiatedBy === 'object' ? item.initiatedBy : null;
   const decider = typeof item.decidedBy === 'object' ? item.decidedBy : null;
+  const { fmtTime, format } = useTimeDisplay();
 
   return (
     <div className="card p-5 cursor-pointer hover:ring-1 hover:ring-border transition" onClick={onOpen}>
@@ -55,7 +57,7 @@ function RegularizationRequestCard({
         <div>
           <div className="text-[10px] uppercase tracking-wider text-text-subtle">Requested times</div>
           <div className="font-mono text-xs">
-            {formatRequestedTimes(item.type, item.requestedInTime, item.requestedOutTime)}
+            {formatRequestedTimes(item.type, item.requestedInTime, item.requestedOutTime, format)}
           </div>
         </div>
         <div>
@@ -64,12 +66,12 @@ function RegularizationRequestCard({
         </div>
       </div>
       <div className="mt-3 text-xs text-text-muted">
-        Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> at {fmtIstTime(item.initiatedAt)}
+        Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> at {fmtTime(item.initiatedAt)}
         {decider && (
           <>
             {' · '}
             {item.status === 'Approved' ? 'Approved' : 'Rejected'} by{' '}
-            <span className="font-semibold">{decider.name}</span> at {fmtIstTime(item.decidedAt!)}
+            <span className="font-semibold">{decider.name}</span> at {fmtTime(item.decidedAt!)}
           </>
         )}
       </div>

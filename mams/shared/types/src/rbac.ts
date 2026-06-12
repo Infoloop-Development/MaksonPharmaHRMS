@@ -3,8 +3,8 @@ import { dedupeUnmaskFieldGrants, type SensitiveUnmaskField } from './sensitiveU
 
 /** Default permission set assigned when creating a user for a role. */
 export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
-  'hr.admin': ['read.real', 'write.adjust', 'write.regularization', 'approve.regularization', 'unmask.sensitive', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave'],
-  'hr.compliance': ['read.compliant', 'approve.adjust', 'approve.regularization', 'approve.leave', 'read.leave'],
+  'hr.admin': ['read.real', 'write.adjust', 'write.regularization', 'approve.regularization', 'unmask.sensitive', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave', 'read.visitors', 'approve.visitors', 'manage.visitors'],
+  'hr.compliance': ['read.compliant', 'approve.adjust', 'approve.regularization', 'approve.leave', 'read.leave', 'read.visitors', 'approve.visitors'],
   'it.admin': ['read.real', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave'],
 };
 
@@ -26,8 +26,11 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'write.leave',
     'approve.leave',
     'manage.leave',
+    'read.visitors',
+    'approve.visitors',
+    'manage.visitors',
   ],
-  'hr.compliance': ['read.compliant', 'approve.adjust', 'approve.regularization', 'approve.leave', 'read.leave'],
+  'hr.compliance': ['read.compliant', 'approve.adjust', 'approve.regularization', 'approve.leave', 'read.leave', 'read.visitors', 'approve.visitors'],
   'it.admin': [
     'read.real',
     'manage.users',

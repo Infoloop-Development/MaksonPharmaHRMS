@@ -68,6 +68,10 @@ describe('settings exportNaming PATCH auth rules', () => {
 
   it('default export naming is valid', () => {
     expect(DEFAULT_EXPORT_NAMING.patterns.dailyReportCsv).toContain('{extension}');
+    expect(DEFAULT_EXPORT_NAMING.patterns.monthlyReportCsv).toContain('{extension}');
+    expect(DEFAULT_EXPORT_NAMING.patterns.departmentReportCsv).toContain('{extension}');
+    expect(DEFAULT_EXPORT_NAMING.patterns.locationReportCsv).toContain('{extension}');
+    expect(DEFAULT_EXPORT_NAMING.patterns.leaveApplicationsCsv).toContain('{extension}');
     expect(DEFAULT_EXPORT_NAMING.patterns.dashboardAttendanceXlsx).toContain('{extension}');
   });
 });

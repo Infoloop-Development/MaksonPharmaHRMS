@@ -17,3 +17,4 @@ export * from './dashboardLayout.js';
 export * from './dashboardKpi.js';
 export * from './leave.js';
 export * from './regularization.js';
+export * from './visitor.js';

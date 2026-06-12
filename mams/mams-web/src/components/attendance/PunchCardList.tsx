@@ -1,4 +1,5 @@
-import { fmtIstTime, fmtDate } from '../../lib/format';
+import { fmtDate } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 
 export interface PunchRow {
   _id: string;
@@ -18,6 +19,8 @@ export function PunchCardList({
   isLoading: boolean;
   emptyMessage?: string;
 }) {
+  const { fmtTime } = useTimeDisplay();
+
   if (isLoading) {
     return <div className="card p-6 text-center text-text-muted text-sm md:hidden">Loading...</div>;
   }
@@ -53,7 +56,7 @@ export function PunchCardList({
             </span>
           </div>
           <div className="flex justify-between text-xs text-text-muted">
-            <span className="font-mono">{fmtIstTime(p.rawTimestamp)}</span>
+            <span className="font-mono">{fmtTime(p.rawTimestamp)}</span>
             <span>{fmtDate(p.rawDate)}</span>
           </div>
           {p.employeeId?.department && (

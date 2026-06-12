@@ -5,7 +5,8 @@ import { useToast } from '../ui/Toast';
 import { Modal } from '../ui/Modal';
 import { Field, Textarea } from '../ui/Field';
 import { Badge } from '../ui/Badge';
-import { fmtDate, fmtIstTime } from '../../lib/format';
+import { fmtDate } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import {
   formatRequestedTimes,
   REGULARIZATION_TYPE_LABELS,
@@ -27,6 +28,7 @@ export function RegularizationDetailModal({
   const emp = typeof item.employeeId === 'object' ? item.employeeId : null;
   const initiator = typeof item.initiatedBy === 'object' ? item.initiatedBy : null;
   const decider = typeof item.decidedBy === 'object' ? item.decidedBy : null;
+  const { fmtTime, format } = useTimeDisplay();
   const showActions = canApprove && item.status === 'Pending';
 
   const approveMutation = useMutation({
@@ -98,7 +100,7 @@ export function RegularizationDetailModal({
           <DetailRow label="Type" value={REGULARIZATION_TYPE_LABELS[item.type]} />
           <DetailRow
             label="Requested times"
-            value={formatRequestedTimes(item.type, item.requestedInTime, item.requestedOutTime)}
+            value={formatRequestedTimes(item.type, item.requestedInTime, item.requestedOutTime, format)}
             mono
           />
         </div>
@@ -113,12 +115,12 @@ export function RegularizationDetailModal({
           <div className="text-[10px] uppercase tracking-wider text-text-subtle mb-1">Audit trail</div>
           <div className="text-xs text-text-muted">
             Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> ({initiator?.email ?? '—'}) at{' '}
-            {fmtIstTime(item.initiatedAt)}
+            {fmtTime(item.initiatedAt)}
           </div>
           {decider && (
             <div className="text-xs text-text-muted">
               {item.status === 'Approved' ? 'Approved' : 'Rejected'} by{' '}
-              <span className="font-semibold">{decider.name}</span> ({decider.email}) at {fmtIstTime(item.decidedAt!)}
+              <span className="font-semibold">{decider.name}</span> ({decider.email}) at {fmtTime(item.decidedAt!)}
               {item.approverNote && <div className="mt-1 italic">Note: {item.approverNote}</div>}
             </div>
           )}

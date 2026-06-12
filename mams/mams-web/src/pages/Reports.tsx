@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { reportsApi } from '../api/reports';
 import { settingsApi } from '../api/settings';
-import { ReportPrintHeader, formatReportDateRange } from '../components/reports/ReportPrintHeader';
+import { formatReportDateRange } from '../components/reports/ReportPrintHeader';
+import { brandingFromSettings } from '../lib/companyBranding';
+import { openReportPrintWindow } from '../lib/reportPrintDocument';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Badge } from '../components/ui/Badge';
@@ -11,7 +13,8 @@ import { Field, Input, Select } from '../components/ui/Field';
 import { DailyReportCardList } from '../components/reports/DailyReportCardList';
 import { MonthlyReportCardList } from '../components/reports/MonthlyReportCardList';
 import { DepartmentReportCardList } from '../components/reports/DepartmentReportCardList';
-import { fmtDate, fmtIstTime, fmtHours, fmtNumber } from '../lib/format';
+import { fmtDate, fmtHours, fmtNumber } from '../lib/format';
+import { useTimeDisplay } from '../store/timeFormat';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { countActiveFilters } from '../lib/countActiveFilters';
 
@@ -70,6 +73,7 @@ export function Reports() {
 
 function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   const { logReportsAction } = useActivityLog();
+  const { fmtTime } = useTimeDisplay();
   const today = new Date().toISOString().slice(0, 10);
   const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [startDate, setStartDate] = useState(sevenDaysAgo);
@@ -95,7 +99,13 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
     queryFn: () => reportsApi.daily({ startDate, endDate, department: department || undefined, location: location || undefined }),
   });
 
+  const branding = brandingFromSettings(settings);
+
   const onPrint = () => {
+    if (!data?.rows.length) {
+      toast('No records to print', 'error');
+      return;
+    }
     logReportsAction('ui.reports.print', {
       tab: 'daily',
       startDate,
@@ -103,9 +113,44 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       department: department || undefined,
       location: location || undefined,
     });
-    document.body.classList.add('print-mode');
-    window.print();
-    setTimeout(() => document.body.classList.remove('print-mode'), 200);
+    const opened = openReportPrintWindow({
+      branding,
+      title: 'Daily Attendance Report',
+      subtitle: formatReportDateRange(startDate, endDate),
+      summaryLine: `${data.summary.total} records · ${data.summary.present} present · ${data.summary.absent} absent · ${data.summary.weeklyOff} weekly off`,
+      columns: [
+        { key: 'date', label: 'Date', mono: true },
+        { key: 'code', label: 'Code', mono: true },
+        { key: 'name', label: 'Name' },
+        { key: 'department', label: 'Department' },
+        { key: 'location', label: 'Location' },
+        { key: 'entry', label: 'Entry', mono: true },
+        { key: 'exit', label: 'Exit', mono: true },
+        { key: 'hours', label: isCompliant ? 'Hours' : 'Net Hrs', mono: true },
+        ...(isCompliant ? [] : [{ key: 'ot', label: 'OT', mono: true }]),
+        { key: 'status', label: 'Status' },
+      ],
+      rows: data.rows.map((r) => {
+        const emp = r.employeeId;
+        const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
+        const exit = isCompliant ? r.compliantExitAt : r.realExitAt;
+        const hrs = isCompliant ? r.compliantHours : r.realNetHours;
+        const row: Record<string, string | number> = {
+          date: fmtDate(r.date),
+          code: emp?.empCode ?? '—',
+          name: emp?.name ?? '—',
+          department: emp?.department ?? '—',
+          location: emp?.location ?? '—',
+          entry: entry ? fmtTime(entry) : '—',
+          exit: exit ? fmtTime(exit) : '—',
+          hours: typeof hrs === 'number' ? fmtHours(hrs) : '—',
+          status: r.status ?? '—',
+        };
+        if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : '—';
+        return row;
+      }),
+    });
+    if (!opened) toast('Could not start print. Please try again.', 'error');
   };
 
   const onDownloadCsv = () => {
@@ -177,13 +222,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
         </div>
       )}
 
-      <div className="card overflow-hidden hidden md:block print:block">
-        <ReportPrintHeader
-          companyName={settings?.companyName ?? 'Company'}
-          companyLogo={settings?.companyLogo ?? null}
-          title="Daily Attendance Report"
-          subtitle={formatReportDateRange(startDate, endDate)}
-        />
+      <div className="card overflow-hidden hidden md:block">
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
@@ -219,8 +258,8 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
                     <td className="px-4 py-2.5 font-medium">{emp?.name ?? '—'}</td>
                     <td className="px-4 py-2.5 text-xs hidden lg:table-cell">{emp?.department ?? '—'}</td>
                     <td className="px-4 py-2.5 text-xs text-text-muted hidden xl:table-cell">{emp?.location ?? '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{entry ? fmtIstTime(entry) : '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{exit ? fmtIstTime(exit) : '—'}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{entry ? fmtTime(entry) : '—'}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{exit ? fmtTime(exit) : '—'}</td>
                     <td className="px-4 py-2.5 font-mono text-xs">{typeof hrs === 'number' ? fmtHours(hrs) : '—'}</td>
                     {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs hidden lg:table-cell">{r.otHours ? fmtHours(r.otHours) : '—'}</td>}
                     <td className="px-4 py-2.5">
@@ -244,11 +283,14 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
 
 function MonthlyReport() {
   const { logReportsAction } = useActivityLog();
+  const toast = useToast((s) => s.push);
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
+  const branding = brandingFromSettings(settings);
 
   const logMonthlyFilter = (patch: Partial<{ yearMonth: string; department: string; location: string }>) => {
     logReportsAction('ui.reports.filter', {
@@ -291,6 +333,54 @@ function MonthlyReport() {
           </Select>
         </Field>
       </FilterBar>
+
+      <ReportExportBar
+        recordCount={data?.rows.length}
+        isLoading={isLoading}
+        onPrint={() => {
+          if (!data?.rows.length) {
+            toast('No records to print', 'error');
+            return;
+          }
+          logReportsAction('ui.reports.print', { tab: 'monthly', yearMonth, department: department || undefined, location: location || undefined });
+          const opened = openReportPrintWindow({
+            branding,
+            title: 'Monthly Summary Report',
+            subtitle: `Period: ${yearMonth}`,
+            summaryLine: `${data.rows.length} employees`,
+            columns: [
+              { key: 'code', label: 'Code', mono: true },
+              { key: 'name', label: 'Name' },
+              { key: 'department', label: 'Department' },
+              { key: 'present', label: 'Present', mono: true },
+              { key: 'absent', label: 'Absent', mono: true },
+              { key: 'weeklyOff', label: 'Weekly Off', mono: true },
+              { key: 'totalHrs', label: 'Total Hrs', mono: true },
+              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'equivDays', label: 'Equiv. Days', mono: true },
+            ],
+            rows: data.rows.map((r) => ({
+              code: r.empCode,
+              name: r.name,
+              department: r.department,
+              present: r.presentDays,
+              absent: r.absentDays,
+              weeklyOff: r.weeklyOffDays,
+              totalHrs: fmtHours(isCompliant ? r.totalCompliantHours : r.totalRealNetHours),
+              ot: fmtHours(r.totalOtHours),
+              equivDays: r.equivalentDays?.toFixed(1) ?? '—',
+            })),
+          });
+          if (!opened) toast('Could not start print. Please try again.', 'error');
+        }}
+        onDownloadCsv={() => {
+          logReportsAction('ui.reports.export_csv', { tab: 'monthly', yearMonth, department: department || undefined, location: location || undefined });
+          const a = document.createElement('a');
+          a.href = reportsApi.monthlyCsvUrl({ yearMonth, department: department || undefined, location: location || undefined });
+          a.click();
+          toast('CSV download started', 'success');
+        }}
+      />
 
       <MonthlyReportCardList
         rows={data?.rows}
@@ -342,9 +432,12 @@ function MonthlyReport() {
 
 function DepartmentReport() {
   const { logReportsAction } = useActivityLog();
+  const toast = useToast((s) => s.push);
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
+  const branding = brandingFromSettings(settings);
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'department', yearMonth],
@@ -361,6 +454,50 @@ function DepartmentReport() {
       >
         <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logReportsAction('ui.reports.filter', { tab: 'department', yearMonth: e.target.value }); }} /></Field>
       </FilterBar>
+
+      <ReportExportBar
+        recordCount={data?.rows.length}
+        isLoading={isLoading}
+        onPrint={() => {
+          if (!data?.rows.length) {
+            toast('No records to print', 'error');
+            return;
+          }
+          logReportsAction('ui.reports.print', { tab: 'department', yearMonth });
+          const opened = openReportPrintWindow({
+            branding,
+            title: 'Department-wise Report',
+            subtitle: `Period: ${yearMonth}`,
+            summaryLine: `${data.rows.length} departments`,
+            columns: [
+              { key: 'department', label: 'Department' },
+              { key: 'employees', label: 'Employees', mono: true },
+              { key: 'present', label: 'Present', mono: true },
+              { key: 'absent', label: 'Absent', mono: true },
+              { key: 'compliantHrs', label: 'Compliant Hrs', mono: true },
+              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'rate', label: 'Attendance Rate', mono: true },
+            ],
+            rows: data.rows.map((r) => ({
+              department: r.department,
+              employees: r.employeeCount,
+              present: r.presentDays,
+              absent: r.absentDays,
+              compliantHrs: fmtHours(r.totalCompliantHours),
+              ot: fmtHours(r.totalOtHours),
+              rate: `${r.attendanceRate.toFixed(0)}%`,
+            })),
+          });
+          if (!opened) toast('Could not start print. Please try again.', 'error');
+        }}
+        onDownloadCsv={() => {
+          logReportsAction('ui.reports.export_csv', { tab: 'department', yearMonth });
+          const a = document.createElement('a');
+          a.href = reportsApi.departmentCsvUrl({ yearMonth });
+          a.click();
+          toast('CSV download started', 'success');
+        }}
+      />
 
       <DepartmentReportCardList rows={data?.rows} isLoading={isLoading} />
 
@@ -411,9 +548,12 @@ function DepartmentReport() {
 
 function LocationReport() {
   const { logReportsAction } = useActivityLog();
+  const toast = useToast((s) => s.push);
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
+  const branding = brandingFromSettings(settings);
 
   const { data, isLoading } = useQuery({
     queryKey: ['reports', 'location', yearMonth],
@@ -431,7 +571,51 @@ function LocationReport() {
         <Field label="Month"><Input type="month" value={yearMonth} onChange={(e) => { setYearMonth(e.target.value); logReportsAction('ui.reports.filter', { tab: 'location', yearMonth: e.target.value }); }} /></Field>
       </FilterBar>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <ReportExportBar
+        recordCount={data?.rows.length}
+        isLoading={isLoading}
+        onPrint={() => {
+          if (!data?.rows.length) {
+            toast('No records to print', 'error');
+            return;
+          }
+          logReportsAction('ui.reports.print', { tab: 'location', yearMonth });
+          const opened = openReportPrintWindow({
+            branding,
+            title: 'Location-wise Report',
+            subtitle: `Period: ${yearMonth}`,
+            summaryLine: `${data.rows.length} locations`,
+            columns: [
+              { key: 'location', label: 'Location' },
+              { key: 'employees', label: 'Employees', mono: true },
+              { key: 'present', label: 'Present', mono: true },
+              { key: 'absent', label: 'Absent', mono: true },
+              { key: 'compliantHrs', label: 'Compliant Hrs', mono: true },
+              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'rate', label: 'Attendance Rate', mono: true },
+            ],
+            rows: data.rows.map((r) => ({
+              location: r.location,
+              employees: r.employeeCount,
+              present: fmtNumber(r.presentDays),
+              absent: fmtNumber(r.absentDays),
+              compliantHrs: fmtHours(r.totalCompliantHours),
+              ot: fmtHours(r.totalOtHours),
+              rate: `${r.attendanceRate.toFixed(0)}%`,
+            })),
+          });
+          if (!opened) toast('Could not start print. Please try again.', 'error');
+        }}
+        onDownloadCsv={() => {
+          logReportsAction('ui.reports.export_csv', { tab: 'location', yearMonth });
+          const a = document.createElement('a');
+          a.href = reportsApi.locationCsvUrl({ yearMonth });
+          a.click();
+          toast('CSV download started', 'success');
+        }}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
         {isLoading && <div className="text-text-muted">Loading...</div>}
         {data?.rows.map((r) => (
           <div key={r.location} className="card p-5">
@@ -458,6 +642,69 @@ function LocationReport() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card overflow-hidden hidden md:block">
+        <div className="tbl-scroll">
+          <table className="w-full text-sm md:min-w-[640px]">
+            <thead className="bg-surface2">
+              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+                <th className="px-4 py-3 font-semibold">Location</th>
+                <th className="px-4 py-3 font-semibold">Employees</th>
+                <th className="px-4 py-3 font-semibold">Present</th>
+                <th className="px-4 py-3 font-semibold">Absent</th>
+                <th className="px-4 py-3 font-semibold">Compliant Hrs</th>
+                <th className="px-4 py-3 font-semibold">OT Hrs</th>
+                <th className="px-4 py-3 font-semibold">Attendance Rate</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+              {!isLoading && !data?.rows.length && (
+                <tr><td colSpan={7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
+              )}
+              {data?.rows.map((r) => (
+                <tr key={r.location} className="hover:bg-surface2/50">
+                  <td className="px-4 py-2.5 font-medium">{r.location}</td>
+                  <td className="px-4 py-2.5">{r.employeeCount}</td>
+                  <td className="px-4 py-2.5">{fmtNumber(r.presentDays)}</td>
+                  <td className="px-4 py-2.5">{fmtNumber(r.absentDays)}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalCompliantHours)}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs">{r.attendanceRate.toFixed(0)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportExportBar({
+  recordCount,
+  isLoading,
+  onPrint,
+  onDownloadCsv,
+}: {
+  recordCount?: number;
+  isLoading: boolean;
+  onPrint: () => void;
+  onDownloadCsv: () => void;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      <div className="text-sm text-text-muted">
+        {isLoading ? 'Loading...' : `${recordCount ?? 0} records`}
+      </div>
+      <div className="flex gap-2 w-full sm:w-auto no-print">
+        <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>
+          Print to PDF
+        </button>
+        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadCsv}>
+          Download CSV
+        </button>
       </div>
     </div>
   );
