@@ -28,6 +28,7 @@ export const AttendanceRawListQuerySchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   punchType: PunchTypeSchema.optional(),
+  outsideShiftOnly: z.coerce.boolean().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
   /** Live feed shortcut: return first `limit` rows (page forced to 1). */
@@ -40,6 +41,7 @@ export const AttendanceRawListResponseSchema = z.object({
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),
+  truncated: z.boolean().optional(),
 });
 export type AttendanceRawListResponse = z.infer<typeof AttendanceRawListResponseSchema>;
 

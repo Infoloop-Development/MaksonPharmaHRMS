@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import type { VisitorField } from '@mams/types';
-import { validateVisitorResponses } from '@mams/types';
+import type { VisitorField, VisitorFormLocale } from '@mams/types';
+import { getIntroVideoForLocale, validateVisitorResponses, VISITOR_FORM_LOCALE_LABELS } from '@mams/types';
 import { publicVisitorApi, PublicVisitorError } from '../api/publicVisitor';
+import { VisitorFormLayoutPublic } from '../components/visitors/VisitorFormLayoutRenderer';
+import { VisitorFormPublicHeader } from '../components/visitors/VisitorFormPublicHeader';
 
 type Responses = Record<string, string | string[] | null>;
 type FileRef = { fieldId: string; storageKey: string; filename: string };
@@ -15,6 +17,9 @@ export function PublicVisitorForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [videoCompleted, setVideoCompleted] = useState(false);
+  const [introBlockMessage, setIntroBlockMessage] = useState<string | null>(null);
+  const [locale, setLocale] = useState<VisitorFormLocale>('en');
 
   const { data: form, isLoading, error } = useQuery({
     queryKey: ['public-visitor-form', slug],
@@ -28,9 +33,17 @@ export function PublicVisitorForm() {
       publicVisitorApi.submit(slug, {
         responses,
         fileRefs: fileRefs.map(({ fieldId, storageKey }) => ({ fieldId, storageKey })),
+        introAttestation: videoCompleted
+          ? { videoCompleted: true, completedAt: new Date().toISOString() }
+          : undefined,
+        locale,
       }),
     onSuccess: () => setSubmitted(true),
     onError: (e: PublicVisitorError) => {
+      if (e.code === 'intro_video_required') {
+        setIntroBlockMessage(e.message);
+        return;
+      }
       if (e.code === 'validation_error' && e.details && typeof e.details === 'object') {
         setFieldErrors(e.details as Record<string, string>);
       }
@@ -71,8 +84,19 @@ export function PublicVisitorForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
+
+    const introFull = form.introFull ?? form.intro;
+    const active = form.localeContent?.[locale];
+    const fields = active?.fields ?? form.fields;
+    const mandatory = getIntroVideoForLocale(introFull, locale)?.viewingMandatory ?? false;
+    if (mandatory && !videoCompleted) {
+      setIntroBlockMessage('Please watch the full intro video before submitting.');
+      return;
+    }
+    setIntroBlockMessage(null);
+
     const fileFieldIds = new Set(fileRefs.map((r) => r.fieldId));
-    const validation = validateVisitorResponses(form.fields, responses, fileFieldIds);
+    const validation = validateVisitorResponses(fields, responses, fileFieldIds);
     if (!validation.ok) {
       setFieldErrors(validation.errors);
       return;
@@ -127,27 +151,78 @@ export function PublicVisitorForm() {
 
   if (!form) return null;
 
-  const sortedFields = [...form.fields].sort((a, b) => a.order - b.order);
+  const introFull = form.introFull ?? form.intro;
+  const activeContent = form.localeContent?.[locale] ?? {
+    title: form.title,
+    description: form.description,
+    fields: form.fields,
+    intro: form.intro,
+  };
+
+  const switchLocale = (next: VisitorFormLocale) => {
+    setLocale(next);
+    setVideoCompleted(false);
+    setIntroBlockMessage(null);
+  };
 
   return (
     <div className="min-h-screen bg-surface2 py-8 px-4">
       <div className="max-w-lg mx-auto card p-6 md:p-8">
-        <h1 className="text-xl font-bold mb-1">{form.title}</h1>
-        {form.description && <p className="text-sm text-text-muted mb-6">{form.description}</p>}
+        {form.branding && <VisitorFormPublicHeader branding={form.branding} />}
+
+        <h1 className="text-xl font-bold mb-1">{activeContent.title}</h1>
+        {activeContent.description && (
+          <p className="text-sm text-text-muted mb-4">{activeContent.description}</p>
+        )}
+
+        {form.multilingual?.enabled && form.multilingual.languages.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {form.multilingual.languages.map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  locale === lang
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface2 border-border text-text-muted hover:border-primary/40'
+                }`}
+                onClick={() => switchLocale(lang)}
+              >
+                {VISITOR_FORM_LOCALE_LABELS[lang]}
+              </button>
+            ))}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {sortedFields.map((field) => (
-            <PublicFieldInput
-              key={field.id}
-              field={field}
-              value={responses[field.id]}
-              fileRef={fileRefs.find((r) => r.fieldId === field.id)}
-              error={fieldErrors[field.id]}
-              uploading={uploadingField === field.id}
-              onChange={(v) => setValue(field.id, v)}
-              onFile={(f) => onFileChange(field, f)}
-            />
-          ))}
+          <VisitorFormLayoutPublic
+            intro={introFull}
+            fields={activeContent.fields}
+            slug={slug}
+            locale={locale}
+            videoCompleted={videoCompleted}
+            onVideoCompleted={() => {
+              setVideoCompleted(true);
+              setIntroBlockMessage(null);
+            }}
+            renderField={(field) => (
+              <PublicFieldInput
+                field={field}
+                value={responses[field.id]}
+                fileRef={fileRefs.find((r) => r.fieldId === field.id)}
+                error={fieldErrors[field.id]}
+                uploading={uploadingField === field.id}
+                onChange={(v) => setValue(field.id, v)}
+                onFile={(f) => onFileChange(field, f)}
+              />
+            )}
+          />
+
+          {introBlockMessage && (
+            <p className="text-sm text-red bg-red/10 border border-red/20 rounded-md px-3 py-2">
+              {introBlockMessage}
+            </p>
+          )}
 
           {submitMu.error && !(submitMu.error as PublicVisitorError).details && (
             <p className="text-sm text-red">{(submitMu.error as Error).message}</p>

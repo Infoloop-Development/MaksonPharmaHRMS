@@ -1,5 +1,6 @@
 import { Bar } from 'react-chartjs-2';
 import type { ChartData } from 'chart.js';
+import { ChartEmptyState } from '../ui/ChartEmptyState';
 import { BAR_CHART_HEIGHT } from './useDashboardChartState';
 import type { useDashboardChartState } from './useDashboardChartState';
 
@@ -10,7 +11,10 @@ export function DashboardBarChartCard({
   barChart,
   barLabel,
   barMetric,
-}: Pick<ChartState, 'isInitialLoad' | 'barChart' | 'barLabel' | 'barMetric'>) {
+  hasChartData,
+}: Pick<ChartState, 'isInitialLoad' | 'barChart' | 'barLabel' | 'barMetric' | 'hasChartData'>) {
+  const showEmpty = !isInitialLoad && (!barChart || !hasChartData);
+
   return (
     <div className="card p-4 md:p-6 h-full flex flex-col">
       <h2 className="text-lg font-bold mb-1">Weekly {barLabel} trend</h2>
@@ -23,7 +27,13 @@ export function DashboardBarChartCard({
             Loading chart…
           </div>
         )}
-        {barChart && (
+        {showEmpty && (
+          <ChartEmptyState
+            variant="bar"
+            hint="Weekly attendance trends will appear once punch data is recorded for active employees."
+          />
+        )}
+        {!showEmpty && barChart && (
           <Bar
             key={barMetric}
             data={barChart.data as ChartData<'bar', number[], string>}
