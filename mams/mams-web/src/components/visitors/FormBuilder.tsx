@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -17,9 +17,21 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useMutation } from '@tanstack/react-query';
-import type { VisitorField, VisitorFieldType, VisitorSlugStrategy } from '@mams/types';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { VisitorField, VisitorFieldType, VisitorFormLocale, VisitorIntro, VisitorSlugStrategy } from '@mams/types';
+import {
+  VISITOR_INTRO_IMAGE_FIELD_ID,
+  VISITOR_INTRO_VIDEO_FIELD_ID,
+  VISITOR_FORM_LOCALE_LABELS,
+  applyVisitorFormLayout,
+  buildVisitorFormLayout,
+  nextVisitorFormLayoutOrder,
+  normalizeVisitorLanguages,
+  type VisitorMultilingual,
+} from '@mams/types';
 import { visitorsApi, type VisitorFormItem } from '../../api/visitors';
+import { settingsApi } from '../../api/settings';
+import { brandingFromSettings } from '../../lib/companyBranding';
 import { useToast } from '../ui/Toast';
 import { Modal } from '../ui/Modal';
 import { Field, Input, Textarea } from '../ui/Field';
@@ -27,6 +39,11 @@ import { FormFieldRow, FormFieldPreview, FormFieldDragGhost } from './FormFieldR
 import { FormFieldInsertDivider } from './FormFieldInsertDivider';
 import { FormSaveSuccessModal } from './FormSaveSuccessModal';
 import { RegenerateSlugDialog } from './RegenerateSlugDialog';
+import { VisitorIntroEditor } from './VisitorIntroEditor';
+import { VisitorMultilingualEditor } from './VisitorMultilingualEditor';
+import { VisitorFormLayoutPreview } from './VisitorFormLayoutRenderer';
+import { VisitorFormPublicHeader } from './VisitorFormPublicHeader';
+import { IntroBlockRow, IntroBlockDragGhost } from './IntroBlockRow';
 import { createEmptyField } from './visitorsUtils';
 
 export function FormBuilder({
@@ -41,8 +58,21 @@ export function FormBuilder({
   const toast = useToast((s) => s.push);
   const isEdit = Boolean(initial);
 
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingsApi.get,
+    staleTime: 60_000,
+  });
+  const previewBranding = brandingFromSettings(settings);
+
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [multilingual, setMultilingual] = useState<VisitorMultilingual>(
+    normalizeVisitorLanguages(initial?.multilingual)
+  );
+  const [previewLocale, setPreviewLocale] = useState<VisitorFormLocale>('en');
+  const [intro, setIntro] = useState<VisitorIntro | null>(initial?.intro ?? null);
+  const [introImagePreview, setIntroImagePreview] = useState<string | null>(null);
   const [fields, setFields] = useState<VisitorField[]>(
     initial?.fields?.length
       ? [...initial.fields].sort((a, b) => a.order - b.order)
@@ -56,6 +86,9 @@ export function FormBuilder({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const fieldRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const introEditorRef = useRef<HTMLDivElement>(null);
+
+  const layoutItems = useMemo(() => buildVisitorFormLayout(intro, fields), [intro, fields]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
@@ -63,21 +96,30 @@ export function FormBuilder({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const normalizeForSave = useCallback(() => {
+    const ids = buildVisitorFormLayout(intro, fields).map((i) => i.id);
+    return applyVisitorFormLayout(ids, intro, fields);
+  }, [intro, fields]);
+
   const saveMu = useMutation({
     mutationFn: async () => {
-      const normalized = fields.map((f, i) => ({ ...f, order: i }));
+      const { intro: savedIntro, fields: savedFields } = normalizeForSave();
       if (isEdit && initial) {
         return visitorsApi.updateForm(initial._id, {
           title: title.trim(),
           description: description.trim() || undefined,
-          fields: normalized,
+          intro: savedIntro === null ? null : savedIntro,
+          multilingual: normalizeVisitorLanguages(multilingual),
+          fields: savedFields,
           slugStrategy,
         });
       }
       return visitorsApi.createForm({
         title: title.trim(),
         description: description.trim() || undefined,
-        fields: normalized,
+        intro: savedIntro ?? undefined,
+        multilingual: normalizeVisitorLanguages(multilingual),
+        fields: savedFields,
         isActive: true,
       });
     },
@@ -99,17 +141,25 @@ export function FormBuilder({
 
   const scrollToField = useCallback((id: string) => {
     requestAnimationFrame(() => {
+      if (id === VISITOR_INTRO_IMAGE_FIELD_ID || id === VISITOR_INTRO_VIDEO_FIELD_ID) {
+        introEditorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
       fieldRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   }, []);
 
-  const insertField = (type: VisitorFieldType, afterIndex: number) => {
-    const f = createEmptyField(type, afterIndex + 1) as VisitorField;
-    setFields((prev) => {
-      const next = [...prev];
-      next.splice(afterIndex + 1, 0, f);
-      return next;
-    });
+  const applyLayoutIds = (ids: string[], extraFields?: VisitorField[]) => {
+    const applied = applyVisitorFormLayout(ids, intro, extraFields ? [...fields, ...extraFields] : fields);
+    setIntro(applied.intro);
+    setFields(applied.fields);
+  };
+
+  const insertField = (type: VisitorFieldType, afterLayoutIndex: number) => {
+    const f = createEmptyField(type, 0) as VisitorField;
+    const ids = layoutItems.map((i) => i.id);
+    ids.splice(afterLayoutIndex + 1, 0, f.id);
+    applyLayoutIds(ids, [f]);
     setSelectedId(f.id);
     setOpenInsertIndex(null);
     scrollToField(f.id);
@@ -120,11 +170,12 @@ export function FormBuilder({
   };
 
   const removeField = (id: string) => {
-    setFields((prev) => {
-      const next = prev.filter((f) => f.id !== id);
-      if (selectedId === id) setSelectedId(next[0]?.id ?? null);
-      return next;
-    });
+    const nextFields = fields.filter((f) => f.id !== id);
+    const ids = buildVisitorFormLayout(intro, nextFields).map((i) => i.id);
+    const applied = applyVisitorFormLayout(ids, intro, nextFields);
+    setIntro(applied.intro);
+    setFields(applied.fields);
+    if (selectedId === id) setSelectedId(applied.fields[0]?.id ?? null);
   };
 
   const onDragStart = (event: DragStartEvent) => {
@@ -136,11 +187,11 @@ export function FormBuilder({
     const { active, over } = event;
     setActiveId(null);
     if (!over || active.id === over.id) return;
-    setFields((prev) => {
-      const oldIndex = prev.findIndex((f) => f.id === active.id);
-      const newIndex = prev.findIndex((f) => f.id === over.id);
-      return arrayMove(prev, oldIndex, newIndex);
-    });
+    const ids = layoutItems.map((i) => i.id);
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    applyLayoutIds(arrayMove(ids, oldIndex, newIndex));
   };
 
   const onDragCancel = () => setActiveId(null);
@@ -161,12 +212,31 @@ export function FormBuilder({
     saveMu.mutate();
   };
 
-  const activeField = activeId ? fields.find((f) => f.id === activeId) : null;
+  const activeLayoutItem = activeId ? layoutItems.find((i) => i.id === activeId) : null;
+  const activeField = activeLayoutItem?.kind === 'field' ? activeLayoutItem.field : null;
 
   const setFieldRef = (id: string) => (el: HTMLDivElement | null) => {
     if (el) fieldRefs.current.set(id, el);
     else fieldRefs.current.delete(id);
   };
+
+  const getNextBlockOrder = () => nextVisitorFormLayoutOrder(intro, fields);
+
+  const previewBundle = useMemo(() => {
+    if (previewLocale === 'en') {
+      return { title, description, fields, intro };
+    }
+    const t = initial?.translations?.[previewLocale];
+    if (t) {
+      return {
+        title: t.title,
+        description: t.description,
+        fields: t.fields,
+        intro,
+      };
+    }
+    return { title, description, fields, intro };
+  }, [previewLocale, title, description, fields, intro, initial?.translations]);
 
   return (
     <>
@@ -193,6 +263,8 @@ export function FormBuilder({
       >
         <div className="grid lg:grid-cols-2 gap-6 max-h-[65vh] overflow-y-auto pr-1">
           <div>
+            <VisitorMultilingualEditor value={multilingual} onChange={setMultilingual} />
+
             <Field label="Form title">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Office visitor registration" />
             </Field>
@@ -205,6 +277,17 @@ export function FormBuilder({
                   rows={2}
                 />
               </Field>
+            </div>
+
+            <div ref={introEditorRef}>
+              <VisitorIntroEditor
+                formId={initial?._id}
+                value={intro}
+                onChange={(v) => setIntro(v ?? null)}
+                onImagePreviewChange={setIntroImagePreview}
+                nextBlockOrder={getNextBlockOrder}
+                multilingual={multilingual}
+              />
             </div>
 
             {isEdit && (
@@ -231,6 +314,11 @@ export function FormBuilder({
               </div>
             )}
 
+            <p className="text-sm font-semibold mt-4 mb-2">Questions & intro placement</p>
+            <p className="text-xs text-text-muted mb-2">
+              Drag header image and intro video between questions to control where they appear on the public form.
+            </p>
+
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -238,9 +326,9 @@ export function FormBuilder({
               onDragEnd={onDragEnd}
               onDragCancel={onDragCancel}
             >
-              <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                <div className="mt-4 space-y-0">
-                  {fields.length === 0 ? (
+              <SortableContext items={layoutItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-0">
+                  {layoutItems.length === 0 ? (
                     <FormFieldInsertDivider
                       afterIndex={-1}
                       isOpen={openInsertIndex === -1}
@@ -249,16 +337,40 @@ export function FormBuilder({
                       prominent
                     />
                   ) : (
-                    fields.map((f, index) => (
-                      <div key={f.id}>
-                        <FormFieldRow
-                          field={f}
-                          selected={selectedId === f.id}
-                          onSelect={() => setSelectedId(f.id)}
-                          onChange={(patch) => updateField(f.id, patch)}
-                          onRemove={() => removeField(f.id)}
-                          rowRef={setFieldRef(f.id)}
-                        />
+                    layoutItems.map((item, index) => (
+                      <div key={item.id}>
+                        {item.kind === 'intro_image' && (
+                          <IntroBlockRow
+                            kind="intro_image"
+                            intro={intro}
+                            selected={selectedId === item.id}
+                            onSelect={() => {
+                              setSelectedId(item.id);
+                              scrollToField(item.id);
+                            }}
+                          />
+                        )}
+                        {item.kind === 'intro_video' && (
+                          <IntroBlockRow
+                            kind="intro_video"
+                            intro={intro}
+                            selected={selectedId === item.id}
+                            onSelect={() => {
+                              setSelectedId(item.id);
+                              scrollToField(item.id);
+                            }}
+                          />
+                        )}
+                        {item.kind === 'field' && (
+                          <FormFieldRow
+                            field={item.field}
+                            selected={selectedId === item.id}
+                            onSelect={() => setSelectedId(item.id)}
+                            onChange={(patch) => updateField(item.field.id, patch)}
+                            onRemove={() => removeField(item.field.id)}
+                            rowRef={setFieldRef(item.field.id)}
+                          />
+                        )}
                         <FormFieldInsertDivider
                           afterIndex={index}
                           isOpen={openInsertIndex === index}
@@ -272,7 +384,13 @@ export function FormBuilder({
               </SortableContext>
 
               <DragOverlay dropAnimation={null}>
-                {activeField ? <FormFieldDragGhost field={activeField} /> : null}
+                {activeField ? (
+                  <FormFieldDragGhost field={activeField} />
+                ) : activeLayoutItem?.kind === 'intro_image' ? (
+                  <IntroBlockDragGhost kind="intro_image" />
+                ) : activeLayoutItem?.kind === 'intro_video' ? (
+                  <IntroBlockDragGhost kind="intro_video" />
+                ) : null}
               </DragOverlay>
             </DndContext>
           </div>
@@ -280,11 +398,42 @@ export function FormBuilder({
           <div className="lg:border-l lg:border-border lg:pl-6">
             <p className="text-sm font-semibold mb-3 text-text-muted uppercase tracking-wide">Preview</p>
             <div className="card p-4 bg-surface2/50">
-              <h3 className="text-lg font-semibold mb-1">{title || 'Untitled form'}</h3>
-              {description && <p className="text-sm text-text-muted mb-4">{description}</p>}
-              {fields.map((f) => (
-                <FormFieldPreview key={f.id} field={f} />
-              ))}
+              <VisitorFormPublicHeader
+                branding={{
+                  companyName: previewBranding.companyName,
+                  companyLogo: previewBranding.companyLogo,
+                  registeredAddress: previewBranding.registeredAddress,
+                }}
+              />
+              <h3 className="text-lg font-semibold mb-1">{previewBundle.title || 'Untitled form'}</h3>
+              {previewBundle.description && (
+                <p className="text-sm text-text-muted mb-4">{previewBundle.description}</p>
+              )}
+              {multilingual.enabled && multilingual.languages.length > 1 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {multilingual.languages.map((locale) => (
+                    <button
+                      key={locale}
+                      type="button"
+                      className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                        previewLocale === locale
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-surface2 border-border text-text-muted'
+                      }`}
+                      onClick={() => setPreviewLocale(locale)}
+                    >
+                      {VISITOR_FORM_LOCALE_LABELS[locale]}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <VisitorFormLayoutPreview
+                intro={previewBundle.intro}
+                fields={previewBundle.fields}
+                slug={initial?.publicSlug}
+                imagePreviewUrl={introImagePreview ?? undefined}
+                locale={previewLocale}
+              />
               <button type="button" className="btn bg-primary text-white w-full mt-2" disabled>
                 Submit
               </button>

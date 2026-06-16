@@ -11,11 +11,20 @@ export interface AttendanceListResponse {
 
 export type RawPunchRow = {
   _id: string;
-  employeeId: { _id: string; name: string; empCode: string; department: string };
+  employeeId: {
+    _id: string;
+    name: string;
+    empCode: string;
+    department: string;
+    timeShift?: 'Day' | 'Night';
+  };
   biometricId: string;
   punchType: 'IN' | 'OUT' | 'OTHER';
   rawTimestamp: string;
   rawDate: string;
+  assignedShift?: 'Day' | 'Night';
+  shiftWindowLabel?: string;
+  outsideMainShift?: boolean | null;
 };
 
 export interface RawPunchResponse {
@@ -26,6 +35,7 @@ export interface RawPunchListResponse extends RawPunchResponse {
   total: number;
   page: number;
   pageSize: number;
+  truncated?: boolean;
 }
 
 export type RawPunchListQuery = {
@@ -34,6 +44,7 @@ export type RawPunchListQuery = {
   startDate?: string;
   endDate?: string;
   punchType?: 'IN' | 'OUT' | 'OTHER';
+  outsideShiftOnly?: boolean;
   page?: number;
   pageSize?: number;
   limit?: number;

@@ -372,6 +372,8 @@ export function useDashboardChartState({
     ? data.weekPunctuality.onTime + data.weekPunctuality.delay + data.weekPunctuality.onLeave
     : 0;
 
+  const hasChartData = Boolean(data && data.last7Days.totalEmployees > 0);
+
   return {
     chartsError,
     isInitialLoad,
@@ -383,6 +385,7 @@ export function useDashboardChartState({
     donutMeta,
     selectedDate,
     punctualityTotal,
+    hasChartData,
     clickLegend,
     statusFilter,
     chartsData: data,

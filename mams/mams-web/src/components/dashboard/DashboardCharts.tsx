@@ -17,6 +17,7 @@ export function DashboardCharts(props: UseDashboardChartStateProps) {
         barChart={state.barChart}
         barLabel={state.barLabel}
         barMetric={state.barMetric}
+        hasChartData={state.hasChartData}
       />
       <DashboardDonutChartCard
         isInitialLoad={state.isInitialLoad}
@@ -25,6 +26,7 @@ export function DashboardCharts(props: UseDashboardChartStateProps) {
         donutMeta={state.donutMeta}
         selectedDate={state.selectedDate}
         punctualityTotal={state.punctualityTotal}
+        hasChartData={state.hasChartData}
         clickLegend={state.clickLegend}
         statusFilter={state.statusFilter}
         chartsData={state.chartsData}

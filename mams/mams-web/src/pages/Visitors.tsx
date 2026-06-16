@@ -51,7 +51,9 @@ export function Visitors() {
       {activeTab === 'requests' && canView && (
         <VisitorRequestsTab canApprove={canApprove} onView={(id) => setDetailId(id)} />
       )}
-      {activeTab === 'forms' && canManageForms && <VisitorFormsTab />}
+      {activeTab === 'forms' && canManageForms && (
+        <VisitorFormsTab onViewRequest={(id) => setDetailId(id)} />
+      )}
 
       {detailId && (
         <VisitorRequestDetailModal
