@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { adjustmentsApi, type AdjustmentListItem } from '../api/adjustments';
 import { employeesApi } from '../api/employees';
@@ -10,6 +10,13 @@ import { Modal } from '../components/ui/Modal';
 import { Field, Input, Select, Textarea } from '../components/ui/Field';
 import { fmtDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import {
+  ADJUSTMENTS_TOUR_ACTIONS,
+  adjustmentsTourScript,
+} from '../lib/onboarding/scripts/adjustmentsTourScript';
+import type { TourPageApi } from '../lib/onboarding/tourTypes';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
@@ -25,6 +32,7 @@ export function Adjustments() {
   const [bulkDecideOpen, setBulkDecideOpen] = useState<'approve' | 'reject' | null>(null);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ['adjustments', statusFilter],
@@ -50,6 +58,18 @@ export function Adjustments() {
 
   const clearSelection = () => setSelected(new Set());
 
+  const tour = usePageTourController('adjustments', adjustmentsTourScript, {
+    pageApiRef,
+    actionMap: ADJUSTMENTS_TOUR_ACTIONS,
+    ready: !isLoading,
+    onBeforeStart: () => pageApiRef.current.closeCreateModal?.(),
+  });
+
+  pageApiRef.current = {
+    openCreateModal: () => setCreateOpen(true),
+    closeCreateModal: () => setCreateOpen(false),
+  };
+
   const bulkMutation = useMutation({
     mutationFn: async ({ decision, note }: { decision: 'approve' | 'reject'; note?: string }) =>
       adjustmentsApi.bulkDecide([...selected], decision, note),
@@ -67,19 +87,29 @@ export function Adjustments() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="adjustments-header">
         <div>
           <h1 className="text-2xl font-bold">Attendance Adjustments</h1>
           <div className="text-sm text-text-muted">HR-initiated corrections with mandatory justification and immutable audit trail.</div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <GiveMeATourButton onClick={tour.onReplayTour} />
         {canCreate && (
-          <button className="btn-primary" onClick={() => setCreateOpen(true)}>
+          <button
+            className="btn-primary"
+            data-tour-id="adjustments-create"
+            onClick={() => {
+              setCreateOpen(true);
+              tour.tourRef.current?.onUserAction('create-opened');
+            }}
+          >
             + New Adjustment
           </button>
         )}
+        </div>
       </div>
 
-      <div className="dash-stat-grid mb-6">
+      <div className="dash-stat-grid mb-6" data-tour-id="adjustments-status-filters">
         <StatCard
           label="Pending"
           value={counts.Pending}
@@ -111,7 +141,7 @@ export function Adjustments() {
       </div>
 
       {canApprove && statusFilter === 'Pending' && items.length > 0 && (
-        <div className="card p-3 mb-4 flex items-center gap-3 flex-wrap">
+        <div className="card p-3 mb-4 flex items-center gap-3 flex-wrap" data-tour-id="adjustments-bulk-actions">
           <button className="btn-outline" onClick={selectAllPending}>
             Select all pending ({items.filter((i) => i.status === 'Pending').length})
           </button>
@@ -138,7 +168,7 @@ export function Adjustments() {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-3" data-tour-id="adjustments-list">
         {items.map((item) => (
           <AdjustmentCard
             key={item._id}
@@ -303,7 +333,7 @@ function CreateAdjustmentModal({ onClose }: { onClose: () => void }) {
         </>
       }
     >
-      <div className="space-y-4">
+      <div data-tour-id="adjustments-create-modal" className="space-y-4">
         <Field label="Employee" required>
           <Input
             placeholder="Search by name or code (min 2 chars)"

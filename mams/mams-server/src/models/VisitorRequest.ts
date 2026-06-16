@@ -34,6 +34,9 @@ const visitorRequestSchema = new Schema(
     decidedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     decidedAt: { type: Date, default: null },
     approverNote: { type: String, default: null },
+    visitValidUntil: { type: Date, default: null },
+    visitAccessMode: { type: String, enum: ['default', 'duration', 'until'], default: null },
+    visitDurationHours: { type: Number, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

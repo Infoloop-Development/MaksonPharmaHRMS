@@ -168,6 +168,7 @@ export function DashboardLayoutEditor({
   }
 
   return (
+    <div data-tour-id={isEditing ? 'dashboard-layout-blocks' : undefined}>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
@@ -185,5 +186,6 @@ export function DashboardLayoutEditor({
       {dragBlockedMsg && <p className="dash-layout-blocked-msg">{dragBlockedMsg}</p>}
       {content}
     </DndContext>
+    </div>
   );
 }

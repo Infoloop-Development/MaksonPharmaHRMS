@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   DashboardAttendanceStatusFilter,
@@ -26,7 +26,14 @@ import {
 import { fmtDate, fmtWeekdayShort } from '../lib/format';
 import { useToast } from '../components/ui/Toast';
 import { useActivityLog } from '../hooks/useActivityLog';
+import { usePageTourController } from '../hooks/usePageTourController';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import {
+  DASHBOARD_TOUR_ACTIONS,
+  dashboardTourScript,
+} from '../lib/onboarding/scripts/dashboardTourScript';
+import type { TourPageApi } from '../lib/onboarding/tourTypes';
 
 function kpiConfigEquals(a: DashboardKpiConfig, b: DashboardKpiConfig): boolean {
   return a.slots.every((s, i) => s === b.slots[i]);
@@ -40,6 +47,7 @@ export function Dashboard() {
   const toast = useToast((s) => s.push);
   const queryClient = useQueryClient();
   const { logFilterDebounced } = useActivityLog();
+  const pageApiRef = useRef<TourPageApi>({});
   const [selectedDate, setSelectedDate] = useState('');
   const [statusFilter, setStatusFilter] = useState<DashboardAttendanceStatusFilter>('All');
   const [shiftFilter, setShiftFilter] = useState<DashboardShiftFilter>('All');
@@ -64,6 +72,18 @@ export function Dashboard() {
   const barMetric = kpiMetricToBarMetric(activeKpiMetric);
 
   const stats = useQuery({ queryKey: ['dashboard', 'stats'], queryFn: dashboardApi.stats });
+
+  const tour = usePageTourController('dashboard', dashboardTourScript, {
+    pageApiRef,
+    actionMap: DASHBOARD_TOUR_ACTIONS,
+    ready: Boolean(stats.data) && !stats.isLoading,
+    onBeforeStart: () => {
+      pageApiRef.current.resetView?.();
+      pageApiRef.current.cancelKpiEdit?.();
+      pageApiRef.current.cancelLayoutEdit?.();
+    },
+  });
+
   const layout = useQuery({ queryKey: ['dashboard', 'layout'], queryFn: dashboardApi.getLayout });
   const kpiConfig = useQuery({ queryKey: ['dashboard', 'kpi'], queryFn: dashboardApi.getKpi });
   const charts = useQuery({
@@ -270,6 +290,7 @@ export function Dashboard() {
     setDraftRows(savedRows.map((r) => ({ items: [...r.items] })));
     setDraftMobileChart(savedMobileChart);
     setIsEditingLayout(true);
+    tour.tourRef.current?.onUserAction('layout-edit-opened');
   };
 
   const cancelEditLayout = () => {
@@ -286,11 +307,21 @@ export function Dashboard() {
     if (isEditingLayout) return;
     setDraftKpiSlots([...savedKpiSlots]);
     setIsEditingKpi(true);
+    tour.tourRef.current?.onUserAction('kpi-edit-opened');
   };
 
   const cancelEditKpi = () => {
     setDraftKpiSlots([...savedKpiSlots]);
     setIsEditingKpi(false);
+  };
+
+  pageApiRef.current = {
+    enterKpiEdit: startEditKpi,
+    cancelKpiEdit: cancelEditKpi,
+    enterLayoutEdit: startEditLayout,
+    cancelLayoutEdit: cancelEditLayout,
+    resetView,
+    demoKpiFilter: () => onStatusFilterChange('Present'),
   };
 
   if (stats.isLoading) return <div className="text-text-muted">Loading...</div>;
@@ -299,16 +330,19 @@ export function Dashboard() {
 
   return (
     <div className="2xl:max-w-[1600px] 2xl:mx-auto">
-      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3">
+      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3" data-tour-id="dashboard-header">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
           <div className="text-xs text-text-muted">As of {fmtDate(s.asOfDate)}</div>
       </div>
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
+          <GiveMeATourButton onClick={tour.onReplayTour} />
         {!isEditingKpi && !isEditingLayout && (
           <button
             type="button"
-            className="dash-kpi-edit-btn shrink-0 mt-0.5"
+            className="dash-kpi-edit-btn shrink-0"
             aria-label="Customize KPI cards"
+            data-tour-id="dashboard-kpi-edit"
             onClick={startEditKpi}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -316,10 +350,11 @@ export function Dashboard() {
             </svg>
           </button>
         )}
+        </div>
       </div>
 
       {isModified && (
-        <div className="dash-filter-bar">
+        <div className="dash-filter-bar" data-tour-id="dashboard-filter-bar">
           <span className="dash-filter-bar-label">
             Viewing:{' '}
             <strong>
@@ -347,7 +382,7 @@ export function Dashboard() {
         isSaving={saveKpiMutation.isPending}
       />
 
-      <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-3 dash-layout-toolbar">
+      <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-3 dash-layout-toolbar" data-tour-id="dashboard-layout-toolbar">
         {isEditingLayout ? (
           <>
             <button type="button" className="btn-outline btn-sm dash-layout-toolbar-btn" onClick={cancelEditLayout}>
@@ -366,6 +401,7 @@ export function Dashboard() {
           <button
             type="button"
             className="btn-outline btn-sm dash-layout-toolbar-btn"
+            data-tour-id="dashboard-layout-edit"
             onClick={startEditLayout}
             disabled={isEditingKpi}
           >

@@ -11,6 +11,7 @@ import {
   VisitorFormLocaleSchema,
   nextVisitorFormLayoutOrder,
   normalizeVisitorLanguages,
+  resolveVisitValidUntil,
   type VisitorField,
   type VisitorFormLocale,
 } from '@mams/types';
@@ -465,16 +466,31 @@ router.patch('/requests/:id/approve', requireAnyPermission('approve.visitors', '
     const doc = await VisitorRequestModel.findOne({ _id: id, status: 'Pending' });
     if (!doc) throw new ApiError(404, 'not_found', 'Pending visitor request not found');
 
+    const decidedAt = new Date();
+    const access = resolveVisitValidUntil(body.visitAccess, decidedAt);
+
     doc.status = 'Approved';
     doc.decidedBy = new Types.ObjectId(req.auth!.sub);
-    doc.decidedAt = new Date();
+    doc.decidedAt = decidedAt;
     doc.approverNote = body.approverNote ?? null;
+    doc.visitValidUntil = access.visitValidUntil;
+    doc.visitAccessMode = access.visitAccessMode;
+    doc.visitDurationHours = access.visitDurationHours;
     await doc.save();
 
     await audit(
       'visitor_request_approved',
       { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
-      { entityType: 'visitor_request', entityId: doc._id, payload: { formId: String(doc.formId) } }
+      {
+        entityType: 'visitor_request',
+        entityId: doc._id,
+        payload: {
+          formId: String(doc.formId),
+          visitValidUntil: access.visitValidUntil.toISOString(),
+          visitAccessMode: access.visitAccessMode,
+          visitDurationHours: access.visitDurationHours,
+        },
+      }
     );
 
     res.json(doc);

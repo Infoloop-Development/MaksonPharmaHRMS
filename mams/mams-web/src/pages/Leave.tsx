@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   canApproveLeave,
@@ -20,6 +20,10 @@ import { ApplyLeaveModal } from '../components/leave/ApplyLeaveModal';
 import { LeaveDetailModal } from '../components/leave/LeaveDetailModal';
 import { LeaveDecideModal } from '../components/leave/LeaveDecideModal';
 import type { LeaveTab } from '../components/leave/leaveUtils';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { leaveTourScript } from '../lib/onboarding/scripts/leaveTourScript';
+import type { TourPageApi } from '../lib/onboarding/tourTypes';
 
 export function Leave() {
   const user = useAuth((s) => s.user);
@@ -32,6 +36,7 @@ export function Leave() {
 
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const pageApiRef = useRef<TourPageApi>({});
 
   const [tab, setTab] = useState<LeaveTab>('requests');
   const [applyOpen, setApplyOpen] = useState(false);
@@ -82,6 +87,20 @@ export function Leave() {
 
   const openApply = () => setApplyOpen(true);
 
+  const tour = usePageTourController('leave', leaveTourScript, {
+    pageApiRef,
+    ready: canView,
+    onBeforeStart: () => pageApiRef.current.closeModals?.(),
+  });
+
+  pageApiRef.current = {
+    closeModals: () => {
+      setApplyOpen(false);
+      setDetailId(null);
+      setDecideItem(null);
+    },
+  };
+
   if (!canView) {
     return (
       <div className="card p-12 text-center text-text-muted">
@@ -92,10 +111,18 @@ export function Leave() {
 
   return (
     <div>
-      <LeavePageHeader canApply={canApply} onAddLeave={openApply} />
-      <LeaveTabBar tab={tab} onTabChange={setTab} canConfigure={canConfigure} />
+      <LeavePageHeader
+        canApply={canApply}
+        onAddLeave={openApply}
+        tourButton={<GiveMeATourButton onClick={tour.onReplayTour} />}
+      />
+      <div data-tour-id="leave-tabs">
+        <LeaveTabBar tab={tab} onTabChange={setTab} canConfigure={canConfigure} />
+        {canConfigure && <span className="sr-only" data-tour-id="leave-holidays-hint" aria-hidden="true" />}
+      </div>
       {readOnly && <LeaveReadOnlyBanner />}
 
+      <div data-tour-id="leave-content">
       {tab === 'requests' && (
         <LeaveRequestsTab
           canApply={canApply}
@@ -112,6 +139,7 @@ export function Leave() {
       )}
       {tab === 'holidays' && canConfigure && <LeaveHolidaysTab canConfigure={canConfigure} />}
       {tab === 'settings' && canConfigure && <LeaveSettingsTab canConfigure={canConfigure} />}
+      </div>
 
       {applyOpen && canApply && (
         <ApplyLeaveModal

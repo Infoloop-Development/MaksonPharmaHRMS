@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { regularizationApi, type RegularizationListItem } from '../api/regularization';
 import { useAuth } from '../store/auth';
@@ -7,6 +7,13 @@ import { RegularizationPageHeader } from '../components/regularization/Regulariz
 import { RegularizationRequestCardList } from '../components/regularization/RegularizationRequestCardList';
 import { CreateRegularizationModal } from '../components/regularization/CreateRegularizationModal';
 import { RegularizationDetailModal } from '../components/regularization/RegularizationDetailModal';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import {
+  REGULARIZATION_TOUR_ACTIONS,
+  regularizationTourScript,
+} from '../lib/onboarding/scripts/regularizationTourScript';
+import type { TourPageApi } from '../lib/onboarding/tourTypes';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
@@ -14,6 +21,7 @@ export function Regularization() {
   const auth = useAuth((s) => s.user);
   const canCreate = auth?.permissions.includes('write.regularization') ?? false;
   const canApprove = auth?.permissions.includes('approve.regularization') ?? false;
+  const pageApiRef = useRef<TourPageApi>({});
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Pending');
   const [createOpen, setCreateOpen] = useState(false);
@@ -28,6 +36,18 @@ export function Regularization() {
   const items = data?.items ?? [];
   const counts = data?.counts ?? { Pending: 0, Approved: 0, Rejected: 0 };
 
+  const tour = usePageTourController('regularization', regularizationTourScript, {
+    pageApiRef,
+    actionMap: REGULARIZATION_TOUR_ACTIONS,
+    ready: !isLoading,
+    onBeforeStart: () => pageApiRef.current.closeCreateModal?.(),
+  });
+
+  pageApiRef.current = {
+    openCreateModal: () => setCreateOpen(true),
+    closeCreateModal: () => setCreateOpen(false),
+  };
+
   if (!canCreate && !canApprove) {
     return (
       <div className="card p-12 text-center text-text-muted">
@@ -39,9 +59,16 @@ export function Regularization() {
 
   return (
     <div>
-      <RegularizationPageHeader canCreate={canCreate} onCreate={() => setCreateOpen(true)} />
+      <RegularizationPageHeader
+        canCreate={canCreate}
+        onCreate={() => {
+          setCreateOpen(true);
+          tour.tourRef.current?.onUserAction('create-opened');
+        }}
+        tourButton={<GiveMeATourButton onClick={tour.onReplayTour} />}
+      />
 
-      <div className="dash-stat-grid mb-6">
+      <div className="dash-stat-grid mb-6" data-tour-id="regularization-status-filters">
         <StatCard
           label="Pending"
           value={counts.Pending}
@@ -79,7 +106,9 @@ export function Regularization() {
         </div>
       )}
 
-      <RegularizationRequestCardList items={items} onOpen={setDetailItem} />
+      <div data-tour-id="regularization-list">
+        <RegularizationRequestCardList items={items} onOpen={setDetailItem} />
+      </div>
 
       {createOpen && <CreateRegularizationModal onClose={() => setCreateOpen(false)} />}
       {detailItem && (

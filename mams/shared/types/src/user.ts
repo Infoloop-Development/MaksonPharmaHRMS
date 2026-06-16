@@ -40,6 +40,7 @@ export const UserPublicSchema = z.object({
   isActive: z.boolean(),
   mustChangePassword: z.boolean(),
   lastLoginAt: z.string().datetime().nullable(),
+  completedOnboardingTours: z.array(z.string()).default([]),
 });
 export type UserPublic = z.infer<typeof UserPublicSchema>;
 
@@ -78,8 +79,28 @@ export const LoginResponseSchema = z.object({
   user: UserPublicSchema,
   accessToken: z.string(),
   refreshToken: z.string(),
+  isFirstLogin: z.boolean().optional(),
 });
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
+export const OnboardingTourIdSchema = z.enum([
+  'dashboard',
+  'employees',
+  'attendance',
+  'reports',
+  'adjustments',
+  'regularization',
+  'leave',
+  'visitors',
+  'devices',
+  'settings',
+]);
+export type OnboardingTourId = z.infer<typeof OnboardingTourIdSchema>;
+
+export const CompleteOnboardingTourSchema = z.object({
+  tour: OnboardingTourIdSchema,
+});
+export type CompleteOnboardingTour = z.infer<typeof CompleteOnboardingTourSchema>;
 
 export const RefreshRequestSchema = z.object({
   refreshToken: z.string(),

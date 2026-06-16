@@ -40,6 +40,7 @@ export async function login(email: string, password: string, ctx: { ipAddress: s
 
   user.failedLoginCount = 0;
   user.lockedUntil = null;
+  const isFirstLogin = !user.lastLoginAt;
   user.lastLoginAt = new Date();
   await user.save();
   await ensureUserRoleDefaultPermissions(user);
@@ -60,7 +61,7 @@ export async function login(email: string, password: string, ctx: { ipAddress: s
   });
 
   await audit('login', { userId: user._id, ipAddress: ctx.ipAddress, userAgent: ctx.userAgent });
-  return { user, accessToken, refreshToken };
+  return { user, accessToken, refreshToken, isFirstLogin };
 }
 
 export async function rotateRefresh(token: string, ctx: { ipAddress: string | null }) {
@@ -119,7 +120,20 @@ export function userPublic(user: UserDoc) {
     isActive: user.isActive ?? true,
     mustChangePassword: user.mustChangePassword ?? false,
     lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+    completedOnboardingTours: user.completedOnboardingTours ?? [],
   };
+}
+
+export async function completeOnboardingTour(userId: string, tour: string) {
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    { $addToSet: { completedOnboardingTours: tour } },
+    { new: true }
+  );
+  if (!user || !user.isActive) {
+    throw new ApiError(401, 'unauthorized', 'User not found or inactive');
+  }
+  return user;
 }
 
 export async function changePassword(

@@ -28,6 +28,9 @@ const sampleItem: VisitorRequestListItem = {
   decidedBy: null,
   decidedAt: null,
   approverNote: null,
+  visitValidUntil: null,
+  visitAccessMode: null,
+  visitDurationHours: null,
 };
 
 const branding: CompanyBranding = {

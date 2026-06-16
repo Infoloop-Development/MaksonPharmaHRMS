@@ -16,7 +16,7 @@ export function DashboardBarChartCard({
   const showEmpty = !isInitialLoad && (!barChart || !hasChartData);
 
   return (
-    <div className="card p-4 md:p-6 h-full flex flex-col">
+    <div className="card p-4 md:p-6 h-full flex flex-col" data-tour-id="dashboard-bar-chart">
       <h2 className="text-lg font-bold mb-1">Weekly {barLabel} trend</h2>
       <p className="text-xs text-text-muted mb-4">
         Click tile above to switch metric. Click bar to select day.
