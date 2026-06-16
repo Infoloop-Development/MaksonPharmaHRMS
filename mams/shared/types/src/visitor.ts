@@ -315,8 +315,26 @@ export const VisitorRequestListQuerySchema = z.object({
 });
 export type VisitorRequestListQuery = z.infer<typeof VisitorRequestListQuerySchema>;
 
+export const VisitorVisitAccessModeSchema = z.enum(['default', 'duration', 'until']);
+export type VisitorVisitAccessMode = z.infer<typeof VisitorVisitAccessModeSchema>;
+
+export const VisitorVisitAccessSchema = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('default') }),
+  z.object({
+    mode: z.literal('duration'),
+    durationHours: z.number().positive().max(72),
+  }),
+  z.object({
+    mode: z.literal('until'),
+    validUntilDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    validUntilTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  }),
+]);
+export type VisitorVisitAccess = z.infer<typeof VisitorVisitAccessSchema>;
+
 export const VisitorRequestApproveSchema = z.object({
   approverNote: z.string().max(2000).optional(),
+  visitAccess: VisitorVisitAccessSchema.optional(),
 });
 export type VisitorRequestApprove = z.infer<typeof VisitorRequestApproveSchema>;
 

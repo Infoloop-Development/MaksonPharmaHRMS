@@ -84,7 +84,7 @@ export function CreateRegularizationModal({ onClose }: { onClose: () => void }) 
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4" data-tour-id="regularization-create-modal">
         <Field label="Employee" required>
           <Input
             placeholder="Search by name or code (min 2 chars)"

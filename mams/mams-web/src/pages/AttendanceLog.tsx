@@ -9,6 +9,10 @@ import { DashboardStatCard } from '../components/ui/DashboardStatCard';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { countActiveFilters } from '../lib/countActiveFilters';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { attendanceTourScript } from '../lib/onboarding/scripts/attendanceTourScript';
+import type { TourPageApi } from '../lib/onboarding/tourTypes';
 
 type PunchTypeFilter = 'all' | 'IN' | 'OUT' | 'OTHER';
 type PunchTile = 'all' | 'in' | 'out' | 'other';
@@ -54,6 +58,7 @@ function filterBarLabel(
 
 export function AttendanceLog() {
   const { fmtTime } = useTimeDisplay();
+  const pageApiRef = useRef<TourPageApi>({});
   const { logFilter, logFilterDebounced } = useActivityLog();
   const searchDebounceSkip = useRef(true);
   const [search, setSearch] = useState('');
@@ -122,6 +127,14 @@ export function AttendanceLog() {
     setPage(1);
   };
 
+  const tour = usePageTourController('attendance', attendanceTourScript, {
+    pageApiRef,
+    ready: !isLoading,
+    onBeforeStart: () => pageApiRef.current.clearFilters?.(),
+  });
+
+  pageApiRef.current = { clearFilters };
+
   const clickTile = (tile: PunchTile) => {
     const next: PunchTile = activeTile === tile && tile !== 'all' ? 'all' : tile;
     const nextPunchType = tileToPunchType(next);
@@ -164,7 +177,7 @@ export function AttendanceLog() {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between flex-wrap gap-3">
+      <div className="mb-3 flex items-center justify-between flex-wrap gap-3" data-tour-id="attendance-header">
         <div>
           <h1 className="text-2xl font-bold">Live Attendance Log</h1>
           <div className="text-sm text-text-muted">
@@ -175,15 +188,18 @@ export function AttendanceLog() {
                 : 'Search and filter historical punches.'}
           </div>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <GiveMeATourButton onClick={tour.onReplayTour} />
         {isLiveMode && (
-          <span className="px-3 py-1 rounded-full bg-green-bg text-green-dark text-xs font-semibold flex items-center gap-1.5 shrink-0">
+          <span className="px-3 py-1 rounded-full bg-green-bg text-green-dark text-xs font-semibold flex items-center gap-1.5 shrink-0" data-tour-id="attendance-live-badge">
             <span className="w-2 h-2 rounded-full bg-green animate-pulse" />
             LIVE
           </span>
         )}
+        </div>
       </div>
 
-      <div className="dash-stat-grid">
+      <div className="dash-stat-grid" data-tour-id="attendance-stats">
         <DashboardStatCard
           label="Total Punches"
           value={stats ? fmtNumber(stats.total) : '—'}
@@ -233,10 +249,12 @@ export function AttendanceLog() {
         </div>
       )}
 
+      <div data-tour-id="attendance-filters">
       <MobileFilterBar
         search={
+          <div className="flex-1 min-w-[200px]" data-tour-id="attendance-filters-search">
           <input
-            className="input flex-1 min-w-[200px]"
+            className="input w-full"
             placeholder="Search by name, employee code, biometric ID..."
             value={search}
             onChange={(e) => {
@@ -244,6 +262,7 @@ export function AttendanceLog() {
               setPage(1);
             }}
           />
+          </div>
         }
         activeCount={countActiveFilters(
           { date, punchType, outsideShiftOnly },
@@ -258,9 +277,10 @@ export function AttendanceLog() {
         }}
         desktopClassName="hidden md:flex flex-row gap-3 flex-wrap"
       >
+        <div data-tour-id="attendance-filters-date" className="w-full sm:w-auto">
         <input
           type="date"
-          className="input w-full sm:w-auto"
+          className="input w-full"
           value={date}
           onChange={(e) => {
             const v = e.target.value;
@@ -270,8 +290,10 @@ export function AttendanceLog() {
           }}
           aria-label="Filter by date"
         />
+        </div>
+        <div data-tour-id="attendance-filters-type" className="w-full sm:w-auto">
         <select
-          className="input w-full sm:w-auto"
+          className="input w-full"
           value={punchType}
           onChange={(e) => {
             const v = e.target.value as PunchTypeFilter;
@@ -287,7 +309,8 @@ export function AttendanceLog() {
           <option value="OUT">OUT</option>
           <option value="OTHER">OTHER</option>
         </select>
-        <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+        </div>
+        <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer" data-tour-id="attendance-outside-shift">
           <input
             type="checkbox"
             className="rounded border-border"
@@ -305,6 +328,7 @@ export function AttendanceLog() {
           </button>
         )}
       </MobileFilterBar>
+      </div>
 
       {data?.truncated && (
         <div className="mb-3 text-xs text-amber bg-amber-bg/40 border border-amber/30 rounded px-3 py-2">
@@ -312,6 +336,7 @@ export function AttendanceLog() {
         </div>
       )}
 
+      <div data-tour-id="attendance-list">
       <PunchCardList
         items={data?.items}
         isLoading={isLoading}
@@ -384,6 +409,7 @@ export function AttendanceLog() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {data && data.total > pageSize && (

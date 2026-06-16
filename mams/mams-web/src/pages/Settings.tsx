@@ -30,6 +30,9 @@ import { z } from 'zod';
 import { ActivityLogPanel } from '../components/activity/ActivityLogPanel';
 import { BrandAssetsCard } from '../components/settings/BrandAssetsCard';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { settingsTourScript } from '../lib/onboarding/scripts/settingsTourScript';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -120,19 +123,26 @@ export function Settings() {
 
   const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
 
+  const tour = usePageTourController('settings', settingsTourScript, {
+    ready: Boolean(data) && !isLoading,
+  });
+
   if (isLoading) return <div className="text-text-muted">Loading...</div>;
   if (!data) return <div className="text-red">Failed to load settings.</div>;
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
-        <div className="text-sm text-text-muted">
-          {canManage ? 'Edits are audit-logged.' : 'Read-only view (you do not have manage.settings permission).'}
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="settings-header">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
+          <div className="text-sm text-text-muted">
+            {canManage ? 'Edits are audit-logged.' : 'Read-only view (you do not have manage.settings permission).'}
+          </div>
         </div>
+        <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
 
-      <div className="card p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="card p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" data-tour-id="settings-leave-link">
         <div>
           <h2 className="font-semibold text-sm">Leave management</h2>
           <p className="text-sm text-text-muted mt-1">
@@ -146,38 +156,56 @@ export function Settings() {
 
       <div className="settings-layout">
         <SettingsLayoutCell full>
-          <TimeDisplayCard settings={data} canManage={canManage} />
+          <div data-tour-id="settings-time-branding">
+            <TimeDisplayCard settings={data} canManage={canManage} />
+          </div>
         </SettingsLayoutCell>
         <SettingsLayoutCell full>
           <BrandAssetsCard settings={data} canManage={canManage} />
         </SettingsLayoutCell>
         <SettingsLayoutCell>
-          <CompanyInfoCard settings={data} canManage={canManage} />
+          <div data-tour-id="settings-company">
+            <CompanyInfoCard settings={data} canManage={canManage} />
+          </div>
         </SettingsLayoutCell>
         <SettingsLayoutCell>
-          <ComplianceCard settings={data} canManage={canManage} />
+          <div data-tour-id="settings-compliance">
+            <ComplianceCard settings={data} canManage={canManage} />
+          </div>
         </SettingsLayoutCell>
         <SettingsLayoutCell>
-          <SmartAnchorCard settings={data} canManage={canManage} />
+          <div data-tour-id="settings-smart-anchor">
+            <SmartAnchorCard settings={data} canManage={canManage} />
+          </div>
         </SettingsLayoutCell>
         <SettingsLayoutCell>
-          <ConfidentialityCard settings={data} canManage={canManage} />
+          <div data-tour-id="settings-confidentiality">
+            <ConfidentialityCard settings={data} canManage={canManage} />
+          </div>
         </SettingsLayoutCell>
         <SettingsLayoutCell full>
-          <ShiftsCard settings={data} canManage={canManage} />
+          <div data-tour-id="settings-shifts">
+            <ShiftsCard settings={data} canManage={canManage} />
+          </div>
         </SettingsLayoutCell>
         <SettingsLayoutCell full>
-          <ExportNamingCard settings={data} canManage={canManageExportNaming} />
+          <div data-tour-id="settings-export-naming">
+            <ExportNamingCard settings={data} canManage={canManageExportNaming} />
+          </div>
         </SettingsLayoutCell>
         {canManageUsers && (
           <SettingsLayoutCell full>
-            <UsersCard />
+            <div data-tour-id="settings-users">
+              <UsersCard />
+            </div>
           </SettingsLayoutCell>
         )}
         <SettingsLayoutCell full>
+          <div data-tour-id="settings-activity">
           <SectionCard title="Activity">
             <ActivityLogPanel />
           </SectionCard>
+          </div>
         </SettingsLayoutCell>
       </div>
     </div>

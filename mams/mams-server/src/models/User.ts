@@ -14,6 +14,7 @@ const userSchema = new Schema(
     failedLoginCount: { type: Number, default: 0 },
     lockedUntil: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
+    completedOnboardingTours: { type: [String], default: [] },
     dashboardLayout: {
       type: {
         rows: [

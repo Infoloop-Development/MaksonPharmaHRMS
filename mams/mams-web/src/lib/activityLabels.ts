@@ -1,5 +1,5 @@
 import type { ActivityListItem } from '@mams/types';
-import { TIME_FORMAT_LABELS, type TimeFormat } from './timeFormat';
+import { TIME_FORMAT_LABELS, formatIstInstant, type TimeFormat } from './timeFormat';
 
 const SECTION_LABELS: Record<string, string> = {
   company: 'Company Info',
@@ -284,8 +284,13 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return `Rejected regularization request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
     case 'visitor_request_submitted':
       return 'Visitor request submitted (public form)';
-    case 'visitor_request_approved':
+    case 'visitor_request_approved': {
+      const until = typeof p.visitValidUntil === 'string' ? p.visitValidUntil : undefined;
+      if (until) {
+        return `Approved visitor request (valid until ${formatIstInstant(until, '12h')})`;
+      }
       return 'Approved visitor request';
+    }
     case 'visitor_request_rejected':
       return `Rejected visitor request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
     case 'visitor_form_created':

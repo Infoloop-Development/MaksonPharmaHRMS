@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { setFirstLoginSession } from '../lib/onboarding/session';
 import { useAuth } from '../store/auth';
 
 export function Login() {
@@ -22,6 +23,9 @@ export function Login() {
       const data = await authApi.login({ email, password });
       qc.removeQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
       setAuth(data);
+      if (data.isFirstLogin) {
+        setFirstLoginSession();
+      }
       navigate(data.user.mustChangePassword ? '/change-password' : '/dashboard');
     } catch (e: any) {
       setErr(e?.message ?? 'Login failed');

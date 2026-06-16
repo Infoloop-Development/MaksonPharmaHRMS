@@ -19,7 +19,7 @@ export function DashboardLayoutGuide({
   };
 
   return (
-    <div className="dash-layout-guide">
+    <div className="dash-layout-guide" data-tour-id="dashboard-layout-guide">
       <p className="text-xs text-text-muted mb-2">
         Drag Bar ↔ Donut to swap charts. Drag table onto a chart to move it top or bottom. Table is
         always full width. Save to apply.

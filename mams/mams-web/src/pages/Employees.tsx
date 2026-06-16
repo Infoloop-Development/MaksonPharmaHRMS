@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
@@ -13,6 +13,10 @@ import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 import { EmployeeCardList } from '../components/employees/EmployeeCardList';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { useActivityLog } from '../hooks/useActivityLog';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { employeesTourScript } from '../lib/onboarding/scripts/employeesTourScript';
+import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
 export function Employees() {
@@ -24,11 +28,32 @@ export function Employees() {
   const pageSize = 50;
   const user = useAuth((s) => s.user);
   const canManage = user?.permissions.includes('manage.users') ?? false;
+  const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['employees', { search, page }],
     queryFn: () => employeesApi.list({ search, page, pageSize }),
   });
+
+  const tour = usePageTourController('employees', employeesTourScript, {
+    pageApiRef,
+    ready: !isLoading,
+    onBeforeStart: () => {
+      pageApiRef.current.clearSearch?.();
+      pageApiRef.current.closeModals?.();
+    },
+  });
+
+  pageApiRef.current = {
+    clearSearch: () => {
+      setSearch('');
+      setPage(1);
+    },
+    closeModals: () => {
+      setImportOpen(false);
+      setAddOpen(false);
+    },
+  };
 
   useEffect(() => {
     logSearch('employees', 'search', { search: search.trim() });
@@ -36,15 +61,17 @@ export function Employees() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="employees-header">
         <div>
           <h1 className="text-2xl font-bold">Employees</h1>
           <div className="text-sm text-text-muted">
             {data ? `${data.total.toLocaleString()} total` : ''}
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <GiveMeATourButton onClick={tour.onReplayTour} />
         {canManage && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
               Add employee
             </button>
@@ -53,10 +80,16 @@ export function Employees() {
             </button>
           </div>
         )}
+        </div>
       </div>
 
-      {canManage && <BiometricIdBanner />}
+      {canManage && (
+        <div data-tour-id="employees-biometric-banner">
+          <BiometricIdBanner />
+        </div>
+      )}
 
+      <div data-tour-id="employees-search">
       <MobileFilterBar
         search={
           <input
@@ -68,10 +101,12 @@ export function Employees() {
         }
         desktopClassName="hidden md:flex gap-3"
       />
+      </div>
 
+      <div data-tour-id="employees-list">
       <EmployeeCardList items={data?.items} isLoading={isLoading} error={!!error} />
 
-      <div className="card overflow-hidden hidden md:block">
+      <div className="card overflow-hidden hidden md:block" data-tour-id="employees-table">
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
@@ -115,9 +150,10 @@ export function Employees() {
           </table>
         </div>
       </div>
+      </div>
 
       {data && data.total > pageSize && (
-        <div className="mt-4 flex items-center justify-between text-sm">
+        <div className="mt-4 flex items-center justify-between text-sm" data-tour-id="employees-pagination">
           <div className="text-text-muted">
             Page {page} of {Math.ceil(data.total / pageSize)}
           </div>

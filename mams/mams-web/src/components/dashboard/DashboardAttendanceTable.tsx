@@ -259,7 +259,7 @@ export function DashboardAttendanceTable({
   }
 
   return (
-    <div className="dash-table-card">
+    <div className="dash-table-card" data-tour-id="dashboard-attendance-table">
       <div className="dash-table-header">
         <h3>
           Attendance - {selectedDate}

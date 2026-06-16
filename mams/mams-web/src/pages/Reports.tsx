@@ -17,6 +17,9 @@ import { fmtDate, fmtHours, fmtNumber } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { countActiveFilters } from '../lib/countActiveFilters';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { reportsTourScript } from '../lib/onboarding/scripts/reportsTourScript';
 
 type Tab = 'daily' | 'monthly' | 'department' | 'location';
 
@@ -28,19 +31,21 @@ export function Reports() {
   const { logReportsAction } = useActivityLog();
   const viewMode = useAuth((s) => s.user?.viewMode);
   const isCompliant = viewMode === 'compliant';
+  const tour = usePageTourController('reports', reportsTourScript, { ready: true });
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Reports</h1>
           <div className="text-sm text-text-muted">
             View mode: <Badge tone={isCompliant ? 'amber' : 'blue'}>{isCompliant ? 'COMPLIANT (8-hour)' : 'REAL (12-hour)'}</Badge>
           </div>
         </div>
+        <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
 
-      <div className="card mb-4 p-1.5 inline-flex gap-1 flex-wrap">
+      <div className="card mb-4 p-1.5 inline-flex gap-1 flex-wrap" data-tour-id="reports-tabs">
         {[
           ['daily', 'Daily Attendance'],
           ['monthly', 'Monthly Summary'],
@@ -61,6 +66,7 @@ export function Reports() {
             {label}
           </button>
         ))}
+        <span className="sr-only" data-tour-id="reports-monthly-hint" aria-hidden="true" />
       </div>
 
       {tab === 'daily' && <DailyReport isCompliant={isCompliant} />}
@@ -172,6 +178,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
 
   return (
     <div>
+      <div data-tour-id="reports-filters">
       <FilterBar
         activeCount={countActiveFilters({ startDate, endDate, department, location }, dailyFilterDefaults)}
         onClear={() => {
@@ -196,7 +203,9 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
           </Select>
         </Field>
       </FilterBar>
+      </div>
 
+      <div data-tour-id="reports-results">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
@@ -208,7 +217,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
             </>
           )}
         </div>
-        <div className="flex gap-2 w-full sm:w-auto no-print">
+        <div className="flex gap-2 w-full sm:w-auto no-print" data-tour-id="reports-export">
           <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
           <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadCsv}>Download CSV</button>
         </div>
@@ -276,6 +285,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
             Showing first 500 rows. Download CSV for full export.
           </div>
         )}
+      </div>
       </div>
     </div>
   );

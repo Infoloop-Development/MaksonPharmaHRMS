@@ -11,6 +11,7 @@ import type {
   VisitorRequestApprove,
   VisitorRequestReject,
   VisitorRequestStatus,
+  VisitorVisitAccessMode,
 } from '@mams/types';
 
 export interface VisitorFormItem {
@@ -52,6 +53,9 @@ export interface VisitorRequestListItem {
   decidedBy: { _id: string; name: string; email: string } | string | null;
   decidedAt: string | null;
   approverNote: string | null;
+  visitValidUntil: string | null;
+  visitAccessMode: VisitorVisitAccessMode | null;
+  visitDurationHours: number | null;
 }
 
 export interface VisitorRequestListResponse {
