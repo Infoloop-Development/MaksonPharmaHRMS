@@ -1,13 +1,17 @@
 import { useAuth } from '../store/auth';
 import { DeviceManagementPanel } from '../components/devices/DeviceManagementPanel';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { devicesTourScript } from '../lib/onboarding/scripts/devicesTourScript';
 
 export function Devices() {
   const user = useAuth((s) => s.user);
   const canManage = user?.permissions.includes('manage.devices') ?? false;
+  const tour = usePageTourController('devices', devicesTourScript, { ready: true });
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="devices-header">
         <div>
           <h1 className="text-2xl font-bold">Devices</h1>
           <p className="text-sm text-text-muted hidden md:block">
@@ -19,6 +23,7 @@ export function Devices() {
             token on each unit.
           </p>
         </div>
+        <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
 
       <DeviceManagementPanel canManage={canManage} showSetupGuide showGoLivePanels showStats />

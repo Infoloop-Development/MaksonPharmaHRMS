@@ -35,6 +35,7 @@ export function DashboardDonutChartCard({
   return (
     <div
       className={`card p-4 md:p-6 h-full flex flex-col transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
+      data-tour-id="dashboard-donut-chart"
     >
       <h2 className="text-lg font-bold mb-1">
         {selectedDate ? `${fmtWeekdayShort(selectedDate)}'s breakdown` : "Day's breakdown"}

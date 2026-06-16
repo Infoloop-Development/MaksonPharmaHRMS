@@ -5,6 +5,7 @@ import { useAuth } from '../store/auth';
 import { settingsApi } from '../api/settings';
 import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { clearFirstLoginSession } from '../lib/onboarding/session';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
 
@@ -52,6 +53,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       // ignore
     } finally {
       clear();
+      clearFirstLoginSession();
       qc.removeQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
       navigate('/login');
     }

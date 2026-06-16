@@ -46,6 +46,7 @@ function DragHandleIcon() {
 
 function SortableKpiSlot({
   metricId,
+  isFirstSlot,
   values,
   filterState,
   isEditing,
@@ -53,6 +54,7 @@ function SortableKpiSlot({
   onPickMetric,
 }: {
   metricId: DashboardKpiMetricId;
+  isFirstSlot?: boolean;
   values: KpiDayValues;
   filterState: DashboardKpiFilterState;
   isEditing: boolean;
@@ -75,11 +77,12 @@ function SortableKpiSlot({
       style={style}
       className={`dash-kpi-slot relative h-full ${isEditing ? 'dash-kpi-slot--editing' : ''} ${isDragging ? 'z-10 opacity-90' : ''}`}
     >
-      {isEditing && (
+        {isEditing && (
         <button
           type="button"
           className="dash-kpi-drag-handle dash-drag-handle"
           aria-label="Drag to reorder"
+          data-tour-id={isFirstSlot ? 'dashboard-kpi-drag-handle' : undefined}
           {...attributes}
           {...listeners}
         >
@@ -146,6 +149,7 @@ export function DashboardKpiGrid({
           <SortableKpiSlot
             key={metricId}
             metricId={metricId}
+            isFirstSlot={index === 0}
             values={values}
             filterState={filterState}
             isEditing={isEditing}
@@ -158,10 +162,10 @@ export function DashboardKpiGrid({
   );
 
   return (
-    <div>
+    <div data-tour-id="dashboard-kpi-grid">
       {isEditing && (
         <>
-          <div className="dash-kpi-toolbar flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-2">
+          <div className="dash-kpi-toolbar flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-2" data-tour-id="dashboard-kpi-edit-toolbar">
             <button type="button" className="btn-outline btn-sm dash-kpi-toolbar-btn" onClick={onCancelEdit}>
               Cancel
             </button>
@@ -174,7 +178,7 @@ export function DashboardKpiGrid({
               {isSaving ? 'Saving…' : 'Save KPIs'}
             </button>
           </div>
-          <p className="dash-kpi-edit-hint text-xs text-text-muted mb-2 md:mb-3">
+          <p className="dash-kpi-edit-hint text-xs text-text-muted mb-2 md:mb-3" data-tour-id="dashboard-kpi-edit-hint">
             Drag cards to reorder. Tap a card to change its metric.
           </p>
         </>

@@ -6,7 +6,7 @@ export function DeviceSetupGuide() {
   const { iclockUrl, hanvonPushUrl } = useMemo(() => getDeviceIntegrationUrls(), []);
 
   return (
-    <div className="rounded-md border border-border bg-surface2/40 p-4 text-sm space-y-3">
+    <div className="rounded-md border border-border bg-surface2/40 p-4 text-sm space-y-3" data-tour-id="devices-setup-guide">
       <div className="font-semibold text-text">Integration setup</div>
       <p className="text-text-muted text-xs">
         Register each device here before connecting hardware. Saving the form only registers the device in MAMS —

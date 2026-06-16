@@ -8,6 +8,7 @@ import { Input, Select } from '../ui/Field';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
 import { fmtDate } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import { formatVisitorResponse, visitorStatusTone } from './visitorsUtils';
 
 export function VisitorRequestsTab({
@@ -59,6 +60,7 @@ export function VisitorRequestsTab({
   const items = data?.items ?? [];
   const counts = data?.counts ?? { Pending: 0, Approved: 0, Rejected: 0 };
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / (data?.pageSize ?? 50)));
+  const { fmtDateTimeMs } = useTimeDisplay();
 
   const searchField = (
     <Input
@@ -203,6 +205,11 @@ export function VisitorRequestsTab({
               <div className="min-w-0">
                 <p className="font-medium truncate">{previewField(item)}</p>
                 <p className="text-sm text-text-muted">{item.formTitle} · {fmtDate(item.submittedAt)}</p>
+                {item.status === 'Approved' && item.visitValidUntil && (
+                  <p className="text-xs text-text-muted mt-0.5">
+                    Until {fmtDateTimeMs(item.visitValidUntil)}
+                  </p>
+                )}
               </div>
               <Badge tone={visitorStatusTone(item.status)}>{item.status}</Badge>
             </div>

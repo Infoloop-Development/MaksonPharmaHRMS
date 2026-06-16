@@ -143,7 +143,7 @@ export function DeviceManagementPanel({
       >
         {syncAllMutation.isPending ? 'Syncing…' : 'Sync All'}
       </button>
-      <button type="button" className="btn-primary btn-sm" onClick={() => setAddOpen(true)}>
+      <button type="button" className="btn-primary btn-sm" data-tour-id="devices-register" onClick={() => setAddOpen(true)}>
         + Register
       </button>
     </>
@@ -165,7 +165,7 @@ export function DeviceManagementPanel({
       {showSetupGuide && canManage && <DeviceSetupGuide />}
 
       {showStats && (
-        <div className="dash-stat-grid mb-0">
+        <div className="dash-stat-grid mb-0" data-tour-id="devices-stats">
           <StatCard label="Total" value={allDevices.length} accent="primary" />
           <StatCard label="Online" value={online} accent="green" />
           <StatCard label="Offline" value={allDevices.length - online} accent="red" />
@@ -173,6 +173,7 @@ export function DeviceManagementPanel({
         </div>
       )}
 
+      <div data-tour-id="devices-filters">
       <MobileFilterBar
         activeCount={activeCount}
         onClear={clearFilters}
@@ -240,13 +241,15 @@ export function DeviceManagementPanel({
             >
               {syncAllMutation.isPending ? 'Syncing all...' : 'Sync All'}
             </button>
-            <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
+            <button type="button" className="btn-primary" data-tour-id="devices-register" onClick={() => setAddOpen(true)}>
               + Register device
             </button>
           </div>
         )}
       </MobileFilterBar>
+      </div>
 
+      <div data-tour-id="devices-list">
       <DeviceTable
         devices={filtered}
         isLoading={isLoading}
@@ -256,6 +259,7 @@ export function DeviceManagementPanel({
         onTest={handleTest}
         onEdit={(d) => setEditDevice(d)}
       />
+      </div>
 
       {showGoLivePanels && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

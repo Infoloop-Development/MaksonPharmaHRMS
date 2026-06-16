@@ -5,6 +5,7 @@ import { visitorsApi, type VisitorFormItem, type VisitorRequestListItem } from '
 import { settingsApi } from '../../api/settings';
 import { brandingFromSettings } from '../../lib/companyBranding';
 import { fmtIstDate, fmtIstTime } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import {
   fetchAllFilteredVisitorResponses,
   openVisitorResponsesPrintWindow,
@@ -33,6 +34,7 @@ export function FormResponsesPanel({
   onViewRequest: (id: string) => void;
 }) {
   const toast = useToast((s) => s.push);
+  const { fmtDateTimeMs } = useTimeDisplay();
   const [statusFilter, setStatusFilter] = useState<VisitorRequestStatus | 'All'>('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -158,6 +160,7 @@ export function FormResponsesPanel({
             <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
               <th className="px-3 py-2 whitespace-nowrap">Submitted</th>
               <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2 whitespace-nowrap">Valid until</th>
               {fieldColumns.map((f) => (
                 <th key={f.id} className="px-3 py-2 whitespace-nowrap">
                   {f.label}
@@ -169,14 +172,14 @@ export function FormResponsesPanel({
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={fieldColumns.length + 3} className="px-3 py-8 text-center text-text-muted">
+                <td colSpan={fieldColumns.length + 4} className="px-3 py-8 text-center text-text-muted">
                   Loading responses…
                 </td>
               </tr>
             )}
             {!isLoading && items.length === 0 && (
               <tr>
-                <td colSpan={fieldColumns.length + 3} className="px-3 py-8 text-center text-text-muted">
+                <td colSpan={fieldColumns.length + 4} className="px-3 py-8 text-center text-text-muted">
                   No responses yet.
                 </td>
               </tr>
@@ -190,6 +193,11 @@ export function FormResponsesPanel({
                   </td>
                   <td className="px-3 py-2">
                     <Badge tone={visitorStatusTone(item.status)}>{item.status}</Badge>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-text-muted whitespace-nowrap">
+                    {item.status === 'Approved' && item.visitValidUntil
+                      ? fmtDateTimeMs(item.visitValidUntil)
+                      : '—'}
                   </td>
                   {fieldColumns.map((f) => (
                     <td key={f.id} className="px-3 py-2 max-w-[200px] truncate" title={cellValue(item, f)}>

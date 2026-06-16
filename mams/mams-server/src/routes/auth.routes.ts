@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { ChangePasswordRequestSchema, LoginRequestSchema, RefreshRequestSchema } from '@mams/types';
+import { ChangePasswordRequestSchema, CompleteOnboardingTourSchema, LoginRequestSchema, RefreshRequestSchema } from '@mams/types';
 import { UserModel } from '../models/User.js';
-import { changePassword, login, logout, rotateRefresh, userPublic } from '../services/auth.service.js';
+import { changePassword, completeOnboardingTour, login, logout, rotateRefresh, userPublic } from '../services/auth.service.js';
 import { ensureUserRoleDefaultPermissions } from '../services/userPermissionBackfill.service.js';
 import { PasswordSchema } from '../utils/passwordPolicy.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -20,6 +20,7 @@ router.post('/login', async (req, res, next) => {
       user: userPublic(result.user),
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
+      isFirstLogin: result.isFirstLogin,
     });
   } catch (err) {
     next(err);
@@ -81,6 +82,16 @@ router.post('/change-password', requireAuth, async (req, res, next) => {
       ipAddress: req.clientIp ?? null,
       userAgent: req.header('user-agent') ?? null,
     });
+    res.json({ user: userPublic(user) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/onboarding/complete', requireAuth, async (req, res, next) => {
+  try {
+    const body = CompleteOnboardingTourSchema.parse(req.body);
+    const user = await completeOnboardingTour(req.auth!.sub, body.tour);
     res.json({ user: userPublic(user) });
   } catch (err) {
     next(err);

@@ -6,12 +6,16 @@ import { VisitorRequestsTab } from '../components/visitors/VisitorRequestsTab';
 import { VisitorFormsTab } from '../components/visitors/VisitorFormsTab';
 import { VisitorRequestDetailModal } from '../components/visitors/VisitorRequestDetailModal';
 import type { VisitorTab } from '../components/visitors/visitorsUtils';
+import { usePageTourController } from '../hooks/usePageTourController';
+import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { visitorsTourScript } from '../lib/onboarding/scripts/visitorsTourScript';
 
 export function Visitors() {
   const perms = useAuth((s) => s.user?.permissions ?? []);
   const canView = canViewVisitors(perms);
   const canApprove = canApproveVisitors(perms);
   const canManageForms = canManageVisitorForms(perms);
+  const tour = usePageTourController('visitors', visitorsTourScript, { ready: canView || canManageForms });
 
   const [tab, setTab] = useState<VisitorTab>('requests');
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -34,26 +38,33 @@ export function Visitors() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Visitors</h1>
-        <p className="text-sm text-text-muted mt-1">
-          Review visitor requests and manage public registration forms with shareable links and QR codes.
-        </p>
+      <div className="mb-6 flex items-start justify-between flex-wrap gap-3" data-tour-id="visitors-header">
+        <div>
+          <h1 className="text-2xl font-bold">Visitors</h1>
+          <p className="text-sm text-text-muted mt-1">
+            Review visitor requests and manage public registration forms with shareable links and QR codes.
+          </p>
+        </div>
+        <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
 
-      <VisitorsTabBar
-        tab={activeTab}
-        onTabChange={setTab}
-        canManageForms={canManageForms}
-        canViewRequests={canView}
-      />
+      <div data-tour-id="visitors-tabs">
+        <VisitorsTabBar
+          tab={activeTab}
+          onTabChange={setTab}
+          canManageForms={canManageForms}
+          canViewRequests={canView}
+        />
+      </div>
 
+      <div data-tour-id="visitors-content">
       {activeTab === 'requests' && canView && (
         <VisitorRequestsTab canApprove={canApprove} onView={(id) => setDetailId(id)} />
       )}
       {activeTab === 'forms' && canManageForms && (
         <VisitorFormsTab onViewRequest={(id) => setDetailId(id)} />
       )}
+      </div>
 
       {detailId && (
         <VisitorRequestDetailModal
