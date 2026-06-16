@@ -3,13 +3,14 @@ import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import { randomBytes } from 'node:crypto';
 import { Types } from 'mongoose';
-import { VisitorPublicSubmitSchema, validateVisitorResponses, type VisitorField } from '@mams/types';
+import { VisitorPublicSubmitSchema, validateVisitorResponses, validateIntroAttestation, type VisitorField, type VisitorIntro } from '@mams/types';
 import { VisitorFormModel } from '../models/VisitorForm.js';
 import { VisitorRequestModel } from '../models/VisitorRequest.js';
 import { VisitorFileModel } from '../models/VisitorFile.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import { findFormBySlug, serializeFormForPublic } from '../services/visitor/visitorForm.service.js';
+import { introUsesStorageKey } from '../services/visitor/visitorIntroMedia.service.js';
 
 const router = Router();
 
@@ -74,7 +75,38 @@ router.get('/:slug', getLimiter, async (req, res, next) => {
       return;
     }
 
-    res.json(serializeFormForPublic(result.form));
+    res.json(await serializeFormForPublic(result.form));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/:slug/intro-media/:storageKey', getLimiter, async (req, res, next) => {
+  try {
+    const slug = req.params.slug ?? '';
+    const storageKey = req.params.storageKey ?? '';
+    const result = await findFormBySlug(slug);
+    if (result.kind === 'retired') {
+      res.status(410).json({ error: 'link_retired', message: 'This form link is no longer active.' });
+      return;
+    }
+    if (result.kind === 'not_found') throw new ApiError(404, 'not_found', 'Visitor form not found');
+
+    const intro = result.form.intro as VisitorIntro | null | undefined;
+    if (!introUsesStorageKey(intro, storageKey)) {
+      throw new ApiError(404, 'not_found', 'Media not found');
+    }
+
+    const file = await VisitorFileModel.findOne({
+      storageKey,
+      formId: result.form._id,
+      consumed: false,
+    }).lean();
+    if (!file) throw new ApiError(404, 'not_found', 'Media not found');
+
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(file.data);
   } catch (err) {
     next(err);
   }
@@ -159,6 +191,13 @@ router.post('/:slug/submit', submitLimiter, async (req, res, next) => {
       throw new ApiError(400, 'validation_error', 'Please correct the highlighted fields', validation.errors);
     }
 
+    const intro = result.form.intro as VisitorIntro | null | undefined;
+    const submitLocale = body.locale ?? 'en';
+    const introError = validateIntroAttestation(intro, body.introAttestation, submitLocale);
+    if (introError) {
+      throw new ApiError(400, 'intro_video_required', introError);
+    }
+
     const fileAttachments = [];
     for (const ref of body.fileRefs) {
       const fileDoc = await VisitorFileModel.findOneAndUpdate(
@@ -185,6 +224,12 @@ router.post('/:slug/submit', submitLimiter, async (req, res, next) => {
       fieldsSnapshot: fields,
       responses: body.responses,
       fileAttachments,
+      introAttestation: body.introAttestation
+        ? {
+            videoCompleted: true,
+            completedAt: new Date(body.introAttestation.completedAt),
+          }
+        : null,
       status: 'Pending',
       submittedAt: new Date(),
       submitterIp: req.clientIp ?? null,

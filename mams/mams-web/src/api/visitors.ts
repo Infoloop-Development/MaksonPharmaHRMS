@@ -3,6 +3,11 @@ import type {
   VisitorField,
   VisitorFormCreate,
   VisitorFormUpdate,
+  VisitorIntro,
+  VisitorIntroAttestation,
+  VisitorMultilingual,
+  VisitorFormLocale,
+  VisitorFormTranslations,
   VisitorRequestApprove,
   VisitorRequestReject,
   VisitorRequestStatus,
@@ -12,6 +17,9 @@ export interface VisitorFormItem {
   _id: string;
   title: string;
   description: string | null;
+  intro: VisitorIntro | null;
+  multilingual: VisitorMultilingual;
+  translations?: VisitorFormTranslations | null;
   publicSlug: string;
   publicUrl: string;
   formVersion: number;
@@ -38,6 +46,7 @@ export interface VisitorRequestListItem {
     size: number;
     storageKey: string;
   }>;
+  introAttestation?: VisitorIntroAttestation | null;
   status: VisitorRequestStatus;
   submittedAt: string;
   decidedBy: { _id: string; name: string; email: string } | string | null;
@@ -76,6 +85,41 @@ export const visitorsApi = {
     api.patch<VisitorFormItem>(`/visitors/forms/${id}`, body),
   toggleFormActive: (id: string) => api.patch<VisitorFormItem>(`/visitors/forms/${id}/toggle-active`),
   deleteForm: (id: string) => api.delete<void>(`/visitors/forms/${id}`),
+  uploadIntroMedia: async (
+    formId: string,
+    kind: 'image' | 'video',
+    file: File,
+    locale: VisitorFormLocale = 'en'
+  ) => {
+    const { accessToken } = (await import('../store/auth')).useAuth.getState();
+    const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+    const base = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('kind', kind);
+    if (kind === 'video') fd.append('locale', locale);
+    const res = await fetch(`${base}/visitors/forms/${encodeURIComponent(formId)}/intro-upload`, {
+      method: 'POST',
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      body: fd,
+    });
+    if (!res.ok) {
+      let payload: { error?: string; message?: string } | null = null;
+      try {
+        payload = await res.json();
+      } catch {
+        /* ignore */
+      }
+      throw new Error(payload?.message ?? 'Upload failed');
+    }
+    return res.json() as Promise<{
+      storageKey: string;
+      filename: string;
+      mimeType: string;
+      size: number;
+      intro?: VisitorIntro | null;
+    }>;
+  },
 
   listRequests: (q: {
     status?: VisitorRequestStatus;

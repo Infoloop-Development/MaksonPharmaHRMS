@@ -1,12 +1,18 @@
 import { Router } from 'express';
 import { Types } from 'mongoose';
+import multer from 'multer';
+import { randomBytes } from 'node:crypto';
 import {
   VisitorFormCreateSchema,
   VisitorFormUpdateSchema,
   VisitorRequestApproveSchema,
   VisitorRequestListQuerySchema,
   VisitorRequestRejectSchema,
+  VisitorFormLocaleSchema,
+  nextVisitorFormLayoutOrder,
+  normalizeVisitorLanguages,
   type VisitorField,
+  type VisitorFormLocale,
 } from '@mams/types';
 import { VisitorFormModel } from '../models/VisitorForm.js';
 import { VisitorRequestModel } from '../models/VisitorRequest.js';
@@ -20,9 +26,65 @@ import {
   enrichFormResponse,
   generatePublicSlug,
 } from '../services/visitor/visitorForm.service.js';
+import {
+  normalizeIntroForStorage,
+  plainIntro,
+  VISITOR_INTRO_IMAGE_FIELD_ID,
+  visitorIntroVideoFieldId,
+} from '../services/visitor/visitorIntroMedia.service.js';
+import { buildVisitorFormTranslations } from '../services/visitor/visitorTranslate.service.js';
 
 const router = Router();
 router.use(requireAuth);
+
+const INTRO_IMAGE_MAX = 5 * 1024 * 1024;
+const INTRO_VIDEO_MAX = 25 * 1024 * 1024;
+
+const introUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: INTRO_VIDEO_MAX },
+});
+
+async function assertIntroStorageKeys(formId: Types.ObjectId, intro: ReturnType<typeof normalizeIntroForStorage>) {
+  if (intro?.image?.storageKey) {
+    const ok = await VisitorFileModel.exists({
+      formId,
+      fieldId: VISITOR_INTRO_IMAGE_FIELD_ID,
+      storageKey: intro.image.storageKey,
+      consumed: false,
+    });
+    if (!ok) throw new ApiError(400, 'invalid_intro', 'Intro image upload is missing or expired');
+  }
+  const videoChecks: Array<{ locale: VisitorFormLocale; storageKey?: string }> = [
+    { locale: 'en', storageKey: intro?.video?.storageKey },
+    { locale: 'gu', storageKey: intro?.videoByLocale?.gu?.storageKey },
+    { locale: 'hi', storageKey: intro?.videoByLocale?.hi?.storageKey },
+  ];
+  for (const { locale, storageKey } of videoChecks) {
+    if (!storageKey) continue;
+    const ok = await VisitorFileModel.exists({
+      formId,
+      fieldId: visitorIntroVideoFieldId(locale),
+      storageKey,
+      consumed: false,
+    });
+    if (!ok) throw new ApiError(400, 'invalid_intro', `Intro video upload is missing or expired (${locale})`);
+  }
+}
+
+async function refreshFormTranslations(form: InstanceType<typeof VisitorFormModel>) {
+  const multilingual = normalizeVisitorLanguages(form.multilingual as Parameters<typeof normalizeVisitorLanguages>[0]);
+  form.set('multilingual', multilingual);
+  const translations = await buildVisitorFormTranslations({
+    title: form.title,
+    description: form.description ?? null,
+    fields: form.fields as VisitorField[],
+    multilingual,
+  });
+  form.set('translations', translations);
+  form.markModified('translations');
+  await form.save();
+}
 
 // --- Forms ---
 
@@ -57,6 +119,8 @@ router.get('/forms', requirePermission('manage.visitors'), async (_req, res, nex
         _id: String(f._id),
         title: f.title,
         description: f.description,
+        intro: f.intro ?? null,
+        multilingual: normalizeVisitorLanguages(f.multilingual as Parameters<typeof normalizeVisitorLanguages>[0]),
         publicSlug: f.publicSlug,
         publicUrl: buildPublicUrl(f.publicSlug),
         formVersion: f.formVersion,
@@ -83,9 +147,15 @@ router.post('/forms', requirePermission('manage.visitors'), async (req, res, nex
       slug = generatePublicSlug();
     }
 
+    const intro = normalizeIntroForStorage(body.intro);
+    const multilingual = normalizeVisitorLanguages(body.multilingual);
+
     const created = await VisitorFormModel.create({
       title: body.title,
       description: body.description ?? null,
+      intro,
+      multilingual,
+      translations: null,
       publicSlug: slug,
       formVersion: 1,
       fields: body.fields,
@@ -93,6 +163,9 @@ router.post('/forms', requirePermission('manage.visitors'), async (req, res, nex
       createdBy: userId,
       updatedBy: userId,
     });
+
+    if (intro) await assertIntroStorageKeys(created._id, intro);
+    await refreshFormTranslations(created);
 
     await audit(
       'visitor_form_created',
@@ -134,6 +207,16 @@ router.patch('/forms/:id', requirePermission('manage.visitors'), async (req, res
 
     if (body.title !== undefined) form.title = body.title;
     if (body.description !== undefined) form.description = body.description ?? null;
+    if (body.intro !== undefined) {
+      const normalizedIntro = normalizeIntroForStorage(body.intro ?? undefined);
+      form.set('intro', normalizedIntro);
+      form.markModified('intro');
+      if (normalizedIntro) await assertIntroStorageKeys(form._id, normalizedIntro);
+    }
+    if (body.multilingual !== undefined) {
+      form.set('multilingual', normalizeVisitorLanguages(body.multilingual));
+      form.markModified('multilingual');
+    }
     if (body.fields !== undefined) form.set('fields', body.fields);
     if (body.isActive !== undefined) form.isActive = body.isActive;
     form.formVersion += 1;
@@ -152,6 +235,7 @@ router.patch('/forms/:id', requirePermission('manage.visitors'), async (req, res
     }
 
     await form.save();
+    await refreshFormTranslations(form);
 
     const eventType = slugRegenerated ? 'visitor_form_slug_regenerated' : 'visitor_form_updated';
     await audit(
@@ -172,6 +256,109 @@ router.patch('/forms/:id', requirePermission('manage.visitors'), async (req, res
     next(err);
   }
 });
+
+router.post(
+  '/forms/:id/intro-upload',
+  requirePermission('manage.visitors'),
+  introUpload.single('file'),
+  async (req, res, next) => {
+    try {
+      const id = req.params.id ?? '';
+      if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Form not found');
+      const form = await VisitorFormModel.findOne({ _id: id, isArchived: false });
+      if (!form) throw new ApiError(404, 'not_found', 'Form not found');
+
+      const kind = String(req.body?.kind ?? '');
+      if (kind !== 'image' && kind !== 'video') {
+        throw new ApiError(400, 'invalid_kind', 'kind must be image or video');
+      }
+
+      let locale: VisitorFormLocale = 'en';
+      if (kind === 'video') {
+        locale = VisitorFormLocaleSchema.parse(String(req.body?.locale ?? 'en'));
+      }
+
+      const file = req.file;
+      if (!file) throw new ApiError(400, 'missing_file', 'No file uploaded');
+
+      const maxBytes = kind === 'image' ? INTRO_IMAGE_MAX : INTRO_VIDEO_MAX;
+      if (file.size > maxBytes) {
+        throw new ApiError(400, 'file_too_large', `File exceeds ${kind === 'image' ? '5MB' : '25MB'} limit`);
+      }
+
+      const allowedImage = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      const allowedVideo = ['video/mp4', 'video/webm'];
+      const allowed = kind === 'image' ? allowedImage : allowedVideo;
+      if (!allowed.includes(file.mimetype)) {
+        throw new ApiError(400, 'invalid_file_type', `Invalid ${kind} file type`);
+      }
+
+      const fieldId =
+        kind === 'image' ? VISITOR_INTRO_IMAGE_FIELD_ID : visitorIntroVideoFieldId(locale);
+      const storageKey = randomBytes(16).toString('hex');
+
+      await VisitorFileModel.create({
+        formId: form._id,
+        fieldId,
+        storageKey,
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        data: file.buffer,
+        consumed: false,
+      });
+
+      const existingIntro = plainIntro(form.intro as Parameters<typeof plainIntro>[0]) ?? {};
+      const formFields = (form.fields as VisitorField[]) ?? [];
+      const nextIntro = { ...existingIntro };
+      const placementOrder = nextVisitorFormLayoutOrder(existingIntro, formFields);
+
+      if (kind === 'image') {
+        nextIntro.image = {
+          source: 'upload' as const,
+          storageKey,
+          order: existingIntro.image?.order ?? placementOrder,
+        };
+      } else if (locale === 'en') {
+        nextIntro.video = {
+          source: 'upload' as const,
+          storageKey,
+          viewingMandatory: existingIntro.video?.viewingMandatory ?? false,
+          order: existingIntro.video?.order ?? placementOrder,
+        };
+      } else {
+        nextIntro.videoByLocale = {
+          ...existingIntro.videoByLocale,
+          [locale]: {
+            source: 'upload' as const,
+            storageKey,
+            viewingMandatory:
+              existingIntro.videoByLocale?.[locale]?.viewingMandatory ??
+              existingIntro.video?.viewingMandatory ??
+              false,
+            order:
+              existingIntro.videoByLocale?.[locale]?.order ??
+              existingIntro.video?.order ??
+              placementOrder,
+          },
+        };
+      }
+      form.set('intro', nextIntro);
+      form.markModified('intro');
+      await form.save();
+
+      res.status(201).json({
+        storageKey,
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        intro: plainIntro(nextIntro),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.patch('/forms/:id/toggle-active', requirePermission('manage.visitors'), async (req, res, next) => {
   try {

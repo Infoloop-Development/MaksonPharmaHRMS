@@ -104,6 +104,15 @@ export function VisitorRequestDetailModal({
             <span className="text-xs text-text-muted">Form v{item.formVersion}</span>
           </div>
 
+          {item.introAttestation?.videoCompleted && (
+            <p className="text-sm text-text-muted">
+              Intro video completed: Yes
+              {item.introAttestation.completedAt
+                ? ` (${fmtDate(item.introAttestation.completedAt)})`
+                : ''}
+            </p>
+          )}
+
           <div className="card p-4 bg-surface2/40 space-y-3">
             <p className="text-sm font-semibold">Submitted information</p>
             {sortedFields.map((field) => {

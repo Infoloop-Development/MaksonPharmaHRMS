@@ -184,6 +184,7 @@ export function Dashboard() {
             barChart={chartState.barChart}
             barLabel={chartState.barLabel}
             barMetric={chartState.barMetric}
+            hasChartData={chartState.hasChartData}
           />
         );
       }
@@ -196,6 +197,7 @@ export function Dashboard() {
             donutMeta={chartState.donutMeta}
             selectedDate={chartState.selectedDate}
             punctualityTotal={chartState.punctualityTotal}
+            hasChartData={chartState.hasChartData}
             clickLegend={chartState.clickLegend}
             statusFilter={chartState.statusFilter}
             chartsData={chartState.chartsData}

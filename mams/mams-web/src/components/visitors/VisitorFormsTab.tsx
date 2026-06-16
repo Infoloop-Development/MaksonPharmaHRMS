@@ -5,11 +5,13 @@ import { useToast } from '../ui/Toast';
 import { Badge } from '../ui/Badge';
 import { FormBuilder } from './FormBuilder';
 import { FormQrActions } from './FormQrActions';
+import { FormResponsesPanel } from './FormResponsesPanel';
 
-export function VisitorFormsTab() {
+export function VisitorFormsTab({ onViewRequest }: { onViewRequest: (id: string) => void }) {
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const [builderForm, setBuilderForm] = useState<VisitorFormItem | null | 'new'>(null);
+  const [expandedResponsesFormId, setExpandedResponsesFormId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['visitors', 'forms'],
@@ -58,7 +60,7 @@ export function VisitorFormsTab() {
       <div className="space-y-4">
         {items.map((form) => (
           <div key={form._id} className="card p-4 md:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-base">{form.title}</h3>
@@ -69,6 +71,15 @@ export function VisitorFormsTab() {
                 <p className="text-xs text-text-muted mt-1">{form.submissionCount} submission(s)</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={`text-sm ${expandedResponsesFormId === form._id ? 'btn bg-primary text-white' : 'btn-outline'}`}
+                  onClick={() =>
+                    setExpandedResponsesFormId((id) => (id === form._id ? null : form._id))
+                  }
+                >
+                  Responses
+                </button>
                 <button type="button" className="btn-outline text-sm" onClick={() => setBuilderForm(form)}>
                   Edit
                 </button>
@@ -95,6 +106,9 @@ export function VisitorFormsTab() {
               </div>
             </div>
             <FormQrActions title={form.title} publicUrl={form.publicUrl} compact />
+            {expandedResponsesFormId === form._id && (
+              <FormResponsesPanel form={form} onViewRequest={onViewRequest} />
+            )}
           </div>
         ))}
       </div>

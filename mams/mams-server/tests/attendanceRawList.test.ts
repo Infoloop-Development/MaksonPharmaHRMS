@@ -18,19 +18,35 @@ vi.mock('../src/models/AttendanceRaw.js', () => ({
   },
 }));
 
+vi.mock('../src/models/Settings.js', () => ({
+  SettingsModel: {
+    findOne: () => ({
+      lean: async () => ({
+        realShifts: [
+          { id: 'Day', start: '06:00', end: '18:00', label: 'Day Shift' },
+          { id: 'Night', start: '18:00', end: '06:00', label: 'Night Shift' },
+        ],
+      }),
+    }),
+  },
+}));
+
 const { buildRawPunchFilter, listRawPunches } = await import(
   '../src/services/attendanceRawList.service.js'
 );
 
-function mockRawFind(items: unknown[] = []) {
+function mockRawFind(items: unknown[] = [], opts?: { noSkip?: boolean }) {
+  const limitFn = () => ({
+    lean: async () => items,
+  });
+  const skipFn = () => ({
+    limit: limitFn,
+  });
   rawFindChain.mockReturnValue({
     populate: () => ({
       sort: () => ({
-        skip: () => ({
-          limit: () => ({
-            lean: async () => items,
-          }),
-        }),
+        skip: opts?.noSkip ? () => ({ limit: limitFn }) : skipFn,
+        limit: limitFn,
       }),
     }),
   });
@@ -108,7 +124,7 @@ describe('attendanceRawList.service', () => {
     expect(rawCount).toHaveBeenCalled();
     expect(rawFindChain).toHaveBeenCalled();
     expect(result).toEqual({
-      items: [{ _id: '1' }],
+      items: [{ _id: '1', assignedShift: undefined, shiftWindowLabel: undefined, outsideMainShift: null }],
       total: 120,
       page: 2,
       pageSize: 50,
@@ -123,5 +139,34 @@ describe('attendanceRawList.service', () => {
 
     expect(result.page).toBe(1);
     expect(result.pageSize).toBe(50);
+  });
+
+  it('listRawPunches filters outside-shift IN punches when outsideShiftOnly', async () => {
+    rawCount.mockResolvedValue(2);
+    mockRawFind(
+      [
+        {
+          _id: '1',
+          punchType: 'IN',
+          rawTimestamp: new Date('2026-06-02T14:30:00.000Z'), // 20:00 IST — outside Day 06:00–18:00
+          employeeId: { timeShift: 'Day', name: 'A', empCode: 'E1', department: 'Ops' },
+        },
+        {
+          _id: '2',
+          punchType: 'IN',
+          rawTimestamp: new Date('2026-06-02T02:30:00.000Z'),
+          employeeId: { timeShift: 'Day', name: 'B', empCode: 'E2', department: 'Ops' },
+        },
+        { _id: '3', punchType: 'OUT', rawTimestamp: new Date(), employeeId: { timeShift: 'Day' } },
+      ],
+      { noSkip: true }
+    );
+
+    const result = await listRawPunches({ outsideShiftOnly: true, page: 1, pageSize: 50 });
+
+    expect(result.total).toBe(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?._id).toBe('1');
+    expect(result.items[0]?.outsideMainShift).toBe(true);
   });
 });

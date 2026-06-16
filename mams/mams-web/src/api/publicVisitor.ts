@@ -1,4 +1,4 @@
-import type { VisitorField, VisitorPublicSubmit } from '@mams/types';
+import type { VisitorField, VisitorFormLocale, VisitorIntro, VisitorPublicSubmit } from '@mams/types';
 
 const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 const BASE = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
@@ -44,12 +44,30 @@ async function publicRequest<T>(method: string, path: string, body?: unknown): P
   return (await res.json()) as T;
 }
 
+export interface PublicVisitorLocaleContent {
+  title: string;
+  description: string | null;
+  fields: VisitorField[];
+  intro?: VisitorIntro;
+}
+
+export interface PublicVisitorFormBranding {
+  companyName: string;
+  companyLogo: string | null;
+  registeredAddress: string;
+}
+
 export interface PublicVisitorFormSchema {
   title: string;
   description: string | null;
   formVersion: number;
   isActive: boolean;
+  intro?: VisitorIntro;
+  introFull?: VisitorIntro;
   fields: VisitorField[];
+  multilingual: { enabled: boolean; languages: VisitorFormLocale[] };
+  localeContent: Partial<Record<VisitorFormLocale, PublicVisitorLocaleContent>>;
+  branding: PublicVisitorFormBranding;
 }
 
 export const publicVisitorApi = {

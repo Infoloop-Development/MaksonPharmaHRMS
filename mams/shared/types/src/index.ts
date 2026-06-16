@@ -18,3 +18,7 @@ export * from './dashboardKpi.js';
 export * from './leave.js';
 export * from './regularization.js';
 export * from './visitor.js';
+export * from './visitorIntroMedia.js';
+export * from './visitorFormLayout.js';
+export * from './visitorLocales.js';
+export * from './shiftWindow.js';

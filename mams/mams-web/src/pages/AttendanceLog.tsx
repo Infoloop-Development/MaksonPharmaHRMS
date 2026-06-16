@@ -39,12 +39,14 @@ function statsScopeLabel(stats: AttendanceRawStats | undefined, hasSearch: boole
 function filterBarLabel(
   activeTile: PunchTile,
   search: string,
-  date: string
+  date: string,
+  outsideShiftOnly: boolean
 ): string {
   const parts: string[] = [];
   if (activeTile === 'in') parts.push('IN punches only');
   else if (activeTile === 'out') parts.push('OUT punches only');
   else if (activeTile === 'other') parts.push('OTHER punches only');
+  if (outsideShiftOnly) parts.push('Outside shift clock-ins only');
   if (date) parts.push(date);
   if (search.trim()) parts.push(`"${search.trim()}"`);
   return parts.join(' / ');
@@ -57,11 +59,12 @@ export function AttendanceLog() {
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('');
   const [punchType, setPunchType] = useState<PunchTypeFilter>('all');
+  const [outsideShiftOnly, setOutsideShiftOnly] = useState(false);
   const [activeTile, setActiveTile] = useState<PunchTile>('all');
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
-  const isLiveMode = !search.trim() && !date && punchType === 'all';
+  const isLiveMode = !search.trim() && !date && punchType === 'all' && !outsideShiftOnly;
 
   const statsQuery = useQuery({
     queryKey: ['attendance', 'raw', 'stats', { search, date }],
@@ -74,7 +77,7 @@ export function AttendanceLog() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['attendance', 'raw', { search, date, punchType, page, isLiveMode }],
+    queryKey: ['attendance', 'raw', { search, date, punchType, outsideShiftOnly, page, isLiveMode }],
     queryFn: () => {
       if (isLiveMode) {
         return attendanceApi.listRaw({ limit: pageSize }).then((r) => ({
@@ -82,12 +85,14 @@ export function AttendanceLog() {
           total: r.total,
           page: 1,
           pageSize,
+          truncated: r.truncated,
         }));
       }
       return attendanceApi.listRaw({
         search: search.trim() || undefined,
         date: date || undefined,
         punchType: punchType === 'all' ? undefined : punchType,
+        outsideShiftOnly: outsideShiftOnly || undefined,
         page,
         pageSize,
       });
@@ -102,7 +107,8 @@ export function AttendanceLog() {
     : '';
 
   const hasFilters = !isLiveMode;
-  const isModified = activeTile !== 'all' || Boolean(search.trim()) || Boolean(date);
+  const isModified =
+    activeTile !== 'all' || Boolean(search.trim()) || Boolean(date) || outsideShiftOnly;
   const emptyMessage = hasFilters
     ? 'No punches match your filters.'
     : 'No punches yet. Run the eSSL simulator (scripts/essl-sim.js) to generate some.';
@@ -111,6 +117,7 @@ export function AttendanceLog() {
     setSearch('');
     setDate('');
     setPunchType('all');
+    setOutsideShiftOnly(false);
     setActiveTile('all');
     setPage(1);
   };
@@ -218,7 +225,7 @@ export function AttendanceLog() {
       {isModified && (
         <div className="dash-filter-bar">
           <span className="dash-filter-bar-label">
-            Viewing: <strong>{filterBarLabel(activeTile, search, date)}</strong>
+            Viewing: <strong>{filterBarLabel(activeTile, search, date, outsideShiftOnly)}</strong>
           </span>
           <button type="button" className="btn-primary btn-sm" onClick={clearFilters}>
             Reset to Default View
@@ -239,12 +246,13 @@ export function AttendanceLog() {
           />
         }
         activeCount={countActiveFilters(
-          { date, punchType },
-          { date: '', punchType: 'all' }
+          { date, punchType, outsideShiftOnly },
+          { date: '', punchType: 'all', outsideShiftOnly: false }
         )}
         onClear={() => {
           setDate('');
           setPunchType('all');
+          setOutsideShiftOnly(false);
           setActiveTile('all');
           setPage(1);
         }}
@@ -279,12 +287,30 @@ export function AttendanceLog() {
           <option value="OUT">OUT</option>
           <option value="OTHER">OTHER</option>
         </select>
+        <label className="flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer">
+          <input
+            type="checkbox"
+            className="rounded border-border"
+            checked={outsideShiftOnly}
+            onChange={(e) => {
+              setOutsideShiftOnly(e.target.checked);
+              setPage(1);
+            }}
+          />
+          Outside shift clock-ins only
+        </label>
         {hasFilters && (
           <button type="button" className="btn-outline shrink-0 hidden md:inline-flex" onClick={clearFilters}>
             Clear filters
           </button>
         )}
       </MobileFilterBar>
+
+      {data?.truncated && (
+        <div className="mb-3 text-xs text-amber bg-amber-bg/40 border border-amber/30 rounded px-3 py-2">
+          Showing outside-shift matches from the most recent 5,000 punches only. Narrow the date range for complete results.
+        </div>
+      )}
 
       <PunchCardList
         items={data?.items}
@@ -303,18 +329,25 @@ export function AttendanceLog() {
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Department</th>
                 <th className="px-4 py-3 font-semibold">Bio ID</th>
                 <th className="px-4 py-3 font-semibold">Type</th>
+                <th className="px-4 py-3 font-semibold hidden lg:table-cell">Shift</th>
+                <th className="px-4 py-3 font-semibold">Outside shift</th>
                 <th className="px-4 py-3 font-semibold">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {!isLoading && data?.items.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-text-muted">{emptyMessage}</td></tr>
+                <tr><td colSpan={9} className="px-4 py-10 text-center text-text-muted">{emptyMessage}</td></tr>
               )}
               {data?.items.map((p) => (
-                <tr key={p._id} className="hover:bg-surface2/50">
+                <tr
+                  key={p._id}
+                  className={`hover:bg-surface2/50 ${
+                    p.punchType === 'IN' && p.outsideMainShift === true ? 'bg-amber-bg/30' : ''
+                  }`}
+                >
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtTime(p.rawTimestamp)}</td>
                   <td className="px-4 py-2.5 font-medium">{p.employeeId?.name ?? '-'}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{p.employeeId?.empCode ?? '-'}</td>
@@ -326,6 +359,24 @@ export function AttendanceLog() {
                       p.punchType === 'OUT' ? 'bg-amber-bg text-amber' :
                       'bg-surface2 text-text-muted'
                     }`}>{p.punchType}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-text-muted hidden lg:table-cell">
+                    {p.shiftWindowLabel ?? (p.assignedShift ? p.assignedShift : '—')}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {p.punchType === 'IN' && p.outsideMainShift === true && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-bg text-amber">
+                        Flagged
+                      </span>
+                    )}
+                    {p.punchType === 'IN' && p.outsideMainShift === false && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-bg text-green-dark">
+                        OK
+                      </span>
+                    )}
+                    {(p.punchType !== 'IN' || p.outsideMainShift == null) && (
+                      <span className="text-text-muted">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-text-muted">{fmtDate(p.rawDate)}</td>
                 </tr>

@@ -1,4 +1,5 @@
 import { Doughnut } from 'react-chartjs-2';
+import { ChartEmptyState } from '../ui/ChartEmptyState';
 import { BAR_CHART_HEIGHT, CHART_COLORS, DONUT_CHART_SIZE } from './useDashboardChartState';
 import type { useDashboardChartState } from './useDashboardChartState';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../lib/format';
@@ -12,6 +13,7 @@ export function DashboardDonutChartCard({
   donutMeta,
   selectedDate,
   punctualityTotal,
+  hasChartData,
   clickLegend,
   statusFilter,
   chartsData,
@@ -23,10 +25,13 @@ export function DashboardDonutChartCard({
   | 'donutMeta'
   | 'selectedDate'
   | 'punctualityTotal'
+  | 'hasChartData'
   | 'clickLegend'
   | 'statusFilter'
   | 'chartsData'
 >) {
+  const showEmpty = !isInitialLoad && (!hasChartData || punctualityTotal === 0 || !donutChart);
+
   return (
     <div
       className={`card p-4 md:p-6 h-full flex flex-col transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
@@ -44,19 +49,17 @@ export function DashboardDonutChartCard({
         className={`relative flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0 ${BAR_CHART_HEIGHT}`}
       >
         {isInitialLoad && (
-          <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm z-10">
             Loading chart…
           </div>
         )}
-        {!isInitialLoad && punctualityTotal === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-center text-sm text-text-muted px-4">
-            No punctuality data for this week. Run{' '}
-            <code className="font-mono text-xs bg-surface2 px-1 rounded">npm run seed</code> in{' '}
-            <code className="font-mono text-xs bg-surface2 px-1 rounded">mams-server</code> (includes 7+
-            days of attendance IST).
-          </div>
+        {showEmpty && (
+          <ChartEmptyState
+            variant="donut"
+            hint="Day breakdown appears when attendance is recorded. Run npm run seed in mams-server to load sample data."
+          />
         )}
-        {donutChart && donutMeta && (
+        {!showEmpty && donutChart && donutMeta && (
           <div className={`relative ${DONUT_CHART_SIZE} max-w-[min(100%,160px)] shrink-0`}>
             <Doughnut data={donutChart.data} options={donutChart.options} />
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -69,7 +72,7 @@ export function DashboardDonutChartCard({
             </div>
           </div>
         )}
-        {donutMeta && (
+        {!showEmpty && donutMeta && (
           <div className="flex flex-col gap-1 w-full md:w-auto md:min-w-[120px] items-stretch md:items-start">
             <button
               type="button"

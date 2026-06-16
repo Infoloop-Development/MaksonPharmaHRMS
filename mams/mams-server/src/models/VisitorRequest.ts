@@ -20,6 +20,14 @@ const visitorRequestSchema = new Schema(
     fieldsSnapshot: { type: Schema.Types.Mixed, required: true },
     responses: { type: Schema.Types.Mixed, default: {} },
     fileAttachments: { type: [fileAttachmentSchema], default: [] },
+    introAttestation: {
+      type: {
+        videoCompleted: { type: Boolean, required: true },
+        completedAt: { type: Date, required: true },
+      },
+      default: null,
+      _id: false,
+    },
     status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending', index: true },
     submittedAt: { type: Date, default: () => new Date() },
     submitterIp: { type: String, default: null },

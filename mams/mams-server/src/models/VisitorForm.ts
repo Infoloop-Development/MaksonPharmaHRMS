@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from 'mongoose';
+import { normalizeVisitorLanguages } from '@mams/types';
 
 const visitorFieldSchema = new Schema(
   {
@@ -27,10 +28,73 @@ const retiredSlugSchema = new Schema(
   { _id: false }
 );
 
+const introImageSchema = new Schema(
+  {
+    source: { type: String, enum: ['url', 'upload'], required: true },
+    url: { type: String, default: null },
+    storageKey: { type: String, default: null },
+    order: { type: Number, default: null },
+  },
+  { _id: false }
+);
+
+const introVideoSchema = new Schema(
+  {
+    source: { type: String, enum: ['youtube', 'loom', 'upload'], required: true },
+    url: { type: String, default: null },
+    storageKey: { type: String, default: null },
+    viewingMandatory: { type: Boolean, default: false },
+    order: { type: Number, default: null },
+  },
+  { _id: false }
+);
+
+const introSchema = new Schema(
+  {
+    image: { type: introImageSchema, default: null },
+    video: { type: introVideoSchema, default: null },
+    videoByLocale: {
+      type: {
+        gu: { type: introVideoSchema, default: null },
+        hi: { type: introVideoSchema, default: null },
+      },
+      default: null,
+      _id: false,
+    },
+  },
+  { _id: false }
+);
+
+const localeContentSchema = new Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, default: null },
+    fields: { type: [visitorFieldSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const visitorFormSchema = new Schema(
   {
     title: { type: String, required: true },
     description: { type: String, default: null },
+    intro: { type: introSchema, default: null },
+    multilingual: {
+      type: {
+        enabled: { type: Boolean, default: false },
+        languages: { type: [String], default: ['en'] },
+      },
+      default: () => normalizeVisitorLanguages({ enabled: false, languages: ['en'] }),
+      _id: false,
+    },
+    translations: {
+      type: {
+        gu: { type: localeContentSchema, default: null },
+        hi: { type: localeContentSchema, default: null },
+      },
+      default: null,
+      _id: false,
+    },
     publicSlug: { type: String, required: true, unique: true, index: true },
     retiredSlugs: { type: [retiredSlugSchema], default: [] },
     formVersion: { type: Number, default: 1 },
