@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
-import type { ActivityListQuery, UiActivityLogBody } from '@mams/types';
+import type { ActivityListQuery, OrgActivityListQuery, UiActivityLogBody } from '@mams/types';
 import { AuditLogModel } from '../models/AuditLog.js';
+import { UserModel } from '../models/User.js';
 import { audit } from './audit.service.js';
 import { ApiError } from '../middleware/error.js';
 import { isUnmaskEnabled } from '../config/featureFlags.js';
@@ -68,6 +69,95 @@ export async function listMyActivity(userId: string, q: ActivityListQuery) {
     entityId: r.entityId ? String(r.entityId) : null,
     payload: (r.payload ?? {}) as Record<string, unknown>,
   }));
+
+  return { items, total, page: q.page, pageSize: q.pageSize };
+}
+
+export async function listOrgActivity(q: OrgActivityListQuery) {
+  const filter: Record<string, unknown> = {
+    eventType: { $nin: hiddenEventTypes() },
+    $or: [
+      { eventType: { $ne: 'csv_import' } },
+      { eventType: 'csv_import', 'payload.successCount': { $gt: 0 } },
+    ],
+  };
+
+  if (q.userId && Types.ObjectId.isValid(q.userId)) {
+    filter.userId = new Types.ObjectId(q.userId);
+  }
+  if (q.eventType) filter.eventType = q.eventType;
+  if (q.entityType) filter.entityType = q.entityType;
+  if (q.from || q.to) {
+    const occurredAt: Record<string, Date> = {};
+    if (q.from) occurredAt.$gte = new Date(q.from);
+    if (q.to) occurredAt.$lte = new Date(q.to);
+    filter.occurredAt = occurredAt;
+  }
+
+  let userIdsForRole: Types.ObjectId[] | null = null;
+  if (q.role) {
+    const users = await UserModel.find({ role: q.role }).select('_id').lean();
+    userIdsForRole = users.map((u) => u._id as Types.ObjectId);
+    if (userIdsForRole.length === 0) {
+      return { items: [], total: 0, page: q.page, pageSize: q.pageSize };
+    }
+    if (filter.userId) {
+      const uid = filter.userId as Types.ObjectId;
+      if (!userIdsForRole.some((id) => id.equals(uid))) {
+        return { items: [], total: 0, page: q.page, pageSize: q.pageSize };
+      }
+    } else {
+      filter.userId = { $in: userIdsForRole };
+    }
+  }
+
+  if (q.search?.trim()) {
+    const re = new RegExp(q.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const searchOr = [{ eventType: re }, { entityType: re }];
+    if (filter.$or) {
+      filter.$and = [{ $or: filter.$or as unknown[] }, { $or: searchOr }];
+      delete filter.$or;
+    } else {
+      filter.$or = searchOr;
+    }
+  }
+
+  const [total, rows] = await Promise.all([
+    AuditLogModel.countDocuments(filter),
+    AuditLogModel.find(filter)
+      .sort({ occurredAt: -1 })
+      .skip((q.page - 1) * q.pageSize)
+      .limit(q.pageSize)
+      .lean(),
+  ]);
+
+  const userIds = [...new Set(rows.map((r) => (r.userId ? String(r.userId) : null)).filter(Boolean))] as string[];
+  const userMap = new Map<string, { name: string; email: string; role: string }>();
+  if (userIds.length > 0) {
+    const users = await UserModel.find({ _id: { $in: userIds } })
+      .select('name email role')
+      .lean();
+    for (const u of users) {
+      userMap.set(String(u._id), { name: u.name, email: u.email, role: u.role });
+    }
+  }
+
+  const items = rows.map((r) => {
+    const uid = r.userId ? String(r.userId) : null;
+    const actor = uid ? userMap.get(uid) : undefined;
+    return {
+      id: String(r._id),
+      occurredAt: (r.occurredAt ?? r.createdAt).toISOString(),
+      eventType: r.eventType,
+      entityType: r.entityType ?? null,
+      entityId: r.entityId ? String(r.entityId) : null,
+      payload: (r.payload ?? {}) as Record<string, unknown>,
+      userId: uid,
+      userName: actor?.name ?? null,
+      userEmail: actor?.email ?? null,
+      userRole: actor?.role ?? null,
+    };
+  });
 
   return { items, total, page: q.page, pageSize: q.pageSize };
 }

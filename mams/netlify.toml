@@ -1,0 +1,13 @@
+# Netlify — MAMS web app (SPA) only.
+# The Express API (mams-server) must run elsewhere (Render, Railway, VPS, etc.).
+# MongoDB Atlas env vars go on the API host, not Netlify.
+
+[build]
+  command = "npm install && npm run build --workspace mams-web"
+  publish = "mams-web/dist"
+
+# React Router — client-side routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

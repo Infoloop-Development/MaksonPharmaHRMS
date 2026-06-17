@@ -1,8 +1,9 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
+import type { Request } from 'express';
 import rateLimit from 'express-rate-limit';
-import { ActivityListQuerySchema, UiActivityLogBodySchema } from '@mams/types';
-import { requireAuth } from '../middleware/auth.js';
-import { logUiActivity, listMyActivity } from '../services/activity.service.js';
+import { ActivityListQuerySchema, OrgActivityListQuerySchema, UiActivityLogBodySchema } from '@mams/types';
+import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { logUiActivity, listMyActivity, listOrgActivity } from '../services/activity.service.js';
 
 const activityLogLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -19,6 +20,16 @@ router.get('/me', async (req, res, next) => {
   try {
     const q = ActivityListQuerySchema.parse(req.query);
     const result = await listMyActivity(req.auth!.sub, q);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/org', requirePermission('read.org_audit'), async (req, res, next) => {
+  try {
+    const q = OrgActivityListQuerySchema.parse(req.query);
+    const result = await listOrgActivity(q);
     res.json(result);
   } catch (err) {
     next(err);

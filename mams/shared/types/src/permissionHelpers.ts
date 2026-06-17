@@ -1,4 +1,5 @@
-import type { Permission } from './user.js';
+import type { Permission, Role } from './user.js';
+import { canAccessAdminConsole } from './rbac.js';
 
 export function canViewLeave(permissions: Permission[]): boolean {
   return (
@@ -44,6 +45,28 @@ export function canApproveVisitors(permissions: Permission[]): boolean {
 export function canManageVisitorForms(permissions: Permission[]): boolean {
   return permissions.includes('manage.visitors');
 }
+
+export function canManageOrgUsers(permissions: Permission[]): boolean {
+  return permissions.includes('manage.org_users') || permissions.includes('manage.users');
+}
+
+export function canManageOrgSettings(permissions: Permission[]): boolean {
+  return permissions.includes('manage.org_settings') || permissions.includes('manage.settings');
+}
+
+export function canManageEmployees(permissions: Permission[]): boolean {
+  return permissions.includes('manage.employees') || permissions.includes('manage.users');
+}
+
+export function isOrgAdminRole(role: Role): boolean {
+  return role === 'org.admin';
+}
+
+export function defaultHomePath(role: Role): '/admin' | '/dashboard' {
+  return role === 'org.admin' ? '/admin' : '/dashboard';
+}
+
+export { canAccessAdminConsole };
 
 /** Resolve whether a leave application should be auto-approved on create. */
 export function resolveLeaveAdminApply(

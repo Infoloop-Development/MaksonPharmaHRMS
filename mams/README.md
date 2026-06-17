@@ -16,8 +16,10 @@ cp mams-server/.env.example mams-server/.env
 cp mams-web/.env.example mams-web/.env
 # Edit JWT secrets in mams-server/.env (generate with: openssl rand -base64 32)
 
-# 4. Seed the database (1,800 mock employees + 7 days of attendance + leave demo data)
-#    Run from the mams/ folder (not the repo root). Seeds leave types, 3 holidays, and sample leave requests.
+# 4. Seed the database (1,800 mock employees + attendance + audit + leave demo data)
+#    Run from the mams/ folder (not the repo root).
+#    Optional: set SEED_DEMO_ANCHOR_DATE=2026-06-18 in mams-server/.env to pre-load the
+#    demo week (12–18 Jun) for Admin Overview charts/tables while keeping the rolling 7-day window.
 npm run seed
 
 # 5. Run dev servers (in two terminals)

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import express from 'express';
 import { EMP_CODE_REGEX, SensitiveFieldsSchema, WeekdaySchema } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requireAnyPermission } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
 import { syncEmployeeCodeSequenceFromDb } from '../services/employeeCode.service.js';
 
@@ -18,7 +18,9 @@ const TEMPLATE_HEADER = [
   'accountType', 'bankName', 'pfNumber', 'esiNumber', 'status',
 ];
 
-router.get('/template', requirePermission('manage.users'), (_req, res) => {
+const manageEmployeesGate = requireAnyPermission('manage.employees', 'manage.users');
+
+router.get('/template', manageEmployeesGate, (_req, res) => {
   const sample = [
     'MKS0001', 'Aarav Patel', 'M', 'Confectionery', 'Operator', 'Surendranagar, GJ',
     'Day', 'A', 'Sunday', '2020-04-15', 'BIO001',
@@ -61,7 +63,7 @@ const RowSchema = z.object({
   status: z.enum(['Active', 'Inactive']),
 });
 
-router.post('/', requirePermission('manage.users'), textBody, async (req, res, next) => {
+router.post('/', manageEmployeesGate, textBody, async (req, res, next) => {
   try {
     const body = String(req.body ?? '');
     const lines = body.split(/\r?\n/).filter((l) => l.trim().length > 0);
