@@ -188,6 +188,15 @@ export function activityPageBadge(eventType: string, payload: Record<string, unk
   ) {
     return 'Dashboard';
   }
+  if (
+    eventType.startsWith('ui.admin') ||
+    eventType === 'admin_overview_layout_saved' ||
+    eventType === 'admin_overview_kpi_saved' ||
+    eventType === 'admin_overview_table_saved' ||
+    eventType === 'admin_overview_widgets_saved'
+  ) {
+    return 'Admin';
+  }
   if (eventType.startsWith('leave_') || eventType === 'holiday_created') return 'Leave';
   if (eventType.startsWith('regularization_')) return 'Regularization';
   if (['login', 'logout', 'password_changed'].includes(eventType)) return 'Auth';
@@ -240,6 +249,10 @@ export function formatActivityDescription(item: ActivityListItem): string {
       const parts = filterParts(p, ['date', 'department', 'status', 'timeShift', 'search']);
       return `Exported dashboard attendance Excel${parts ? ` (${parts})` : ''}`;
     }
+    case 'ui.dashboard.export_pdf': {
+      const parts = filterParts(p, ['date', 'department', 'status', 'timeShift', 'search']);
+      return `Exported dashboard attendance PDF${parts ? ` (${parts})` : ''}`;
+    }
     case 'dashboard_layout_saved': {
       const mobile = MOBILE_CHART_LABELS[String(p.mobileChart)] ?? String(p.mobileChart ?? 'both');
       const tablePos = p.tablePosition === 'top' ? 'table on top' : 'charts on top';
@@ -255,6 +268,27 @@ export function formatActivityDescription(item: ActivityListItem): string {
       const slots = (p.slotsAfter as string[] | undefined) ?? (p.slots as string[] | undefined) ?? [];
       const labels = slots.slice(0, 4).join(', ');
       return labels ? `Customized KPI cards (${labels})` : 'Customized KPI cards';
+    }
+    case 'admin_overview_layout_saved': {
+      const mobile = MOBILE_CHART_LABELS[String(p.mobileChart)] ?? String(p.mobileChart ?? 'both');
+      const tablePos = p.tablePosition === 'top' ? 'table on top' : 'charts on top';
+      return `Saved admin overview layout (${tablePos}; mobile: ${mobile})`;
+    }
+    case 'admin_overview_kpi_saved': {
+      const slots = (p.slotsAfter as string[] | undefined) ?? (p.slots as string[] | undefined) ?? [];
+      const labels = slots.slice(0, 4).join(', ');
+      return labels ? `Customized admin overview KPIs (${labels})` : 'Customized admin overview KPIs';
+    }
+    case 'admin_overview_table_saved': {
+      const kind = String(p.kindAfter ?? p.kind ?? 'table');
+      return `Saved admin overview table (${kind})`;
+    }
+    case 'admin_overview_widgets_saved': {
+      const count = (p.count as number | undefined) ?? 0;
+      const metrics = (p.metrics as string[] | undefined) ?? [];
+      return metrics.length
+        ? `Saved admin overview charts (${count} widgets: ${metrics.slice(0, 3).join(', ')}${metrics.length > 3 ? '…' : ''})`
+        : `Saved admin overview charts (${count} widgets)`;
     }
     case 'device_registered':
       return `Registered device ${p.serialNumber ?? ''} (${p.vendor ?? 'eSSL'})`.trim();

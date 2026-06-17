@@ -1,16 +1,25 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../store/auth';
-import { settingsApi } from '../api/settings';
-import { authApi } from '../api/auth';
-import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
-import { clearFirstLoginSession } from '../lib/onboarding/session';
-import { isAutogenDemoEnabled } from '../config/featureFlags';
-import { NavIcon, type NavIconName } from './navIcons';
-import { isOrgAdminRole } from '@mams/types';
+import { useAuth } from '../../store/auth';
+import { settingsApi } from '../../api/settings';
+import { authApi } from '../../api/auth';
+import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
+import { clearFirstLoginSession } from '../../lib/onboarding/session';
+import { isAutogenDemoEnabled } from '../../config/featureFlags';
+import { NavIcon, type NavIconName } from '../navIcons';
 
-const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
+const ADMIN_NAV: { to: string; label: string; icon: NavIconName }[] = [
+  { to: '/admin', label: 'Overview', icon: 'dashboard' },
+  { to: '/admin/users', label: 'Users & roles', icon: 'employees' },
+  { to: '/admin/organization', label: 'Organization', icon: 'settings' },
+  { to: '/admin/security', label: 'Security', icon: 'devices' },
+  { to: '/admin/audit', label: 'Audit log', icon: 'reports' },
+  { to: '/admin/health', label: 'System health', icon: 'attendance' },
+  { to: '/admin/feature-flags', label: 'Feature flags', icon: 'autogen' },
+];
+
+const HR_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { to: '/employees', label: 'Employees', icon: 'employees' },
   { to: '/attendance', label: 'Attendance Log', icon: 'attendance' },
@@ -20,17 +29,10 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/leave', label: 'Leave', icon: 'leave' },
   { to: '/visitors', label: 'Visitors', icon: 'visitors' },
   { to: '/devices', label: 'Devices', icon: 'devices' },
-  { to: '/settings', label: 'Settings', icon: 'settings' },
+  { to: '/settings', label: 'HR Settings', icon: 'settings' },
 ];
 
-const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
-
-function buildNav() {
-  if (!isAutogenDemoEnabled()) return [...BASE_NAV];
-  return [...BASE_NAV.slice(0, 4), AUTOGEN_NAV, ...BASE_NAV.slice(4)];
-}
-
-export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const user = useAuth((s) => s.user);
   const refreshToken = useAuth((s) => s.refreshToken);
   const clear = useAuth((s) => s.clear);
@@ -60,6 +62,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     }
   };
 
+  const showHrModules = user?.role === 'org.admin';
+
   return (
     <aside
       className={`fixed top-0 left-0 bottom-0 w-[250px] max-w-[85vw] bg-primary text-white flex flex-col z-30 transition-transform duration-200 ease-out lg:translate-x-0 ${
@@ -75,7 +79,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               className="w-9 h-9 rounded-md object-contain bg-white p-0.5 mb-2"
             />
           )}
-          <div className="text-[10px] tracking-[2px] uppercase opacity-60 mb-1">Attendance System</div>
+          <div className="text-[10px] tracking-[2px] uppercase opacity-60 mb-1">Admin Console</div>
           <h1 className="text-base font-bold">{settings?.companyName ?? 'Makson Group'}</h1>
         </div>
         <button
@@ -88,32 +92,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </button>
       </div>
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
-        {user && isOrgAdminRole(user.role) && (
-          <>
-            <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Administration</div>
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
-                  isActive
-                    ? 'sidebar-nav-link--active bg-red/25 text-white font-semibold'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white'
-                }`
-              }
-            >
-              <NavIcon name="settings" />
-              <span>Admin Console</span>
-            </NavLink>
-            <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 pt-3 font-semibold">HR modules</div>
-          </>
-        )}
-        {user && isOrgAdminRole(user.role) ? null : (
-          <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Navigation</div>
-        )}
-        {buildNav().map((n) => (
+        <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Administration</div>
+        {ADMIN_NAV.map((n) => (
           <NavLink
             key={n.to}
             to={n.to}
+            end={n.to === '/admin'}
             className={({ isActive }) =>
               `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
                 isActive
@@ -126,6 +110,40 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <span>{n.label}</span>
           </NavLink>
         ))}
+        {showHrModules && (
+          <>
+            <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 pt-4 font-semibold">HR modules</div>
+            {HR_NAV.filter((n) => n.to !== '/autogeneration-demo').map((n) => (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                className={({ isActive }) =>
+                  `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
+                    isActive
+                      ? 'sidebar-nav-link--active bg-red/25 text-white font-semibold'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`
+                }
+              >
+                <NavIcon name={n.icon} />
+                <span>{n.label}</span>
+              </NavLink>
+            ))}
+            {isAutogenDemoEnabled() && (
+              <NavLink
+                to="/autogeneration-demo"
+                className={({ isActive }) =>
+                  `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
+                    isActive ? 'sidebar-nav-link--active bg-red/25 text-white font-semibold' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`
+                }
+              >
+                <NavIcon name="autogen" />
+                <span>Auto Gen Demo</span>
+              </NavLink>
+            )}
+          </>
+        )}
       </nav>
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-2.5 p-2 rounded-md">
