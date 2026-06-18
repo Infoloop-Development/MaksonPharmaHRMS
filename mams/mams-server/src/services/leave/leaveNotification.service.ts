@@ -14,9 +14,9 @@ export async function notifyLeaveApplied(params: {
     return { sent: false, error: 'mail_disabled' };
   }
 
-  const employee = await EmployeeModel.findById(params.employeeId).select('name email').lean();
-  if (!employee?.email) {
-    return { sent: false, error: 'no_employee_email' };
+  const employee = await EmployeeModel.findById(params.employeeId).select('name').lean();
+  if (!employee?.name) {
+    return { sent: false, error: 'no_employee' };
   }
 
   try {

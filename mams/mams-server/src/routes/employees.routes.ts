@@ -125,7 +125,7 @@ router.post('/:id/unmask', requirePermission('unmask.sensitive'), async (req, re
       throw new ApiError(403, 'forbidden', 'You are not allowed to unmask this field');
     }
 
-    const rawValue = (doc as Record<string, unknown>)[field];
+    const rawValue = (doc as unknown as Record<string, unknown>)[field];
     const value = rawValue == null ? '' : String(rawValue);
 
     await logUnmask(req.auth!.sub, doc._id, field, auditCtx);
