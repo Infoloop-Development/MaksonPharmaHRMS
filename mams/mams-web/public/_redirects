@@ -1,2 +1,1 @@
-# Proxy API to Render (published with dist/). SPA fallback is in netlify.toml.
-/api/*  https://maksonpharmahrms.onrender.com/api/:splat  200!
+/api/*  https://mams-api-xvso.onrender.com/api/:splat  200!
