@@ -1,5 +1,5 @@
 # Netlify — MAMS web app (SPA) only.
-# API (mams-server) runs on Render/Railway; MongoDB on Atlas.
+# API (mams-server) runs on Render; MongoDB on Atlas.
 
 [build]
   base = "mams"
@@ -7,16 +7,14 @@
   publish = "mams-web/dist"
 
 [build.environment]
-  VITE_API_BASE_URL = "https://maksonpharmahrms.onrender.com"
+  VITE_API_BASE_URL = "https://mams-api-xvso.onrender.com"
 
-# Proxy API calls to Render (works even when VITE_API_BASE_URL is missing from the build).
 [[redirects]]
   from = "/api/*"
-  to = "https://maksonpharmahrms.onrender.com/api/:splat"
+  to = "https://mams-api-xvso.onrender.com/api/:splat"
   status = 200
   force = true
 
-# React Router — client-side routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
