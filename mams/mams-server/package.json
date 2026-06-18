@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build --workspace @mams/types && tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "npm run build --prefix ../shared/types && tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "seed": "tsx seed/seed.ts",
     "seed:first-time-user": "tsx seed/firstTimeUser.ts",
