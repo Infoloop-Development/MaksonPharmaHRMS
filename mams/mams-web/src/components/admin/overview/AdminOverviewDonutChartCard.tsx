@@ -3,7 +3,9 @@ import type { AdminOverviewDonutMetric } from '@mams/types';
 import { ChartEmptyState } from '../../ui/ChartEmptyState';
 import { DONUT_METRIC_LABELS } from '../../../lib/adminOverviewKpiRegistry';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../../lib/format';
-import { BAR_CHART_HEIGHT, CHART_COLORS, DONUT_CHART_SIZE } from './useAdminOverviewChartState';
+import { useTheme } from '../../../hooks/useTheme';
+import { getChartColors } from '../../../lib/chartColors';
+import { BAR_CHART_HEIGHT, DONUT_CHART_SIZE } from './useAdminOverviewChartState';
 import type { useAdminOverviewChartState } from './useAdminOverviewChartState';
 
 type ChartState = ReturnType<typeof useAdminOverviewChartState>;
@@ -32,6 +34,8 @@ export function AdminOverviewDonutChartCard({
   | 'onDonutMetricChange'
   | 'chartsData'
 >) {
+  const { resolvedTheme } = useTheme();
+  const CHART_COLORS = getChartColors(resolvedTheme === 'dark');
   const showEmpty = !isInitialLoad && (!hasChartData || punctualityTotal === 0 || !donutChart);
 
   return (

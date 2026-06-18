@@ -16,7 +16,7 @@ function BarChartEmptyIllustration() {
       <rect x="58" y="52" width="12" height="16" rx="3" fill="currentColor" fillOpacity="0.12" />
       <rect x="76" y="42" width="12" height="26" rx="3" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="3 3" />
       <rect x="94" y="56" width="12" height="12" rx="3" fill="currentColor" fillOpacity="0.12" />
-      <circle cx="60" cy="28" r="14" fill="#f4f6f9" stroke="currentColor" strokeOpacity="0.18" strokeWidth="1.5" />
+      <circle cx="60" cy="28" r="14" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeOpacity="0.18" strokeWidth="1.5" />
       <path
         d="M54 28h12M60 22v12"
         stroke="currentColor"
@@ -48,7 +48,7 @@ function DonutChartEmptyIllustration() {
         strokeLinecap="round"
         strokeDasharray="6 10"
       />
-      <circle cx="50" cy="50" r="22" fill="#f4f6f9" />
+      <circle cx="50" cy="50" r="22" fill="currentColor" fillOpacity="0.08" />
       <path
         d="M44 50h12M50 44v12"
         stroke="currentColor"

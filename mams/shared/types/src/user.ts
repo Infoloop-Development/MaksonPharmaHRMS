@@ -7,6 +7,16 @@ export type Role = z.infer<typeof RoleSchema>;
 export const ViewModeSchema = z.enum(['real', 'compliant']);
 export type ViewMode = z.infer<typeof ViewModeSchema>;
 
+export const ThemePreferenceSchema = z.enum(['light', 'dark', 'system']);
+export type ThemePreference = z.infer<typeof ThemePreferenceSchema>;
+
+export const UpdatePreferencesRequestSchema = z.object({
+  themePreference: ThemePreferenceSchema.optional(),
+}).strict().refine((v) => v.themePreference !== undefined, {
+  message: 'Provide at least one preference to update',
+});
+export type UpdatePreferencesRequest = z.infer<typeof UpdatePreferencesRequestSchema>;
+
 export const PermissionSchema = z.enum([
   'read.real',
   'read.compliant',
@@ -48,6 +58,7 @@ export const UserPublicSchema = z.object({
   mustChangePassword: z.boolean(),
   lastLoginAt: z.string().datetime().nullable(),
   completedOnboardingTours: z.array(z.string()).default([]),
+  themePreference: ThemePreferenceSchema.default('system'),
 });
 export type UserPublic = z.infer<typeof UserPublicSchema>;
 

@@ -15,6 +15,7 @@ const userSchema = new Schema(
     lockedUntil: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
     completedOnboardingTours: { type: [String], default: [] },
+    themePreference: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
     dashboardLayout: {
       type: {
         rows: [

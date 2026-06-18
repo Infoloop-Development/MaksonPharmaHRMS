@@ -1,4 +1,4 @@
-import type { ChangePasswordRequest, LoginRequest, LoginResponse, OnboardingTourId, UserPublic } from '@mams/types';
+import type { ChangePasswordRequest, LoginRequest, LoginResponse, OnboardingTourId, UpdatePreferencesRequest, UserPublic } from '@mams/types';
 import { api } from './client';
 
 export const authApi = {
@@ -10,4 +10,6 @@ export const authApi = {
   me: () => api.get<{ user: UserPublic }>('/auth/me'),
   completeOnboardingTour: (tour: OnboardingTourId) =>
     api.post<{ user: UserPublic }>('/auth/onboarding/complete', { tour }),
+  updatePreferences: (body: UpdatePreferencesRequest) =>
+    api.patch<{ user: UserPublic }>('/auth/preferences', body),
 };

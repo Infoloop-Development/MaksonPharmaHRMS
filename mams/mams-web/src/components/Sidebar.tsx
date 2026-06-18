@@ -72,7 +72,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <img
               src={settings.companyLogo}
               alt="Company logo"
-              className="w-9 h-9 rounded-md object-contain bg-white p-0.5 mb-2"
+              className="w-9 h-9 rounded-md object-contain bg-white/10 p-0.5 mb-2"
             />
           )}
           <div className="text-[10px] tracking-[2px] uppercase opacity-60 mb-1">Attendance System</div>

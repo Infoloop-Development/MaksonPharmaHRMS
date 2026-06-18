@@ -21,7 +21,7 @@ export function LeaveTypeCardList({
   return (
     <div className="space-y-3 md:hidden">
       {items.map((t) => (
-        <div key={t.id} className="border border-border rounded-md p-4 bg-white">
+        <div key={t.id} className="border border-border rounded-md p-4 bg-surface">
           <div className="flex items-start justify-between gap-2 mb-3">
             <div className="font-semibold">{t.name}</div>
             <Badge tone={t.active ? 'green' : 'gray'}>{t.active ? 'Active' : 'Inactive'}</Badge>

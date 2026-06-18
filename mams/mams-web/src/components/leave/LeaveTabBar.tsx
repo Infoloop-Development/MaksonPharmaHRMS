@@ -27,8 +27,8 @@ export function LeaveTabBar({
             type="button"
             className={`flex-1 md:flex-none px-3 md:px-5 py-3 text-sm font-medium text-center border-b-2 -mb-px transition-colors ${
               tab === t.id
-                ? 'border-primary text-primary bg-primary-bg/30'
-                : 'border-transparent text-text-muted hover:text-text hover:bg-surface2'
+                ? 'tab-link--active border-b-2 -mb-px'
+                : 'border-transparent border-b-2 -mb-px text-text-muted hover:text-text hover:bg-surface2'
             }`}
             onClick={() => onTabChange(t.id)}
           >

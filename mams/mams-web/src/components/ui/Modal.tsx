@@ -36,10 +36,10 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-lg shadow-floating w-full ${SIZE_MAP[size]} max-h-[90vh] flex flex-col`}
+        className={`bg-surface rounded-lg shadow-floating w-full ${SIZE_MAP[size]} max-h-[90vh] flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-4 sm:px-6 py-4 border-b border-border flex items-center justify-between sticky top-0 bg-white rounded-t-lg">
+        <div className="px-4 sm:px-6 py-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface rounded-t-lg">
           <h2 className="text-base sm:text-lg font-bold pr-2">{title}</h2>
           <button
             onClick={onClose}
