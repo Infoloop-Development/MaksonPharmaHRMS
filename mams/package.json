@@ -13,7 +13,7 @@
     "dev:web": "npm --workspace mams-web run dev",
     "seed": "npm --workspace mams-server run seed",
     "build": "npm --workspaces --if-present run build",
-    "build:server": "npm run build --workspace mams-server",
+    "build:server": "npm run build --workspace @mams/types && npm run build --workspace mams-server",
     "start:server": "npm run start --workspace mams-server",
     "test": "npm --workspace mams-server run test",
     "typecheck": "npm --workspaces --if-present run typecheck",

@@ -3,7 +3,7 @@
 
 [build]
   base = "mams"
-  command = "npm install && npm run build --workspace mams-web"
+  command = "npm install && npm run build --workspace @mams/types && npm run build --workspace mams-web"
   publish = "mams-web/dist"
 
 [[redirects]]
