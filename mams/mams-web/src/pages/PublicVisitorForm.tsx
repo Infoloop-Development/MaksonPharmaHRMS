@@ -107,7 +107,7 @@ export function PublicVisitorForm() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface2 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <p className="text-text-muted">Loading form…</p>
       </div>
     );
@@ -124,7 +124,7 @@ export function PublicVisitorForm() {
             ? 'Visitor form not found. Please check the link and try again.'
             : err.message || 'Unable to load this form.';
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface2 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="card max-w-md w-full p-8 text-center">
           <h1 className="text-lg font-semibold mb-2">Unable to open form</h1>
           <p className="text-sm text-text-muted">{message}</p>
@@ -135,7 +135,7 @@ export function PublicVisitorForm() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface2 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="card max-w-md w-full p-8 text-center">
           <div className="w-12 h-12 rounded-full bg-green/10 text-green flex items-center justify-center mx-auto mb-4 text-xl">
             ✓
@@ -166,7 +166,7 @@ export function PublicVisitorForm() {
   };
 
   return (
-    <div className="min-h-screen bg-surface2 py-8 px-4">
+    <div className="min-h-screen bg-bg py-8 px-4">
       <div className="max-w-lg mx-auto card p-6 md:p-8">
         {form.branding && <VisitorFormPublicHeader branding={form.branding} />}
 

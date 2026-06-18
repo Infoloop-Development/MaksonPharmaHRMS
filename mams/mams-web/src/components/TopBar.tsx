@@ -4,6 +4,7 @@ import { useAuth } from '../store/auth';
 import { fmtIstHeaderDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { ThemeToggle } from './ui/ThemeToggle';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 
 function pageTitle(pathname: string): string {
@@ -67,7 +68,7 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
           <span
             title={badgeFull}
             className={`md:hidden inline-block mt-0.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${
-              isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
+              isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary-on-bg'
             }`}
           >
             {badgeShort}
@@ -75,11 +76,12 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        <ThemeToggle compact />
         <span
           title={badgeFull}
           className={`hidden md:inline text-[11px] font-semibold px-2.5 py-1.5 rounded-full ${
-            isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
+            isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary-on-bg'
           }`}
         >
           {badgeFull}

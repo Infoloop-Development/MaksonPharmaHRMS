@@ -1,10 +1,10 @@
 type Tone = 'green' | 'red' | 'amber' | 'blue' | 'gray';
 
 const TONE_MAP: Record<Tone, string> = {
-  green: 'bg-green-bg text-green-dark',
+  green: 'bg-green-bg text-green-on-bg',
   red: 'bg-red-bg text-red',
   amber: 'bg-amber-bg text-amber',
-  blue: 'bg-primary-bg text-primary',
+  blue: 'bg-primary-bg text-primary-on-bg',
   gray: 'bg-surface2 text-text-muted',
 };
 

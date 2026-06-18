@@ -3,24 +3,21 @@ import type { ChartOptions, ScriptableContext, TooltipItem } from 'chart.js';
 import type { AdminOverviewAnalyticsPayload, AdminOverviewWidget } from '@mams/types';
 import { getMetricLabel, getTrendSeries } from '../../../../lib/adminOverviewChartRegistry';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../../../lib/format';
+import { useTheme } from '../../../../hooks/useTheme';
+import { getAnalyticsColors, type AnalyticsColors } from '../../../../lib/chartColors';
 
 export const CHART_HEIGHT = 'h-[220px]';
 export const DONUT_SIZE = 'w-[160px] h-[160px]';
 
-export const COLORS = {
-  navy: '#1A2878',
-  green: '#73ae25',
-  red: '#E82C2C',
-  amber: '#f59e0b',
-  purple: '#6366f1',
-  muted: '#8492a6',
-  border: '#e2e6ed',
-  inactive: '#B0BFD8',
-};
+function seriesPalette(colors: AnalyticsColors): string[] {
+  return [colors.navy, colors.green, colors.amber, colors.red, colors.purple];
+}
 
-const SERIES_PALETTE = [COLORS.navy, COLORS.green, COLORS.amber, COLORS.red, COLORS.purple];
-
-function baseCartesianOptions(onDayClick?: (index: number) => void, dayCount = 7) {
+function baseCartesianOptions(
+  colors: AnalyticsColors,
+  onDayClick?: (index: number) => void,
+  dayCount = 7,
+) {
   return {
     responsive: true,
     maintainAspectRatio: false,
@@ -31,7 +28,7 @@ function baseCartesianOptions(onDayClick?: (index: number) => void, dayCount = 7
       if (typeof idx === 'number' && idx >= 0 && idx < dayCount) onDayClick?.(idx);
     },
     scales: {
-      x: { grid: { display: false }, border: { color: COLORS.border } },
+      x: { grid: { display: false }, border: { color: colors.border }, ticks: { color: colors.muted } },
       y: { display: false, beginAtZero: true },
     },
   } satisfies Partial<ChartOptions<'bar' | 'line'>>;
@@ -41,37 +38,41 @@ export function useAdminAnalyticsChart(
   analytics: AdminOverviewAnalyticsPayload | undefined,
   widget: AdminOverviewWidget,
   selectedDayIndex: number,
-  onDayClick?: (index: number) => void
+  onDayClick?: (index: number) => void,
 ) {
+  const { resolvedTheme } = useTheme();
+
   return useMemo(() => {
+    const colors = getAnalyticsColors(resolvedTheme === 'dark');
     if (!analytics) return { chart: null, centerValue: 0, centerSub: '', hasData: false };
 
     const labels = analytics.last7Days.dates.map((d) => fmtWeekdayShort(d));
     const { chartType, metricId } = widget;
 
     if (chartType === 'donut' || chartType === 'pie') {
-      return buildCircularChart(analytics, metricId, chartType);
+      return buildCircularChart(analytics, metricId, chartType, colors);
     }
     if (chartType === 'horizontal_bar') {
-      return buildHorizontalBar(analytics, metricId);
+      return buildHorizontalBar(analytics, metricId, colors);
     }
     if (chartType === 'stacked_bar') {
-      return buildStackedBar(analytics, metricId, labels, onDayClick);
+      return buildStackedBar(analytics, metricId, labels, colors, onDayClick);
     }
     if (chartType === 'line') {
-      return buildLine(analytics, metricId, labels, onDayClick, selectedDayIndex);
+      return buildLine(analytics, metricId, labels, colors, onDayClick, selectedDayIndex);
     }
     if (chartType === 'area') {
-      return buildArea(analytics, metricId, labels, onDayClick);
+      return buildArea(analytics, metricId, labels, colors, onDayClick);
     }
-    return buildBar(analytics, metricId, labels, onDayClick, selectedDayIndex);
-  }, [analytics, widget, selectedDayIndex, onDayClick]);
+    return buildBar(analytics, metricId, labels, colors, onDayClick, selectedDayIndex);
+  }, [analytics, widget, selectedDayIndex, onDayClick, resolvedTheme]);
 }
 
 function buildCircularChart(
   analytics: AdminOverviewAnalyticsPayload,
   metricId: AdminOverviewWidget['metricId'],
-  variant: 'pie' | 'donut'
+  variant: 'pie' | 'donut',
+  colors: AnalyticsColors,
 ) {
   let labels: string[] = [];
   let values: number[] = [];
@@ -120,7 +121,7 @@ function buildCircularChart(
         datasets: [
           {
             data: values,
-            backgroundColor: SERIES_PALETTE.slice(0, values.length),
+            backgroundColor: seriesPalette(colors).slice(0, values.length),
             borderWidth: 0,
             borderRadius: variant === 'pie' ? 4 : 8,
             spacing: variant === 'pie' ? 1 : 2,
@@ -133,7 +134,11 @@ function buildCircularChart(
         cutout: variant === 'pie' ? '0%' : '68%',
         animation: { duration: 0 },
         plugins: {
-          legend: { display: variant === 'pie', position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 10 } } },
+          legend: {
+            display: variant === 'pie',
+            position: 'bottom' as const,
+            labels: { boxWidth: 10, font: { size: 10 }, color: colors.text },
+          },
           tooltip: {
             callbacks: {
               label: (ctx: TooltipItem<'doughnut'>) => {
@@ -154,7 +159,8 @@ function buildCircularChart(
 
 function buildHorizontalBar(
   analytics: AdminOverviewAnalyticsPayload,
-  metricId: AdminOverviewWidget['metricId']
+  metricId: AdminOverviewWidget['metricId'],
+  colors: AnalyticsColors,
 ) {
   let items: { label: string; value: number }[] = [];
   if (metricId === 'top_departments_present') items = analytics.breakdowns.topDepartmentsPresent;
@@ -182,7 +188,7 @@ function buildHorizontalBar(
         datasets: [
           {
             data: items.map((x) => x.value),
-            backgroundColor: COLORS.navy,
+            backgroundColor: colors.navy,
             borderRadius: 6,
           },
         ],
@@ -195,7 +201,7 @@ function buildHorizontalBar(
         plugins: { legend: { display: false } },
         scales: {
           x: { display: false, beginAtZero: true },
-          y: { grid: { display: false } },
+          y: { grid: { display: false }, ticks: { color: colors.muted } },
         },
       } satisfies ChartOptions<'bar'>,
     },
@@ -209,26 +215,27 @@ function buildStackedBar(
   analytics: AdminOverviewAnalyticsPayload,
   metricId: AdminOverviewWidget['metricId'],
   labels: string[],
-  onDayClick?: (index: number) => void
+  colors: AnalyticsColors,
+  onDayClick?: (index: number) => void,
 ) {
   const d = analytics.last7Days;
   let datasets: { label: string; data: number[]; backgroundColor: string }[] = [];
 
   if (metricId === 'attendance_status') {
     datasets = [
-      { label: 'Present', data: d.present, backgroundColor: COLORS.navy },
-      { label: 'Absent', data: d.absent, backgroundColor: COLORS.red },
-      { label: 'Late', data: d.late, backgroundColor: COLORS.amber },
+      { label: 'Present', data: d.present, backgroundColor: colors.navy },
+      { label: 'Absent', data: d.absent, backgroundColor: colors.red },
+      { label: 'Late', data: d.late, backgroundColor: colors.amber },
     ];
   } else if (metricId === 'login_outcomes') {
     datasets = [
-      { label: 'Success', data: d.login_success, backgroundColor: COLORS.green },
-      { label: 'Failed', data: d.login_failed, backgroundColor: COLORS.red },
+      { label: 'Success', data: d.login_success, backgroundColor: colors.green },
+      { label: 'Failed', data: d.login_failed, backgroundColor: colors.red },
     ];
   } else if (metricId === 'shift_present') {
     datasets = [
-      { label: 'Day shift', data: d.dayShiftPresent, backgroundColor: COLORS.navy },
-      { label: 'Night shift', data: d.nightShiftPresent, backgroundColor: COLORS.purple },
+      { label: 'Day shift', data: d.dayShiftPresent, backgroundColor: colors.navy },
+      { label: 'Night shift', data: d.nightShiftPresent, backgroundColor: colors.purple },
     ];
   }
 
@@ -240,13 +247,17 @@ function buildStackedBar(
     chart: {
       data: { labels, datasets },
       options: {
-        ...baseCartesianOptions(onDayClick, labels.length),
+        ...baseCartesianOptions(colors, onDayClick, labels.length),
         scales: {
-          x: { stacked: true, grid: { display: false } },
+          x: { stacked: true, grid: { display: false }, ticks: { color: colors.muted } },
           y: { stacked: true, display: false, beginAtZero: true },
         },
         plugins: {
-          legend: { display: true, position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 10 } } },
+          legend: {
+            display: true,
+            position: 'bottom' as const,
+            labels: { boxWidth: 10, font: { size: 10 }, color: colors.text },
+          },
         },
       } satisfies ChartOptions<'bar'>,
     },
@@ -260,8 +271,9 @@ function buildLine(
   analytics: AdminOverviewAnalyticsPayload,
   metricId: AdminOverviewWidget['metricId'],
   labels: string[],
+  colors: AnalyticsColors,
   onDayClick?: (index: number) => void,
-  selectedDayIndex?: number
+  selectedDayIndex?: number,
 ) {
   const values = getTrendSeries(analytics, metricId);
   const hasData = values.some((v) => v > 0);
@@ -276,18 +288,18 @@ function buildLine(
           {
             label: getMetricLabel(metricId),
             data: values,
-            borderColor: COLORS.navy,
+            borderColor: colors.navy,
             backgroundColor: 'transparent',
             tension: 0.35,
             pointRadius: labels.map((_, i) => (i === selectedDayIndex ? 6 : 4)),
             pointBackgroundColor: labels.map((_, i) =>
-              i === selectedDayIndex ? COLORS.navy : COLORS.inactive
+              i === selectedDayIndex ? colors.navy : colors.inactive,
             ),
           },
         ],
       },
       options: {
-        ...baseCartesianOptions(onDayClick, labels.length),
+        ...baseCartesianOptions(colors, onDayClick, labels.length),
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -312,11 +324,16 @@ function buildArea(
   analytics: AdminOverviewAnalyticsPayload,
   metricId: AdminOverviewWidget['metricId'],
   labels: string[],
-  onDayClick?: (index: number) => void
+  colors: AnalyticsColors,
+  onDayClick?: (index: number) => void,
 ) {
   const values = getTrendSeries(analytics, metricId);
   const hasData = values.some((v) => v > 0);
   if (!hasData) return { chart: null, centerValue: 0, centerSub: '', hasData: false };
+
+  const r = parseInt(colors.navy.slice(1, 3), 16);
+  const g = parseInt(colors.navy.slice(3, 5), 16);
+  const b = parseInt(colors.navy.slice(5, 7), 16);
 
   return {
     type: 'area' as const,
@@ -327,15 +344,15 @@ function buildArea(
           {
             label: getMetricLabel(metricId),
             data: values,
-            borderColor: COLORS.navy,
-            backgroundColor: 'rgba(26,40,120,0.15)',
+            borderColor: colors.navy,
+            backgroundColor: `rgba(${r},${g},${b},0.15)`,
             fill: true,
             tension: 0.35,
             pointRadius: 3,
           },
         ],
       },
-      options: baseCartesianOptions(onDayClick, labels.length) satisfies ChartOptions<'line'>,
+      options: baseCartesianOptions(colors, onDayClick, labels.length) satisfies ChartOptions<'line'>,
     },
     centerValue: values[values.length - 1] ?? 0,
     centerSub: getMetricLabel(metricId),
@@ -347,8 +364,9 @@ function buildBar(
   analytics: AdminOverviewAnalyticsPayload,
   metricId: AdminOverviewWidget['metricId'],
   labels: string[],
+  colors: AnalyticsColors,
   onDayClick?: (index: number) => void,
-  selectedDayIndex?: number
+  selectedDayIndex?: number,
 ) {
   const values = getTrendSeries(analytics, metricId);
   const hasData = values.some((v) => v > 0);
@@ -366,21 +384,21 @@ function buildBar(
             label: getMetricLabel(metricId),
             data: values,
             backgroundColor: (ctx: ScriptableContext<'bar'>) =>
-              isHighlighted(ctx.dataIndex) ? COLORS.navy : COLORS.inactive,
+              isHighlighted(ctx.dataIndex) ? colors.navy : colors.inactive,
             borderRadius: 8,
           },
         ],
       },
       options: {
-        ...baseCartesianOptions(onDayClick, labels.length),
+        ...baseCartesianOptions(colors, onDayClick, labels.length),
         plugins: {
           legend: { display: false },
           stackedBarValueLabels: {
             labels: values.map((v) => fmtNumber(v)),
             selectedIndex: selectedDayIndex ?? values.length - 1,
             hoveredIndex: null,
-            navy: COLORS.navy,
-            text: '#1a1f36',
+            navy: colors.navy,
+            text: colors.text,
           },
         },
       } satisfies ChartOptions<'bar'>,

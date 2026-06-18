@@ -82,7 +82,7 @@ export function AdminWidgetPicker({
                         disabled
                           ? 'opacity-40 cursor-not-allowed'
                           : chartType === type
-                            ? 'bg-primary-bg text-primary font-semibold'
+                            ? 'bg-primary-bg text-primary-on-bg font-semibold'
                             : 'hover:bg-surface2'
                       }`}
                       onClick={() => !disabled && setChartType(type)}
@@ -121,7 +121,7 @@ export function AdminWidgetPicker({
                             <button
                               type="button"
                               className={`dash-kpi-picker-option w-full text-left px-3 py-2 rounded text-sm hover:bg-surface2 ${
-                                metricId === id ? 'bg-primary-bg text-primary font-semibold' : ''
+                                metricId === id ? 'bg-primary-bg text-primary-on-bg font-semibold' : ''
                               }`}
                               onClick={() => setMetricId(id)}
                             >

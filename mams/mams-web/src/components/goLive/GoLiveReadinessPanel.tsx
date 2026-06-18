@@ -47,8 +47,8 @@ export function GoLiveReadinessPanel() {
               <div className="text-lg font-bold">{data.totalActive}</div>
             </div>
             <div className="rounded bg-green-bg/50 p-2">
-              <div className="text-[10px] uppercase text-green-dark">With punch</div>
-              <div className="text-lg font-bold text-green-dark">{data.withRecentPunch}</div>
+              <div className="text-[10px] uppercase text-green-on-bg">With punch</div>
+              <div className="text-lg font-bold text-green-on-bg">{data.withRecentPunch}</div>
             </div>
             <div className="rounded bg-amber-bg/50 p-2">
               <div className="text-[10px] uppercase text-amber">No punch</div>

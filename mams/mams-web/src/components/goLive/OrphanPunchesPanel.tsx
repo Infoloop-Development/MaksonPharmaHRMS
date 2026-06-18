@@ -48,7 +48,7 @@ export function OrphanPunchesPanel() {
       {error && <div className="text-sm text-red py-4">Could not load unmapped punches.</div>}
 
       {data && data.total === 0 && (
-        <div className="text-sm text-text-muted py-2 bg-green-bg/50 text-green-dark px-3 rounded">
+        <div className="text-sm text-text-muted py-2 bg-green-bg/50 text-green-on-bg px-3 rounded">
           No unmapped punches in the selected period.
         </div>
       )}

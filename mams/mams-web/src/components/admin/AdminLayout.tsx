@@ -43,7 +43,7 @@ export function AdminLayout() {
 
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
-      <div className="flex min-h-screen overflow-x-hidden">
+      <div className="flex min-h-screen overflow-x-hidden bg-bg">
         <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
         {sidebarOpen && (
           <button

@@ -33,6 +33,7 @@ import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { settingsTourScript } from '../lib/onboarding/scripts/settingsTourScript';
+import { AppearanceSection } from '../components/ui/ThemeToggle';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -173,6 +174,9 @@ export function Settings() {
 
       <div className="settings-layout">
         <SettingsLayoutCell full>
+          <AppearanceSection />
+        </SettingsLayoutCell>
+        <SettingsLayoutCell full>
           <div data-tour-id="settings-shifts">
             <ShiftsCard settings={data} canManage={canManageShifts} />
           </div>
@@ -204,6 +208,12 @@ export function OrganizationSettingsPanel() {
 
   return (
     <div className="settings-layout">
+      <SettingsLayoutCell full>
+        <AppearanceSection />
+        <p className="text-xs text-text-muted mt-2">
+          Theme is saved per user. Logo and company name above are organization-wide.
+        </p>
+      </SettingsLayoutCell>
       <SettingsLayoutCell full>
         <TimeDisplayCard settings={data} canManage={canManage} />
       </SettingsLayoutCell>
@@ -838,7 +848,7 @@ function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canMan
           {EXPORT_NAMING_TOKENS.map((token) => (
             <span
               key={token}
-              className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-white border border-border text-text-muted"
+              className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-text-muted"
             >
               {`{${token}}`}
             </span>

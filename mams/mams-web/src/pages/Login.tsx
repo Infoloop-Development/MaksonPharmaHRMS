@@ -37,7 +37,7 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0D1540] via-primary to-primary-light">
-      <div className="bg-white rounded-2xl p-6 sm:p-12 w-full max-w-[420px] mx-4 shadow-2xl">
+      <div className="bg-surface rounded-2xl p-6 sm:p-12 w-full max-w-[420px] mx-4 shadow-2xl border border-border">
         <div className="text-[11px] tracking-[3px] uppercase text-red font-semibold mb-6">
           Makson Group of Companies
         </div>

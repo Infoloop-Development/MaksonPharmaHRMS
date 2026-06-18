@@ -10,6 +10,8 @@ import type { AdminOverviewBarMetric, AdminOverviewChartsPayload, AdminOverviewD
 import '../../../lib/chartSetup';
 import { BAR_METRIC_LABELS } from '../../../lib/adminOverviewKpiRegistry';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../../lib/format';
+import { useTheme } from '../../../hooks/useTheme';
+import { getChartColors, type ChartColorPalette } from '../../../lib/chartColors';
 
 export const BAR_CHART_HEIGHT = 'h-[200px]';
 export const DONUT_CHART_SIZE = 'w-[160px] h-[160px]';
@@ -23,20 +25,6 @@ const ROUNDED_ALL = {
   bottomRight: BAR_RADIUS,
 };
 
-export const CHART_COLORS = {
-  navy: '#1A2878',
-  presentInactive: '#B0BFD8',
-  red: '#E82C2C',
-  redInactive: '#f5a8a8',
-  amber: '#f59e0b',
-  amberInactive: '#fcd9a0',
-  muted: '#8492a6',
-  text: '#1a1f36',
-  border: '#e2e6ed',
-  green: '#73ae25',
-  purple: '#6366f1',
-};
-
 function dimColor(hex: string, alpha = 0.35): string {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -48,20 +36,23 @@ function barSeries(data: AdminOverviewChartsPayload, metric: AdminOverviewBarMet
   return data.last7Days[metric];
 }
 
-function barColors(metric: AdminOverviewBarMetric): { active: string; inactive: string } {
+function barColors(
+  metric: AdminOverviewBarMetric,
+  colors: ChartColorPalette,
+): { active: string; inactive: string } {
   if (metric === 'absent' || metric === 'login_failed') {
-    return { active: CHART_COLORS.red, inactive: CHART_COLORS.redInactive };
+    return { active: colors.red, inactive: colors.redInactive };
   }
   if (metric === 'late' || metric === 'audit_events') {
-    return { active: CHART_COLORS.amber, inactive: CHART_COLORS.amberInactive };
+    return { active: colors.amber, inactive: colors.amberInactive };
   }
   if (metric === 'devices_online') {
-    return { active: CHART_COLORS.green, inactive: dimColor(CHART_COLORS.green, 0.35) };
+    return { active: colors.green, inactive: dimColor(colors.green, 0.35) };
   }
   if (metric === 'users_active' || metric === 'login_success') {
-    return { active: CHART_COLORS.purple, inactive: dimColor(CHART_COLORS.purple, 0.35) };
+    return { active: colors.indigo ?? colors.navy, inactive: dimColor(colors.indigo ?? colors.navy, 0.35) };
   }
-  return { active: CHART_COLORS.navy, inactive: CHART_COLORS.presentInactive };
+  return { active: colors.navy, inactive: colors.presentInactive };
 }
 
 export interface UseAdminOverviewChartStateProps {
@@ -85,6 +76,12 @@ export function useAdminOverviewChartState({
   donutMetric,
   onDonutMetricChange,
 }: UseAdminOverviewChartStateProps) {
+  const { resolvedTheme } = useTheme();
+  const CHART_COLORS = useMemo(
+    () => getChartColors(resolvedTheme === 'dark'),
+    [resolvedTheme],
+  );
+
   const data = chartsData;
   const isInitialLoad = !data && chartsFetching;
   const donutRefreshing = chartsFetching && Boolean(data);
@@ -114,7 +111,7 @@ export function useAdminOverviewChartState({
     const labels = data.last7Days.dates.map((d) => fmtWeekdayShort(d));
     const values = barSeries(data, barMetric);
     const dayCount = data.last7Days.dates.length;
-    const { active, inactive } = barColors(barMetric);
+    const { active, inactive } = barColors(barMetric, CHART_COLORS);
     const barMax = Math.max(...values, 1);
 
     const isHighlighted = (i: number) => i === selectedDayIndex || i === hoveredDayIndex;
@@ -200,7 +197,7 @@ export function useAdminOverviewChartState({
         },
       } satisfies ChartOptions<'bar'>,
     };
-  }, [data, selectedDayIndex, hoveredDayIndex, onSelectedDateChange, barMetric, barLabel]);
+  }, [data, selectedDayIndex, hoveredDayIndex, onSelectedDateChange, barMetric, barLabel, CHART_COLORS]);
 
   const donutMeta = useMemo(() => {
     if (!data) return null;
@@ -251,7 +248,7 @@ export function useAdminOverviewChartState({
           datasets: [
             {
               data: values,
-              backgroundColor: [CHART_COLORS.navy, CHART_COLORS.green, CHART_COLORS.amber, CHART_COLORS.purple],
+              backgroundColor: [CHART_COLORS.navy, CHART_COLORS.green, CHART_COLORS.amber, CHART_COLORS.indigo ?? CHART_COLORS.navy],
               borderWidth: 0,
               borderRadius: 8,
               spacing: 2,
@@ -305,7 +302,7 @@ export function useAdminOverviewChartState({
           {
             data: [onTime, delay, onLeave],
             backgroundColor: [CHART_COLORS.navy, CHART_COLORS.amber, CHART_COLORS.red],
-            hoverBackgroundColor: ['#141f5c', '#d97706', '#c41f1f'],
+            hoverBackgroundColor: [CHART_COLORS.navy, CHART_COLORS.amber, CHART_COLORS.red],
             borderWidth: 0,
             borderRadius: 8,
             spacing: 2,
@@ -320,7 +317,7 @@ export function useAdminOverviewChartState({
         plugins: { legend: { display: false } },
       } satisfies ChartOptions<'doughnut'>,
     };
-  }, [data, donutMeta]);
+  }, [data, donutMeta, CHART_COLORS]);
 
   const punctualityTotal = donutMeta?.kind === 'attendance_punctuality'
     ? donutMeta.onTime + donutMeta.delay + donutMeta.onLeave

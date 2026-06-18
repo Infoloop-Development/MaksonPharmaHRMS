@@ -50,7 +50,7 @@ export function AdminOverviewKpiMetricPicker({
                     disabled
                       ? 'text-text-subtle cursor-not-allowed opacity-50'
                       : 'hover:bg-surface2 active:bg-surface2 text-text'
-                  } ${currentSlots[slotIndex] === id ? 'bg-primary-bg text-primary font-semibold' : ''}`}
+                  } ${currentSlots[slotIndex] === id ? 'bg-primary-bg text-primary-on-bg font-semibold' : ''}`}
                   disabled={disabled}
                   onClick={() => {
                     if (!disabled) {

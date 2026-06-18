@@ -358,7 +358,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
 function ResultStat({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'amber' | 'red' }) {
   const tones: Record<'green' | 'amber' | 'red', string> = {
-    green: 'bg-green-bg text-green-dark',
+    green: 'bg-green-bg text-green-on-bg',
     amber: 'bg-amber-bg text-amber',
     red: 'bg-red-bg text-red',
   };

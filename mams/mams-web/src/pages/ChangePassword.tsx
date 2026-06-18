@@ -75,7 +75,7 @@ export function ChangePassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0D1540] via-primary to-primary-light p-4">
-      <div className="bg-white rounded-2xl p-6 sm:p-10 w-full max-w-[420px] shadow-2xl">
+      <div className="bg-surface rounded-2xl p-6 sm:p-10 w-full max-w-[420px] shadow-2xl border border-border">
         <h1 className="text-2xl font-bold text-primary mb-1">Set a new password</h1>
         <p className="text-text-muted text-sm mb-6">
           Hi {user.name}, you must change your password before using MAMS.
