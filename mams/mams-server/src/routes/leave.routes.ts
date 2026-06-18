@@ -50,6 +50,11 @@ import { z } from 'zod';
 const router = Router();
 router.use(requireAuth);
 
+function requireMongoId(id: string | undefined): string {
+  if (!id || !Types.ObjectId.isValid(id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
+  return id;
+}
+
 function mapLeaveType(doc: { _id: Types.ObjectId; [k: string]: unknown }) {
   return {
     id: String(doc._id),
@@ -116,9 +121,9 @@ router.post('/types', requirePermission('manage.leave'), async (req, res, next) 
 
 router.patch('/types/:id', requirePermission('manage.leave'), async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
+    const id = requireMongoId(req.params.id);
     const body = LeaveTypePatchSchema.parse(req.body);
-    const updated = await LeaveTypeModel.findByIdAndUpdate(req.params.id, { $set: body }, { new: true });
+    const updated = await LeaveTypeModel.findByIdAndUpdate(id, { $set: body }, { new: true });
     if (!updated) throw new ApiError(404, 'not_found', 'Leave type not found');
     res.json(mapLeaveType(updated.toObject()));
   } catch (err) {
@@ -157,9 +162,9 @@ router.post('/holidays', requirePermission('manage.leave'), async (req, res, nex
 
 router.patch('/holidays/:id', requirePermission('manage.leave'), async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
+    const id = requireMongoId(req.params.id);
     const body = HolidayPatchSchema.parse(req.body);
-    const updated = await HolidayModel.findByIdAndUpdate(req.params.id, { $set: body }, { new: true });
+    const updated = await HolidayModel.findByIdAndUpdate(id, { $set: body }, { new: true });
     if (!updated) throw new ApiError(404, 'not_found', 'Holiday not found');
     res.json(mapHoliday(updated.toObject()));
   } catch (err) {
@@ -169,8 +174,8 @@ router.patch('/holidays/:id', requirePermission('manage.leave'), async (req, res
 
 router.delete('/holidays/:id', requirePermission('manage.leave'), async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
-    const deleted = await HolidayModel.findByIdAndDelete(req.params.id);
+    const id = requireMongoId(req.params.id);
+    const deleted = await HolidayModel.findByIdAndDelete(id);
     if (!deleted) throw new ApiError(404, 'not_found', 'Holiday not found');
     res.status(204).end();
   } catch (err) {
@@ -377,8 +382,8 @@ router.get('/applications/export.csv', async (req, res, next) => {
 
 router.get('/applications/:id', async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
-    const item = await LeaveApplicationModel.findById(req.params.id)
+    const id = requireMongoId(req.params.id);
+    const item = await LeaveApplicationModel.findById(id)
       .populate('employeeId', 'name empCode department location')
       .populate('leaveTypeId', 'name code paid')
       .populate('appliedBy', 'name email')
@@ -512,9 +517,9 @@ router.post('/applications', requireAnyPermission('write.leave', 'manage.leave')
 
 router.patch('/applications/:id/approve', requireAnyPermission('approve.leave', 'manage.leave'), async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
+    const id = requireMongoId(req.params.id);
     const body = LeaveDecisionSchema.parse(req.body);
-    const app = await LeaveApplicationModel.findById(req.params.id);
+    const app = await LeaveApplicationModel.findById(id);
     if (!app) throw new ApiError(404, 'not_found', 'Leave application not found');
     if (app.status !== 'Pending') throw new ApiError(400, 'invalid_status', 'Only pending leaves can be approved');
 
@@ -551,9 +556,9 @@ router.patch('/applications/:id/approve', requireAnyPermission('approve.leave', 
 
 router.patch('/applications/:id/reject', requireAnyPermission('approve.leave', 'manage.leave'), async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
+    const id = requireMongoId(req.params.id);
     const body = LeaveRejectSchema.parse(req.body);
-    const app = await LeaveApplicationModel.findById(req.params.id);
+    const app = await LeaveApplicationModel.findById(id);
     if (!app) throw new ApiError(404, 'not_found', 'Leave application not found');
     if (app.status !== 'Pending') throw new ApiError(400, 'invalid_status', 'Only pending leaves can be rejected');
 
@@ -577,9 +582,9 @@ router.patch('/applications/:id/reject', requireAnyPermission('approve.leave', '
 
 router.patch('/applications/:id/cancel', requireAnyPermission('approve.leave', 'manage.leave'), async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
+    const id = requireMongoId(req.params.id);
     const body = LeaveDecisionSchema.parse(req.body);
-    const app = await LeaveApplicationModel.findById(req.params.id);
+    const app = await LeaveApplicationModel.findById(id);
     if (!app) throw new ApiError(404, 'not_found', 'Leave application not found');
     if (!['Pending', 'Approved'].includes(app.status)) {
       throw new ApiError(400, 'invalid_status', 'Cannot cancel this leave');

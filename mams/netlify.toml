@@ -1,0 +1,12 @@
+# Netlify — MAMS web app (SPA) only.
+# API (mams-server) runs on Render/Railway; MongoDB on Atlas.
+
+[build]
+  base = "mams"
+  command = "npm install && npm run build --workspace mams-web"
+  publish = "mams-web/dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
