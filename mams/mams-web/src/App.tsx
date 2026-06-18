@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './store/auth';
 import { Layout } from './components/Layout';
+import { AdminLayout } from './components/admin/AdminLayout';
 import { Login } from './pages/Login';
 import { ChangePassword } from './pages/ChangePassword';
 import { Dashboard } from './pages/Dashboard';
@@ -15,8 +16,16 @@ import { Visitors } from './pages/Visitors';
 import { PublicVisitorForm } from './pages/PublicVisitorForm';
 import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
+import { AdminOverview } from './pages/admin/AdminOverview';
+import { AdminUsers } from './pages/admin/AdminUsers';
+import { AdminOrganization } from './pages/admin/AdminOrganization';
+import { AdminSecurity } from './pages/admin/AdminSecurity';
+import { AdminAudit } from './pages/admin/AdminAudit';
+import { AdminSystemHealth } from './pages/admin/AdminSystemHealth';
+import { AdminFeatureFlags } from './pages/admin/AdminFeatureFlags';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
+import { defaultHomePath } from '@mams/types';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
@@ -34,6 +43,12 @@ function RequireAuthSession({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function HomeRedirect() {
+  const user = useAuth((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={defaultHomePath(user.role)} replace />;
+}
+
 export function App() {
   return (
     <Routes>
@@ -48,6 +63,22 @@ export function App() {
         }
       />
       <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <AdminLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<AdminOverview />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="organization" element={<AdminOrganization />} />
+        <Route path="security" element={<AdminSecurity />} />
+        <Route path="audit" element={<AdminAudit />} />
+        <Route path="health" element={<AdminSystemHealth />} />
+        <Route path="feature-flags" element={<AdminFeatureFlags />} />
+      </Route>
+      <Route
         path="/"
         element={
           <RequireAuth>
@@ -55,7 +86,7 @@ export function App() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<HomeRedirect />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="employees" element={<Employees />} />
         <Route path="employees/:id" element={<EmployeeDetail />} />
@@ -71,7 +102,7 @@ export function App() {
         <Route path="devices" element={<Devices />} />
         <Route path="settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
 }

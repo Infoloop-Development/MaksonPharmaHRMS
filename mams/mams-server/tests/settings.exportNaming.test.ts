@@ -25,10 +25,15 @@ function canPatchSettingsFields(
 ): { ok: true } | { ok: false; requiredPermission: string } {
   const touchesSettings = changedKeys.some((k) => MANAGE_SETTINGS_FIELDS.has(k));
   const touchesExportNaming = changedKeys.includes('exportNaming');
-  if (touchesSettings && !permissions.includes('manage.settings')) {
-    return { ok: false, requiredPermission: 'manage.settings' };
+  const canOrgSettings = permissions.includes('manage.org_settings') || permissions.includes('manage.settings');
+  const canExportNaming =
+    permissions.includes('manage.org_settings') ||
+    permissions.includes('manage.export_naming') ||
+    permissions.includes('manage.settings');
+  if (touchesSettings && !canOrgSettings) {
+    return { ok: false, requiredPermission: 'manage.org_settings' };
   }
-  if (touchesExportNaming && !permissions.includes('manage.export_naming')) {
+  if (touchesExportNaming && !canExportNaming) {
     return { ok: false, requiredPermission: 'manage.export_naming' };
   }
   return { ok: true };
@@ -46,24 +51,24 @@ describe('settings exportNaming PATCH auth rules', () => {
     expect(r.requiredPermission).toBe('manage.export_naming');
   });
 
-  it('rejects company fields without manage.settings', () => {
+  it('rejects company fields without manage.org_settings', () => {
     const r = canPatchSettingsFields(['manage.export_naming'], ['companyName']);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.requiredPermission).toBe('manage.settings');
+    expect(r.requiredPermission).toBe('manage.org_settings');
   });
 
-  it('requires both permissions when patch touches both groups', () => {
+  it('manage.org_settings alone can patch export naming and company fields', () => {
     expect(
-      canPatchSettingsFields(['manage.settings', 'manage.export_naming'], [
-        'companyName',
-        'exportNaming',
-      ]).ok
+      canPatchSettingsFields(['manage.org_settings'], ['companyName', 'exportNaming']).ok
     ).toBe(true);
-    const r = canPatchSettingsFields(['manage.settings'], ['companyName', 'exportNaming']);
+  });
+
+  it('requires export permission when only manage.export_naming is held', () => {
+    const r = canPatchSettingsFields(['manage.export_naming'], ['companyName']);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.requiredPermission).toBe('manage.export_naming');
+    expect(r.requiredPermission).toBe('manage.org_settings');
   });
 
   it('default export naming is valid', () => {

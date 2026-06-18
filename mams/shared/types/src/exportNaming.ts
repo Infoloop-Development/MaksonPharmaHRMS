@@ -7,6 +7,11 @@ export const ExportTypeKeySchema = z.enum([
   'locationReportCsv',
   'leaveApplicationsCsv',
   'dashboardAttendanceXlsx',
+  'adminOverviewAttendanceXlsx',
+  'adminOverviewEmployeesXlsx',
+  'adminOverviewUsersXlsx',
+  'adminOverviewDevicesXlsx',
+  'adminOverviewAuditXlsx',
 ]);
 export type ExportTypeKey = z.infer<typeof ExportTypeKeySchema>;
 
@@ -20,6 +25,11 @@ export const EXPORT_TYPE_LABELS: Record<ExportTypeKey, string> = {
   locationReportCsv: 'Location report (CSV)',
   leaveApplicationsCsv: 'Leave applications (CSV)',
   dashboardAttendanceXlsx: 'Dashboard attendance (Excel)',
+  adminOverviewAttendanceXlsx: 'Admin overview attendance (Excel)',
+  adminOverviewEmployeesXlsx: 'Admin overview employees (Excel)',
+  adminOverviewUsersXlsx: 'Admin overview users (Excel)',
+  adminOverviewDevicesXlsx: 'Admin overview devices (Excel)',
+  adminOverviewAuditXlsx: 'Admin overview audit (Excel)',
 };
 
 export const EXPORT_REPORT_TYPE_CODES: Record<ExportTypeKey, string> = {
@@ -29,6 +39,11 @@ export const EXPORT_REPORT_TYPE_CODES: Record<ExportTypeKey, string> = {
   locationReportCsv: 'LocationReport',
   leaveApplicationsCsv: 'LeaveApplications',
   dashboardAttendanceXlsx: 'AttendanceExport',
+  adminOverviewAttendanceXlsx: 'AdminOverviewAttendance',
+  adminOverviewEmployeesXlsx: 'AdminOverviewEmployees',
+  adminOverviewUsersXlsx: 'AdminOverviewUsers',
+  adminOverviewDevicesXlsx: 'AdminOverviewDevices',
+  adminOverviewAuditXlsx: 'AdminOverviewAudit',
 };
 
 export const EXPORT_FILE_EXTENSIONS: Record<ExportTypeKey, string> = {
@@ -38,6 +53,11 @@ export const EXPORT_FILE_EXTENSIONS: Record<ExportTypeKey, string> = {
   locationReportCsv: 'csv',
   leaveApplicationsCsv: 'csv',
   dashboardAttendanceXlsx: 'xlsx',
+  adminOverviewAttendanceXlsx: 'xlsx',
+  adminOverviewEmployeesXlsx: 'xlsx',
+  adminOverviewUsersXlsx: 'xlsx',
+  adminOverviewDevicesXlsx: 'xlsx',
+  adminOverviewAuditXlsx: 'xlsx',
 };
 
 export const EXPORT_NAMING_TOKENS = [
@@ -79,6 +99,11 @@ export const ExportNamingSettingsSchema = z.object({
     locationReportCsv: patternSchema,
     leaveApplicationsCsv: patternSchema,
     dashboardAttendanceXlsx: patternSchema,
+    adminOverviewAttendanceXlsx: patternSchema,
+    adminOverviewEmployeesXlsx: patternSchema,
+    adminOverviewUsersXlsx: patternSchema,
+    adminOverviewDevicesXlsx: patternSchema,
+    adminOverviewAuditXlsx: patternSchema,
   }),
 });
 
@@ -96,6 +121,11 @@ export const DEFAULT_EXPORT_NAMING: ExportNamingSettings = {
     locationReportCsv: '{company}_{reportType}_{asOfDate}.{extension}',
     leaveApplicationsCsv: '{company}_{reportType}.{extension}',
     dashboardAttendanceXlsx: '{company}_{reportType}_{department}_{asOfDate}.{extension}',
+    adminOverviewAttendanceXlsx: '{company}_{reportType}_{department}_{asOfDate}.{extension}',
+    adminOverviewEmployeesXlsx: '{company}_{reportType}_{department}_{asOfDate}.{extension}',
+    adminOverviewUsersXlsx: '{company}_{reportType}_{asOfDate}.{extension}',
+    adminOverviewDevicesXlsx: '{company}_{reportType}_{location}_{asOfDate}.{extension}',
+    adminOverviewAuditXlsx: '{company}_{reportType}_{asOfDate}.{extension}',
   },
 };
 

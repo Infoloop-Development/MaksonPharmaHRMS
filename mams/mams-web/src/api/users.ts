@@ -35,4 +35,5 @@ export const usersApi = {
     permissions?: Permission[];
   }) => api.post<UserCreateResponse>('/users', body),
   patch: (id: string, body: UserUpdateBody) => api.patch<UserPatchResponse>(`/users/${id}`, body),
+  revokeSessions: (id: string) => api.post<{ ok: boolean }>(`/users/${id}/revoke-sessions`, {}),
 };

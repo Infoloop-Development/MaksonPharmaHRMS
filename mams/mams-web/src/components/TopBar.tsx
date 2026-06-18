@@ -18,11 +18,21 @@ function pageTitle(pathname: string): string {
   if (pathname === '/devices') return 'Devices';
   if (pathname === '/settings') return 'Settings';
   if (pathname === '/autogeneration-demo' && isAutogenDemoEnabled()) return 'Auto Genrated Shift Demo';
+  if (pathname.startsWith('/admin')) {
+    if (pathname === '/admin') return 'Admin Overview';
+    if (pathname.startsWith('/admin/users')) return 'Users & Roles';
+    if (pathname.startsWith('/admin/organization')) return 'Organization';
+    if (pathname.startsWith('/admin/security')) return 'Security';
+    if (pathname.startsWith('/admin/audit')) return 'Audit Log';
+    if (pathname.startsWith('/admin/health')) return 'System Health';
+    if (pathname.startsWith('/admin/feature-flags')) return 'Feature Flags';
+    return 'Administration';
+  }
   if (pathname === '/change-password') return 'Change Password';
   return 'MAMS';
 }
 
-export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
+export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () => void; title?: string }) {
   const user = useAuth((s) => s.user);
   const location = useLocation();
   const isOnline = useOnlineStatus();
@@ -36,7 +46,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const isCompliant = user?.viewMode === 'compliant';
   const badgeFull = isCompliant ? 'COMPLIANT VIEW (8-hour)' : 'REAL VIEW (12-hour)';
   const badgeShort = isCompliant ? 'COMPLIANT' : 'REAL';
-  const title = pageTitle(location.pathname);
+  const title = titleOverride ?? pageTitle(location.pathname);
   const { fmtTime } = useTimeDisplay();
 
   return (

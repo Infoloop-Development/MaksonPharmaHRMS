@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { UnmaskFieldGrantsSchema } from './sensitiveUnmask.js';
 
-export const RoleSchema = z.enum(['hr.admin', 'hr.compliance', 'it.admin']);
+export const RoleSchema = z.enum(['org.admin', 'hr.admin', 'hr.compliance', 'it.admin']);
 export type Role = z.infer<typeof RoleSchema>;
 
 export const ViewModeSchema = z.enum(['real', 'compliant']);
@@ -14,9 +14,16 @@ export const PermissionSchema = z.enum([
   'approve.adjust',
   'unmask.sensitive',
   'manage.users',
+  'manage.employees',
   'manage.devices',
   'manage.settings',
   'manage.export_naming',
+  'manage.org_users',
+  'manage.org_settings',
+  'manage.security',
+  'read.org_audit',
+  'manage.feature_flags',
+  'read.system_health',
   'read.leave',
   'write.leave',
   'approve.leave',
@@ -58,10 +65,11 @@ export const UserUpdateBodySchema = z
     permissions: z.array(PermissionSchema).optional(),
     unmaskFieldGrants: UnmaskFieldGrantsSchema.optional(),
     isActive: z.boolean().optional(),
+    mustChangePassword: z.boolean().optional(),
   })
   .strict()
   .superRefine((val, ctx) => {
-    const keys = ['name', 'email', 'role', 'permissions', 'isActive'] as const;
+    const keys = ['name', 'email', 'role', 'permissions', 'isActive', 'mustChangePassword'] as const;
     const count = keys.filter((k) => val[k] !== undefined).length;
     if (count < 1) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Provide at least one field to update' });
@@ -106,3 +114,10 @@ export const RefreshRequestSchema = z.object({
   refreshToken: z.string(),
 });
 export type RefreshRequest = z.infer<typeof RefreshRequestSchema>;
+
+export const ROLE_LABELS: Record<Role, string> = {
+  'org.admin': 'Organization Admin',
+  'hr.admin': 'HR Admin',
+  'hr.compliance': 'Compliance Auditor',
+  'it.admin': 'IT Admin',
+};

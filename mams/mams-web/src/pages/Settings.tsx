@@ -44,7 +44,7 @@ const ADD_USER_PASSWORD_MAX = 128;
 const ADD_USER_FORM_ID = 'add-user-form';
 const EDIT_USER_FORM_ID = 'edit-user-form';
 
-/** Human-readable labels for Settings permission checkboxes. */
+/** Human-readable labels for permission checkboxes. */
 const PERMISSION_LABELS: Record<Permission, string> = {
   'read.real': 'Read real (12h) attendance data',
   'read.compliant': 'Read compliant (8h) attendance data',
@@ -53,10 +53,17 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'write.regularization': 'Submit regularization requests (pending approval)',
   'approve.regularization': 'Approve/reject regularization requests',
   'unmask.sensitive': 'Unmask PAN, bank, Aadhaar, PF, ESI',
-  'manage.users': 'Manage users',
+  'manage.users': 'Manage users (legacy)',
+  'manage.employees': 'Manage employee records',
   'manage.devices': 'Manage biometric devices',
-  'manage.settings': 'Manage settings',
+  'manage.settings': 'Manage settings (legacy)',
   'manage.export_naming': 'Configure export filename formats',
+  'manage.org_users': 'Manage organization users & roles',
+  'manage.org_settings': 'Manage organization settings',
+  'manage.security': 'Security policy & session control',
+  'read.org_audit': 'View organization audit log',
+  'manage.feature_flags': 'Manage feature flags',
+  'read.system_health': 'View system health',
   'read.leave': 'View leave management data',
   'write.leave': 'Submit leave requests (pending approval)',
   'approve.leave': 'Approve/reject/cancel leave requests',
@@ -73,7 +80,19 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
   { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
-  { label: 'Administration', permissions: ['manage.users', 'manage.devices', 'manage.settings', 'manage.export_naming'] },
+  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices'] },
+  {
+    label: 'Organization admin',
+    permissions: [
+      'manage.org_users',
+      'manage.org_settings',
+      'manage.security',
+      'read.org_audit',
+      'manage.feature_flags',
+      'read.system_health',
+      'manage.export_naming',
+    ],
+  },
 ];
 const ADD_USER_PASSWORD_SPECIALS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`' as const;
 
@@ -117,9 +136,7 @@ function validateAddUserForm(values: { name: string; email: string; password: st
 
 export function Settings() {
   const user = useAuth((s) => s.user);
-  const canManage = user?.permissions.includes('manage.settings') ?? false;
-  const canManageExportNaming = user?.permissions.includes('manage.export_naming') ?? false;
-  const canManageUsers = user?.permissions.includes('manage.users') ?? false;
+  const canManageShifts = user?.permissions.includes('manage.org_settings') ?? false;
 
   const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
 
@@ -134,9 +151,9 @@ export function Settings() {
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="settings-header">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">HR Settings</h1>
           <div className="text-sm text-text-muted">
-            {canManage ? 'Edits are audit-logged.' : 'Read-only view (you do not have manage.settings permission).'}
+            Operational shortcuts and shift reference. Organization-wide config is in Admin → Organization.
           </div>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
@@ -156,58 +173,61 @@ export function Settings() {
 
       <div className="settings-layout">
         <SettingsLayoutCell full>
-          <div data-tour-id="settings-time-branding">
-            <TimeDisplayCard settings={data} canManage={canManage} />
-          </div>
-        </SettingsLayoutCell>
-        <SettingsLayoutCell full>
-          <BrandAssetsCard settings={data} canManage={canManage} />
-        </SettingsLayoutCell>
-        <SettingsLayoutCell>
-          <div data-tour-id="settings-company">
-            <CompanyInfoCard settings={data} canManage={canManage} />
-          </div>
-        </SettingsLayoutCell>
-        <SettingsLayoutCell>
-          <div data-tour-id="settings-compliance">
-            <ComplianceCard settings={data} canManage={canManage} />
-          </div>
-        </SettingsLayoutCell>
-        <SettingsLayoutCell>
-          <div data-tour-id="settings-smart-anchor">
-            <SmartAnchorCard settings={data} canManage={canManage} />
-          </div>
-        </SettingsLayoutCell>
-        <SettingsLayoutCell>
-          <div data-tour-id="settings-confidentiality">
-            <ConfidentialityCard settings={data} canManage={canManage} />
-          </div>
-        </SettingsLayoutCell>
-        <SettingsLayoutCell full>
           <div data-tour-id="settings-shifts">
-            <ShiftsCard settings={data} canManage={canManage} />
+            <ShiftsCard settings={data} canManage={canManageShifts} />
           </div>
         </SettingsLayoutCell>
-        <SettingsLayoutCell full>
-          <div data-tour-id="settings-export-naming">
-            <ExportNamingCard settings={data} canManage={canManageExportNaming} />
-          </div>
-        </SettingsLayoutCell>
-        {canManageUsers && (
-          <SettingsLayoutCell full>
-            <div data-tour-id="settings-users">
-              <UsersCard />
-            </div>
-          </SettingsLayoutCell>
-        )}
         <SettingsLayoutCell full>
           <div data-tour-id="settings-activity">
-          <SectionCard title="Activity">
+          <SectionCard title="My activity">
             <ActivityLogPanel />
           </SectionCard>
           </div>
         </SettingsLayoutCell>
       </div>
+    </div>
+  );
+}
+
+export function OrganizationSettingsPanel() {
+  const user = useAuth((s) => s.user);
+  const canManage = user?.permissions.includes('manage.org_settings') ?? false;
+  const canManageExportNaming =
+    user?.permissions.includes('manage.org_settings') ||
+    user?.permissions.includes('manage.export_naming') ||
+    false;
+
+  const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
+
+  if (isLoading) return <div className="text-text-muted">Loading...</div>;
+  if (!data) return <div className="text-red">Failed to load settings.</div>;
+
+  return (
+    <div className="settings-layout">
+      <SettingsLayoutCell full>
+        <TimeDisplayCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell full>
+        <BrandAssetsCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell>
+        <CompanyInfoCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell>
+        <ComplianceCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell>
+        <SmartAnchorCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell>
+        <ConfidentialityCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell full>
+        <ShiftsCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell full>
+        <ExportNamingCard settings={data} canManage={canManageExportNaming} />
+      </SettingsLayoutCell>
     </div>
   );
 }
@@ -634,6 +654,24 @@ const EXPORT_PREVIEW_CONTEXT: Record<ExportTypeKey, ExportFileNameContext> = {
     department: 'Production',
     asOfDate: '2026-06-09',
   },
+  adminOverviewAttendanceXlsx: {
+    department: 'Production',
+    asOfDate: '2026-06-09',
+  },
+  adminOverviewEmployeesXlsx: {
+    department: 'Production',
+    asOfDate: '2026-06-09',
+  },
+  adminOverviewUsersXlsx: {
+    asOfDate: '2026-06-09',
+  },
+  adminOverviewDevicesXlsx: {
+    location: 'Surendranagar',
+    asOfDate: '2026-06-09',
+  },
+  adminOverviewAuditXlsx: {
+    asOfDate: '2026-06-09',
+  },
 };
 
 function PermissionCheckboxList({
@@ -901,7 +939,7 @@ function PasswordRevealToggle({ visible, onToggle }: { visible: boolean; onToggl
   );
 }
 
-function UsersCard() {
+export function UsersManagementPanel() {
   const [openAdd, setOpenAdd] = useState(false);
   const [editUser, setEditUser] = useState<UserSummary | null>(null);
   const [userPage, setUserPage] = useState(1);
@@ -1123,11 +1161,34 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
               if (r !== 'hr.admin') setUnmaskFieldGrants([]);
             }}
           >
+            <option value="org.admin">Organization Admin</option>
             <option value="hr.admin">HR Admin (real view)</option>
             <option value="hr.compliance">Compliance Auditor (compliant view)</option>
             <option value="it.admin">IT Admin</option>
           </Select>
         </Field>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['HR Admin standard', 'hr.admin'],
+              ['Compliance reviewer', 'hr.compliance'],
+              ['IT only', 'it.admin'],
+            ] as const
+          ).map(([label, r]) => (
+            <button
+              key={r}
+              type="button"
+              className="btn-outline btn-sm"
+              onClick={() => {
+                setRole(r);
+                setSelectedPerms([...PERMISSIONS_BY_ROLE[r]].filter((p) => p !== 'unmask.sensitive'));
+                if (r !== 'hr.admin') setUnmaskFieldGrants([]);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         {role !== 'hr.compliance' && (
           <div className="space-y-2">
             <div className="text-xs font-semibold uppercase tracking-wider text-text-muted">Permissions</div>
@@ -1181,6 +1242,7 @@ function EditUserModal({
   const [unmaskFieldGrants, setUnmaskFieldGrants] = useState<SensitiveUnmaskField[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Permission[]>([]);
   const [isActive, setIsActive] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
 
@@ -1197,6 +1259,7 @@ function EditUserModal({
       Array.isArray(user.unmaskFieldGrants) ? [...user.unmaskFieldGrants] : []
     );
     setIsActive(user.isActive);
+    setMustChangePassword(user.mustChangePassword ?? false);
   }, [user]);
 
   const mutation = useMutation({
@@ -1213,6 +1276,7 @@ function EditUserModal({
         unmaskFieldGrants:
           isUnmaskEnabled() && role === 'hr.admin' ? unmaskFieldGrants : [],
         isActive,
+        mustChangePassword,
       });
     },
     onSuccess: (res) => {
@@ -1244,6 +1308,11 @@ function EditUserModal({
   });
 
   const cap = ROLE_PERMISSION_CAP[role];
+  const roleDefaults = PERMISSIONS_BY_ROLE[role].filter((p) => p !== 'unmask.sensitive');
+  const defaultSet = new Set<string>(roleDefaults);
+  const selectedSet = new Set<string>(selectedPerms);
+  const permissionsAdded = selectedPerms.filter((p) => !defaultSet.has(p));
+  const permissionsRemoved = roleDefaults.filter((p) => !selectedSet.has(p));
 
   const togglePerm = (p: Permission) => {
     setSelectedPerms((prev) => {
@@ -1300,7 +1369,8 @@ function EditUserModal({
                   setUnmaskFieldGrants([]);
                 }}
               >
-                <option value="hr.admin">HR Admin (real view)</option>
+                <option value="org.admin">Organization Admin</option>
+            <option value="hr.admin">HR Admin (real view)</option>
                 <option value="hr.compliance">Compliance Auditor (compliant view)</option>
                 <option value="it.admin">IT Admin</option>
               </Select>
@@ -1309,6 +1379,21 @@ function EditUserModal({
               <span className="text-sm font-medium">Active</span>
               <Toggle checked={isActive} onChange={setIsActive} />
             </div>
+            <div className="flex items-center justify-between gap-3 py-1">
+              <span className="text-sm font-medium">Force password change on next login</span>
+              <Toggle checked={mustChangePassword} onChange={setMustChangePassword} />
+            </div>
+            {(permissionsAdded.length > 0 || permissionsRemoved.length > 0) && (
+              <div className="rounded-md border border-border bg-surface2/50 p-3 text-xs space-y-1">
+                <div className="font-semibold uppercase tracking-wider text-text-muted">Permission diff vs role default</div>
+                {permissionsAdded.length > 0 && (
+                  <div><span className="text-green font-medium">Added:</span> {permissionsAdded.map((p) => PERMISSION_LABELS[p]).join(', ')}</div>
+                )}
+                {permissionsRemoved.length > 0 && (
+                  <div><span className="text-red font-medium">Removed:</span> {permissionsRemoved.map((p) => PERMISSION_LABELS[p]).join(', ')}</div>
+                )}
+              </div>
+            )}
             {isUnmaskEnabled() && role === 'hr.admin' && (
               <UnmaskFieldGrantsSection grants={unmaskFieldGrants} onChange={setUnmaskFieldGrants} />
             )}
