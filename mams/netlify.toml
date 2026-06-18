@@ -6,6 +6,17 @@
   command = "npm install && npm run build --workspace @mams/types && npm run build --workspace mams-web"
   publish = "mams-web/dist"
 
+[build.environment]
+  VITE_API_BASE_URL = "https://maksonpharmahrms.onrender.com"
+
+# Proxy API calls to Render (works even when VITE_API_BASE_URL is missing from the build).
+[[redirects]]
+  from = "/api/*"
+  to = "https://maksonpharmahrms.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# React Router — client-side routes
 [[redirects]]
   from = "/*"
   to = "/index.html"

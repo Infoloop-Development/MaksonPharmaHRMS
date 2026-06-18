@@ -30,6 +30,17 @@ export const ActivityListQuerySchema = z.object({
 });
 export type ActivityListQuery = z.infer<typeof ActivityListQuerySchema>;
 
+export const OrgActivityListQuerySchema = ActivityListQuerySchema.extend({
+  userId: z.string().optional(),
+  role: z.string().optional(),
+  eventType: z.string().optional(),
+  entityType: z.string().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  search: z.string().optional(),
+});
+export type OrgActivityListQuery = z.infer<typeof OrgActivityListQuerySchema>;
+
 export const ActivityListItemSchema = z.object({
   id: z.string(),
   occurredAt: z.string().datetime(),
@@ -37,6 +48,10 @@ export const ActivityListItemSchema = z.object({
   entityType: z.string().nullable(),
   entityId: z.string().nullable(),
   payload: z.record(z.unknown()),
+  userId: z.string().nullable().optional(),
+  userName: z.string().nullable().optional(),
+  userEmail: z.string().nullable().optional(),
+  userRole: z.string().nullable().optional(),
 });
 export type ActivityListItem = z.infer<typeof ActivityListItemSchema>;
 

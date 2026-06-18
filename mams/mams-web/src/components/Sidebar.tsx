@@ -8,6 +8,7 @@ import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { clearFirstLoginSession } from '../lib/onboarding/session';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
+import { isOrgAdminRole } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -87,7 +88,28 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </button>
       </div>
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
-        <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Navigation</div>
+        {user && isOrgAdminRole(user.role) && (
+          <>
+            <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Administration</div>
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
+                  isActive
+                    ? 'sidebar-nav-link--active bg-red/25 text-white font-semibold'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white'
+                }`
+              }
+            >
+              <NavIcon name="settings" />
+              <span>Admin Console</span>
+            </NavLink>
+            <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 pt-3 font-semibold">HR modules</div>
+          </>
+        )}
+        {user && isOrgAdminRole(user.role) ? null : (
+          <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Navigation</div>
+        )}
         {buildNav().map((n) => (
           <NavLink
             key={n.to}

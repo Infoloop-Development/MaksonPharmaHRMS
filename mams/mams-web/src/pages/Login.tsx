@@ -5,9 +5,10 @@ import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { setFirstLoginSession } from '../lib/onboarding/session';
 import { useAuth } from '../store/auth';
+import { defaultHomePath } from '@mams/types';
 
 export function Login() {
-  const [email, setEmail] = useState('hr.admin@makson-group.com');
+  const [email, setEmail] = useState('org.admin@makson-group.com');
   const [password, setPassword] = useState('makson2026');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -26,7 +27,7 @@ export function Login() {
       if (data.isFirstLogin) {
         setFirstLoginSession();
       }
-      navigate(data.user.mustChangePassword ? '/change-password' : '/dashboard');
+      navigate(data.user.mustChangePassword ? '/change-password' : defaultHomePath(data.user.role));
     } catch (e: any) {
       setErr(e?.message ?? 'Login failed');
     } finally {
@@ -73,13 +74,15 @@ export function Login() {
         </form>
 
         <div className="mt-6 p-3 bg-surface2 rounded-md text-[11px] text-text-subtle leading-relaxed">
-          <strong>Demo credentials:</strong>
+          <strong>Demo credentials</strong> (password <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">makson2026</code>):
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.admin@makson-group.com</code> for the real (12-hour) view
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">org.admin@makson-group.com</code> — Admin Console
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.compliance@makson-group.com</code> for the compliant (8-hour) view
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.admin@makson-group.com</code> — HR (real / 12-hour view)
           <br />
-          Password: <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">makson2026</code>
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.compliance@makson-group.com</code> — Compliance (8-hour view)
+          <br />
+          <span className="text-text-muted">First time or login fails? From the <code className="bg-border px-1 rounded">mams</code> folder run: <code className="bg-border px-1 rounded">npm run seed:users</code></span>
         </div>
 
         <div className="text-center mt-6 text-[11px] text-text-subtle">

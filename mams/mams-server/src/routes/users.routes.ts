@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { UserModel } from '../models/User.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import { revokeRefreshTokensForUser, userPublic } from '../services/auth.service.js';
@@ -30,7 +30,9 @@ import { PasswordSchema } from '../utils/passwordPolicy.js';
 const router = Router();
 router.use(requireAuth);
 
-router.get('/', requirePermission('manage.users'), async (_req, res, next) => {
+const manageUsersGate = requireAnyPermission('manage.org_users', 'manage.users');
+
+router.get('/', manageUsersGate, async (_req, res, next) => {
   try {
     const items = await UserModel.find().select('-passwordHash').sort({ createdAt: 1 }).lean();
     res.json({ items });
@@ -46,25 +48,24 @@ function permissionsEqual(a: Permission[], b: Permission[]): boolean {
   return sa.every((v, i) => v === sb[i]);
 }
 
-async function assertLeavingAtLeastOneOtherManageUser(
+async function assertLeavingAtLeastOneOtherOrgAdmin(
   targetId: string,
-  nextPerms: Permission[],
+  nextRole: Role,
   nextActive: boolean
 ): Promise<void> {
-  const stillHolds = nextActive && nextPerms.includes('manage.users');
-  if (stillHolds) return;
+  if (nextRole === 'org.admin' && nextActive) return;
 
   const oid = new mongoose.Types.ObjectId(targetId);
   const others = await UserModel.countDocuments({
     _id: { $ne: oid },
     isActive: true,
-    permissions: 'manage.users',
+    role: 'org.admin',
   });
   if (others < 1) {
     throw new ApiError(
       400,
-      'last_manage_user',
-      'At least one other active user must retain manage.users permission.'
+      'last_org_admin',
+      'At least one other active Organization Admin must remain.'
     );
   }
 }
@@ -107,7 +108,7 @@ function normalizeUnmaskGrantsForRole(
   return grants;
 }
 
-router.post('/', requirePermission('manage.users'), async (req, res, next) => {
+router.post('/', manageUsersGate, async (req, res, next) => {
   try {
     const body = UserCreateSchema.parse(req.body);
     const exists = await UserModel.findOne({ email: body.email });
@@ -189,7 +190,32 @@ router.post('/', requirePermission('manage.users'), async (req, res, next) => {
   }
 });
 
-router.patch('/:id', requirePermission('manage.users'), async (req, res, next) => {
+router.post('/:id/revoke-sessions', requireAnyPermission('manage.security', 'manage.org_users'), async (req, res, next) => {
+  try {
+    const rawId = req.params.id ?? '';
+    if (!mongoose.isValidObjectId(rawId)) {
+      throw new ApiError(404, 'not_found', 'User not found');
+    }
+    const user = await UserModel.findById(rawId);
+    if (!user) throw new ApiError(404, 'not_found', 'User not found');
+
+    await revokeRefreshTokensForUser(rawId);
+    await audit(
+      'sessions_revoked',
+      { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
+      {
+        entityType: 'user',
+        entityId: user._id,
+        payload: { targetEmail: user.email },
+      }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:id', manageUsersGate, async (req, res, next) => {
   try {
     const rawId = req.params.id ?? '';
     if (!mongoose.isValidObjectId(rawId)) {
@@ -202,7 +228,7 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
     const isSelf = actorId === targetIdStr;
 
     if (isSelf) {
-      if (body.role !== undefined || body.permissions !== undefined || body.isActive !== undefined) {
+      if (body.role !== undefined || body.permissions !== undefined || body.isActive !== undefined || body.mustChangePassword !== undefined) {
         throw new ApiError(403, 'forbidden', 'You cannot change your own role, permissions, or status');
       }
 
@@ -280,7 +306,7 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
 
     const nextActive = body.isActive !== undefined ? body.isActive : prevActive;
 
-    await assertLeavingAtLeastOneOtherManageUser(targetIdStr, nextPermissions, nextActive);
+    await assertLeavingAtLeastOneOtherOrgAdmin(targetIdStr, nextRole, nextActive);
 
     if (body.email !== undefined && body.email !== user.email) {
       const taken = await UserModel.findOne({ email: body.email, _id: { $ne: user._id } });
@@ -294,6 +320,9 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
     user.permissions = nextPermissions;
     user.unmaskFieldGrants = nextUnmaskGrants;
     user.isActive = nextActive;
+    if (body.mustChangePassword !== undefined) {
+      user.mustChangePassword = body.mustChangePassword;
+    }
 
     await user.save();
 
@@ -304,7 +333,7 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
       rbacOrStatusChanged &&
       (!permissionsEqual(prevPerms, nextPermissions) || prevRole !== nextRole || prevActive !== nextActive);
 
-    if (rbacOrStatusChanged) {
+    if (rbacOrStatusChanged || body.mustChangePassword !== undefined) {
       await revokeRefreshTokensForUser(targetIdStr);
     }
 
@@ -321,6 +350,7 @@ router.patch('/:id', requirePermission('manage.users'), async (req, res, next) =
           email: body.email !== undefined,
           role: body.role !== undefined,
           isActive: body.isActive !== undefined,
+          mustChangePassword: body.mustChangePassword !== undefined,
           permissionsChanged: permissionsActuallyChanged,
           permissionsAdded: permissionsActuallyChanged ? permissionsAdded : undefined,
           permissionsRemoved: permissionsActuallyChanged ? permissionsRemoved : undefined,

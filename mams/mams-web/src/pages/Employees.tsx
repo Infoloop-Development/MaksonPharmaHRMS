@@ -27,7 +27,7 @@ export function Employees() {
   const [addOpen, setAddOpen] = useState(false);
   const pageSize = 50;
   const user = useAuth((s) => s.user);
-  const canManage = user?.permissions.includes('manage.users') ?? false;
+  const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
   const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({

@@ -1,15 +1,71 @@
 import type { Permission, Role } from './user.js';
 import { dedupeUnmaskFieldGrants, type SensitiveUnmaskField } from './sensitiveUnmask.js';
 
+const HR_OPERATIONAL: Permission[] = [
+  'read.real',
+  'read.compliant',
+  'write.adjust',
+  'approve.adjust',
+  'write.regularization',
+  'approve.regularization',
+  'unmask.sensitive',
+  'manage.employees',
+  'manage.devices',
+  'read.leave',
+  'write.leave',
+  'approve.leave',
+  'manage.leave',
+  'read.visitors',
+  'approve.visitors',
+  'manage.visitors',
+];
+
+const ORG_GOVERNANCE: Permission[] = [
+  'manage.org_users',
+  'manage.org_settings',
+  'manage.security',
+  'read.org_audit',
+  'manage.feature_flags',
+  'read.system_health',
+  'manage.export_naming',
+];
+
 /** Default permission set assigned when creating a user for a role. */
 export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
-  'hr.admin': ['read.real', 'write.adjust', 'write.regularization', 'approve.regularization', 'unmask.sensitive', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave', 'read.visitors', 'approve.visitors', 'manage.visitors'],
-  'hr.compliance': ['read.compliant', 'approve.adjust', 'approve.regularization', 'approve.leave', 'read.leave', 'read.visitors', 'approve.visitors'],
-  'it.admin': ['read.real', 'manage.users', 'manage.devices', 'manage.settings', 'manage.leave'],
+  'org.admin': [...ORG_GOVERNANCE, ...HR_OPERATIONAL],
+  'hr.admin': [
+    'read.real',
+    'write.adjust',
+    'write.regularization',
+    'approve.regularization',
+    'unmask.sensitive',
+    'manage.employees',
+    'manage.devices',
+    'manage.leave',
+    'read.visitors',
+    'approve.visitors',
+    'manage.visitors',
+  ],
+  'hr.compliance': [
+    'read.compliant',
+    'approve.adjust',
+    'approve.regularization',
+    'approve.leave',
+    'read.leave',
+    'read.visitors',
+    'approve.visitors',
+  ],
+  'it.admin': ['read.real', 'manage.devices', 'manage.leave'],
 };
 
 /** Maximum permissions assignable per role (PATCH validation + Settings UI caps). */
 export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
+  'org.admin': [
+    ...ORG_GOVERNANCE,
+    ...HR_OPERATIONAL,
+    'manage.settings',
+    'manage.users',
+  ],
   'hr.admin': [
     'read.real',
     'read.compliant',
@@ -18,10 +74,8 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'write.regularization',
     'approve.regularization',
     'unmask.sensitive',
-    'manage.users',
+    'manage.employees',
     'manage.devices',
-    'manage.settings',
-    'manage.export_naming',
     'read.leave',
     'write.leave',
     'approve.leave',
@@ -30,13 +84,18 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'approve.visitors',
     'manage.visitors',
   ],
-  'hr.compliance': ['read.compliant', 'approve.adjust', 'approve.regularization', 'approve.leave', 'read.leave', 'read.visitors', 'approve.visitors'],
+  'hr.compliance': [
+    'read.compliant',
+    'approve.adjust',
+    'approve.regularization',
+    'approve.leave',
+    'read.leave',
+    'read.visitors',
+    'approve.visitors',
+  ],
   'it.admin': [
     'read.real',
-    'manage.users',
     'manage.devices',
-    'manage.settings',
-    'manage.export_naming',
     'read.leave',
     'write.leave',
     'approve.leave',
@@ -45,6 +104,7 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
 };
 
 const capSets: Record<Role, Set<string>> = {
+  'org.admin': new Set(ROLE_PERMISSION_CAP['org.admin']),
   'hr.admin': new Set(ROLE_PERMISSION_CAP['hr.admin']),
   'hr.compliance': new Set(ROLE_PERMISSION_CAP['hr.compliance']),
   'it.admin': new Set(ROLE_PERMISSION_CAP['it.admin']),
@@ -83,8 +143,25 @@ export function validatePermissionsForRole(
   return { ok: true, permissions: deduped };
 }
 
+export function hasManageOrgUsersPermission(permissions: Permission[]): boolean {
+  return permissions.includes('manage.org_users') || permissions.includes('manage.users');
+}
+
+/** @deprecated Use hasManageOrgUsersPermission */
 export function hasManageUsersPermission(permissions: Permission[]): boolean {
-  return permissions.includes('manage.users');
+  return hasManageOrgUsersPermission(permissions);
+}
+
+export function canAccessAdminConsole(role: Role, permissions: Permission[]): boolean {
+  return (
+    role === 'org.admin' ||
+    permissions.includes('manage.org_users') ||
+    permissions.includes('manage.org_settings') ||
+    permissions.includes('read.org_audit') ||
+    permissions.includes('manage.security') ||
+    permissions.includes('manage.feature_flags') ||
+    permissions.includes('read.system_health')
+  );
 }
 
 /** Base role permissions with unmask.sensitive only when HR Admin has at least one field grant. */

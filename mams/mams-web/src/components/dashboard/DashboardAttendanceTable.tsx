@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { DashboardAttendanceRow, DashboardAttendanceStatusFilter } from '@mams/types';
 import { dashboardApi } from '../../api/dashboard';
 import { settingsApi } from '../../api/settings';
+import {
+  ADMIN_ATTENDANCE_COLUMN_LABELS,
+  type AdminAttendanceVisibleColumn,
+  resolveAttendanceVisibleColumns,
+} from '../../lib/adminOverviewTableUtils';
+import {
+  fetchAllAttendanceRows,
+  openAttendanceTablePrintWindow,
+} from '../../lib/adminOverviewTablePrintDocument';
+import { brandingFromSettings } from '../../lib/companyBranding';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
@@ -20,6 +30,15 @@ import { countActiveFilters } from '../../lib/countActiveFilters';
 type ShiftFilter = 'All' | 'Day' | 'Night';
 type StatusFilter = DashboardAttendanceStatusFilter;
 type SortCol = 'name' | 'id' | 'dept' | 'shift' | 'hrs' | 'status' | null;
+
+const ADMIN_SORT_KEY: Record<AdminAttendanceVisibleColumn, Exclude<SortCol, null>> = {
+  name: 'name',
+  empCode: 'id',
+  department: 'dept',
+  shift: 'shift',
+  hours: 'hrs',
+  status: 'status',
+};
 
 const PAGE_SIZE = 50;
 
@@ -72,18 +91,51 @@ function sortRows(rows: DashboardAttendanceRow[], col: SortCol, dir: 'asc' | 'de
   return sorted;
 }
 
+function renderAdminAttendanceCell(
+  columnId: AdminAttendanceVisibleColumn,
+  row: DashboardAttendanceRow
+): ReactNode {
+  switch (columnId) {
+    case 'name':
+      return (
+        <Link to={`/employees/${row.employeeId}`} className="dash-emp-link">
+          {row.employeeName}
+        </Link>
+      );
+    case 'empCode':
+      return <span className="font-mono text-[11px]">{row.empCode}</span>;
+    case 'department':
+      return row.department;
+    case 'shift':
+      return <AttendanceShiftPill shift={row.timeShift} />;
+    case 'hours':
+      return (
+        <span className="dash-time">
+          {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
+        </span>
+      );
+    case 'status':
+      return <AttendanceStatusPill status={row.displayStatus} />;
+    default:
+      return '—';
+  }
+}
+
 export function DashboardAttendanceTable({
   selectedDate,
   statusFilter,
   onStatusFilterChange,
   shiftFilter,
   onShiftFilterChange,
+  visibleColumns,
 }: {
   selectedDate: string;
   statusFilter: StatusFilter;
   onStatusFilterChange: (s: StatusFilter) => void;
   shiftFilter: ShiftFilter;
   onShiftFilterChange: (s: ShiftFilter) => void;
+  /** When set (Admin Overview), only these columns render. Omit for full dashboard table. */
+  visibleColumns?: string[];
 }) {
   const toast = useToast((s) => s.push);
   const { logDashboardAction } = useActivityLog();
@@ -103,6 +155,14 @@ export function DashboardAttendanceTable({
   const [exporting, setExporting] = useState(false);
   const [sortCol, setSortCol] = useState<SortCol>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const adminVisibleColumns = resolveAttendanceVisibleColumns(visibleColumns);
+  const isAdminColumnMode = adminVisibleColumns !== null;
+
+  useEffect(() => {
+    setSortCol(null);
+    setSortDir('asc');
+  }, [adminVisibleColumns?.join(',')]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -175,21 +235,44 @@ export function DashboardAttendanceTable({
     if (!selectedDate) return;
     setExporting(true);
     try {
-      await dashboardApi.downloadAttendanceXlsx({
+      const settingsData = settings ?? (await settingsApi.get());
+      const branding = brandingFromSettings(settingsData);
+      const exportFilters = {
+        date: selectedDate,
+        search: debouncedSearch.trim() || undefined,
+        department: department || undefined,
+        timeShift: shift === 'All' ? undefined : shift,
+        status,
+      };
+      const { items: allItems, truncated } = await fetchAllAttendanceRows(exportFilters);
+      if (allItems.length === 0) {
+        toast('No records match the current filters', 'error');
+        return;
+      }
+      const opened = openAttendanceTablePrintWindow({
+        branding,
+        date: selectedDate,
+        items: allItems,
+        filters: exportFilters,
+        visibleColumns,
+        titleSuffix: weekday !== '-' ? `${selectedDate} (${weekday})` : selectedDate,
+      });
+      if (!opened) {
+        toast('Could not start print. Please try again.', 'error');
+        return;
+      }
+      logDashboardAction('ui.dashboard.export_pdf', {
         date: selectedDate,
         search: debouncedSearch.trim() || undefined,
         department: department || undefined,
         timeShift: shift === 'All' ? undefined : shift,
         status,
       });
-      logDashboardAction('ui.dashboard.export_xlsx', {
-        date: selectedDate,
-        search: debouncedSearch.trim() || undefined,
-        department: department || undefined,
-        timeShift: shift === 'All' ? undefined : shift,
-        status,
-      });
-      toast('Attendance export downloaded', 'success');
+      if (truncated) {
+        toast(`PDF includes first ${allItems.length} records (limit reached)`, 'success');
+      } else {
+        toast('Attendance PDF ready', 'success');
+      }
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
@@ -205,12 +288,12 @@ export function DashboardAttendanceTable({
   const exportButton = (
     <button
       type="button"
-      className="btn-green"
+      className="btn-green shrink-0"
       onClick={onExport}
       disabled={exporting || isInitialLoad}
     >
       <DownloadIcon />
-      {exporting ? 'Exporting…' : 'Export'}
+      {exporting ? 'Exporting…' : 'Export PDF'}
     </button>
   );
 
@@ -322,6 +405,7 @@ export function DashboardAttendanceTable({
         rows={rows}
         isInitialLoad={isInitialLoad}
         isRefreshing={isRefreshing}
+        visibleColumns={adminVisibleColumns ?? undefined}
       />
 
       <div
@@ -330,51 +414,75 @@ export function DashboardAttendanceTable({
         <table>
           <thead>
             <tr>
-              <th
-                className={sortCol === 'name' ? 'sorted' : ''}
-                onClick={() => toggleSort('name')}
-              >
-                Employee <span className="sort-arrow">{sortArrow('name')}</span>
-              </th>
-              <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleSort('id')}>
-                ID <span className="sort-arrow">{sortArrow('id')}</span>
-              </th>
-              <th
-                className={sortCol === 'dept' ? 'sorted' : ''}
-                onClick={() => toggleSort('dept')}
-              >
-                Department <span className="sort-arrow">{sortArrow('dept')}</span>
-              </th>
-              <th
-                className={sortCol === 'shift' ? 'sorted' : ''}
-                onClick={() => toggleSort('shift')}
-              >
-                Shift <span className="sort-arrow">{sortArrow('shift')}</span>
-              </th>
-              <th>Entry</th>
-              <th>Exit</th>
-              <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleSort('hrs')}>
-                Hours <span className="sort-arrow">{sortArrow('hrs')}</span>
-              </th>
-              <th
-                className={sortCol === 'status' ? 'sorted' : ''}
-                onClick={() => toggleSort('status')}
-              >
-                Status <span className="sort-arrow">{sortArrow('status')}</span>
-              </th>
+              {isAdminColumnMode && adminVisibleColumns ? (
+                adminVisibleColumns.map((colId) => {
+                  const sortKey = ADMIN_SORT_KEY[colId];
+                  return (
+                    <th
+                      key={colId}
+                      className={sortCol === sortKey ? 'sorted' : ''}
+                      onClick={() => toggleSort(sortKey)}
+                    >
+                      {ADMIN_ATTENDANCE_COLUMN_LABELS[colId]}{' '}
+                      <span className="sort-arrow">{sortArrow(sortKey)}</span>
+                    </th>
+                  );
+                })
+              ) : (
+                <>
+                  <th
+                    className={sortCol === 'name' ? 'sorted' : ''}
+                    onClick={() => toggleSort('name')}
+                  >
+                    Employee <span className="sort-arrow">{sortArrow('name')}</span>
+                  </th>
+                  <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleSort('id')}>
+                    ID <span className="sort-arrow">{sortArrow('id')}</span>
+                  </th>
+                  <th
+                    className={sortCol === 'dept' ? 'sorted' : ''}
+                    onClick={() => toggleSort('dept')}
+                  >
+                    Department <span className="sort-arrow">{sortArrow('dept')}</span>
+                  </th>
+                  <th
+                    className={sortCol === 'shift' ? 'sorted' : ''}
+                    onClick={() => toggleSort('shift')}
+                  >
+                    Shift <span className="sort-arrow">{sortArrow('shift')}</span>
+                  </th>
+                  <th>Entry</th>
+                  <th>Exit</th>
+                  <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleSort('hrs')}>
+                    Hours <span className="sort-arrow">{sortArrow('hrs')}</span>
+                  </th>
+                  <th
+                    className={sortCol === 'status' ? 'sorted' : ''}
+                    onClick={() => toggleSort('status')}
+                  >
+                    Status <span className="sort-arrow">{sortArrow('status')}</span>
+                  </th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
             {isInitialLoad && (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-text-subtle">
+                <td
+                  colSpan={isAdminColumnMode && adminVisibleColumns ? adminVisibleColumns.length : 8}
+                  className="text-center py-8 text-text-subtle"
+                >
                   Loading attendance…
                 </td>
               </tr>
             )}
             {!isInitialLoad && rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-text-subtle">
+                <td
+                  colSpan={isAdminColumnMode && adminVisibleColumns ? adminVisibleColumns.length : 8}
+                  className="text-center py-8 text-text-subtle"
+                >
                   No attendance records match your filters.
                 </td>
               </tr>
@@ -382,24 +490,32 @@ export function DashboardAttendanceTable({
             {!isInitialLoad &&
               rows.map((row) => (
                 <tr key={row.employeeId}>
-                  <td>
-                    <Link to={`/employees/${row.employeeId}`} className="dash-emp-link">
-                      {row.employeeName}
-                    </Link>
-                  </td>
-                  <td className="font-mono text-[11px]">{row.empCode}</td>
-                  <td>{row.department}</td>
-                  <td>
-                    <AttendanceShiftPill shift={row.timeShift} />
-                  </td>
-                  <td className="dash-time">{formatCell(row.entryStamp)}</td>
-                  <td className="dash-time">{formatCell(row.exitStamp)}</td>
-                  <td className="dash-time">
-                    {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
-                  </td>
-                  <td>
-                    <AttendanceStatusPill status={row.displayStatus} />
-                  </td>
+                  {isAdminColumnMode && adminVisibleColumns ? (
+                    adminVisibleColumns.map((colId) => (
+                      <td key={colId}>{renderAdminAttendanceCell(colId, row)}</td>
+                    ))
+                  ) : (
+                    <>
+                      <td>
+                        <Link to={`/employees/${row.employeeId}`} className="dash-emp-link">
+                          {row.employeeName}
+                        </Link>
+                      </td>
+                      <td className="font-mono text-[11px]">{row.empCode}</td>
+                      <td>{row.department}</td>
+                      <td>
+                        <AttendanceShiftPill shift={row.timeShift} />
+                      </td>
+                      <td className="dash-time">{formatCell(row.entryStamp)}</td>
+                      <td className="dash-time">{formatCell(row.exitStamp)}</td>
+                      <td className="dash-time">
+                        {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
+                      </td>
+                      <td>
+                        <AttendanceStatusPill status={row.displayStatus} />
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
           </tbody>

@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom';
 import type { DashboardAttendanceRow } from '@mams/types';
+import {
+  ADMIN_ATTENDANCE_COLUMN_LABELS,
+  type AdminAttendanceVisibleColumn,
+} from '../../lib/adminOverviewTableUtils';
 import { fmtHours } from '../../lib/format';
 import { AttendanceShiftPill, AttendanceStatusPill, useDisplayAttendanceCell } from './dashboardAttendanceUi';
 
@@ -7,12 +11,16 @@ export function DashboardAttendanceCardList({
   rows,
   isInitialLoad,
   isRefreshing,
+  visibleColumns,
 }: {
   rows: DashboardAttendanceRow[];
   isInitialLoad: boolean;
   isRefreshing: boolean;
+  visibleColumns?: AdminAttendanceVisibleColumn[];
 }) {
   const formatCell = useDisplayAttendanceCell();
+  const showField = (col: AdminAttendanceVisibleColumn) =>
+    !visibleColumns || visibleColumns.includes(col);
 
   if (isInitialLoad) {
     return (
@@ -40,36 +48,54 @@ export function DashboardAttendanceCardList({
         >
           <div className="flex items-start justify-between gap-2 mb-2">
             <div>
-              <div className="font-semibold text-text">{row.employeeName}</div>
-              <div className="font-mono text-xs text-text-muted">{row.empCode}</div>
+              {showField('name') && <div className="font-semibold text-text">{row.employeeName}</div>}
+              {showField('empCode') && (
+                <div className="font-mono text-xs text-text-muted">{row.empCode}</div>
+              )}
             </div>
-            <AttendanceStatusPill status={row.displayStatus} />
+            {showField('status') && <AttendanceStatusPill status={row.displayStatus} />}
           </div>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-            <div>
-              <dt className="text-text-subtle uppercase tracking-wider">Department</dt>
-              <dd>{row.department}</dd>
-            </div>
-            <div>
-              <dt className="text-text-subtle uppercase tracking-wider">Shift</dt>
-              <dd>
-                <AttendanceShiftPill shift={row.timeShift} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-text-subtle uppercase tracking-wider">Entry</dt>
-              <dd className="dash-time">{formatCell(row.entryStamp)}</dd>
-            </div>
-            <div>
-              <dt className="text-text-subtle uppercase tracking-wider">Exit</dt>
-              <dd className="dash-time">{formatCell(row.exitStamp)}</dd>
-            </div>
-            <div className="col-span-2">
-              <dt className="text-text-subtle uppercase tracking-wider">Hours</dt>
-              <dd className="dash-time">
-                {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
-              </dd>
-            </div>
+            {showField('department') && (
+              <div>
+                <dt className="text-text-subtle uppercase tracking-wider">
+                  {ADMIN_ATTENDANCE_COLUMN_LABELS.department}
+                </dt>
+                <dd>{row.department}</dd>
+              </div>
+            )}
+            {showField('shift') && (
+              <div>
+                <dt className="text-text-subtle uppercase tracking-wider">
+                  {ADMIN_ATTENDANCE_COLUMN_LABELS.shift}
+                </dt>
+                <dd>
+                  <AttendanceShiftPill shift={row.timeShift} />
+                </dd>
+              </div>
+            )}
+            {!visibleColumns && (
+              <>
+                <div>
+                  <dt className="text-text-subtle uppercase tracking-wider">Entry</dt>
+                  <dd className="dash-time">{formatCell(row.entryStamp)}</dd>
+                </div>
+                <div>
+                  <dt className="text-text-subtle uppercase tracking-wider">Exit</dt>
+                  <dd className="dash-time">{formatCell(row.exitStamp)}</dd>
+                </div>
+              </>
+            )}
+            {showField('hours') && (
+              <div className={visibleColumns ? '' : 'col-span-2'}>
+                <dt className="text-text-subtle uppercase tracking-wider">
+                  {ADMIN_ATTENDANCE_COLUMN_LABELS.hours}
+                </dt>
+                <dd className="dash-time">
+                  {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
+                </dd>
+              </div>
+            )}
           </dl>
         </Link>
       ))}
