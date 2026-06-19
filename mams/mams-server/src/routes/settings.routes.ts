@@ -124,13 +124,15 @@ router.patch('/', async (req, res, next) => {
     for (const [key, value] of Object.entries(patch)) {
       if (value === undefined) continue;
       if (key === 'orgBranding' && value && typeof value === 'object') {
-        const existing = ((doc as Record<string, unknown>).orgBranding ?? {}) as Record<string, unknown>;
-        (doc as Record<string, unknown>).orgBranding = {
-          ...existing,
-          ...value,
-          updatedAt: new Date(),
-          updatedBy: req.auth!.sub,
-        };
+        const existing = (doc.toObject().orgBranding ?? {}) as Record<string, unknown>;
+        Object.assign(doc, {
+          orgBranding: {
+            ...existing,
+            ...(value as Record<string, unknown>),
+            updatedAt: new Date(),
+            updatedBy: req.auth!.sub,
+          },
+        });
         continue;
       }
       (doc as any)[key] = value;
