@@ -342,6 +342,28 @@ input, select, textarea {
   .segment-btn--active {
     @apply bg-primary-bg text-primary-on-bg font-semibold;
   }
+  .theme-toggle {
+    @apply inline-flex rounded-md border border-border bg-surface2 p-0.5 shrink-0;
+  }
+  .theme-toggle--busy {
+    @apply opacity-50 pointer-events-none;
+  }
+  .theme-toggle-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded text-text-muted transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface2;
+  }
+  .theme-toggle-btn--compact {
+    @apply p-2 w-8 h-8;
+  }
+  .theme-toggle-btn:not(.theme-toggle-btn--compact) {
+    @apply px-2.5 py-1.5 text-xs font-semibold;
+  }
+  .theme-toggle-btn:hover:not(.theme-toggle-btn--active) {
+    @apply text-text;
+  }
+  .theme-toggle-btn--active {
+    @apply bg-primary-bg text-primary-on-bg shadow-sm;
+  }
   .dash-layout-blocked-msg {
     @apply text-xs text-amber bg-amber-bg border border-amber/30 rounded-lg px-3 py-2 mb-3;
   }
@@ -508,7 +530,7 @@ input, select, textarea {
   width: 3px;
   height: 24px;
   border-radius: 0 3px 3px 0;
-  background: var(--color-surface);
+  background: var(--color-red);
 }
 .sidebar-nav-scroll {
   scrollbar-width: thin;

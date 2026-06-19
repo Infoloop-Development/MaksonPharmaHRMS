@@ -3,6 +3,7 @@ import { METRICS_BY_CHART_TYPE } from '@mams/types';
 import {
   ALL_CHART_TYPES,
   canAccessMetric,
+  getAllMetricChartPairs,
   getMetricsForChartType,
 } from './adminOverviewChartRegistry';
 
@@ -38,5 +39,17 @@ describe('adminOverviewChartRegistry', () => {
 
   it('devices_online is accessible without extra permissions', () => {
     expect(canAccessMetric('devices_online', [])).toBe(true);
+  });
+
+  it('getAllMetricChartPairs lists every chart type + metric combo', () => {
+    const perms = [...orgAdminPerms];
+    const pairs = getAllMetricChartPairs(perms);
+    const expected = ALL_CHART_TYPES.reduce(
+      (sum, type) => sum + getMetricsForChartType(type, perms).length,
+      0
+    );
+    expect(pairs).toHaveLength(expected);
+    expect(pairs.some((p) => p.chartType === 'bar' && p.metricId === 'present')).toBe(true);
+    expect(pairs.some((p) => p.chartType === 'donut' && p.metricId === 'attendance_punctuality')).toBe(true);
   });
 });

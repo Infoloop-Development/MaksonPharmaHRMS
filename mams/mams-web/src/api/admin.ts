@@ -26,12 +26,7 @@ export interface SystemHealthResponse {
   ts: string;
 }
 
-export interface FeatureFlagsResponse {
-  unmaskEnabled: boolean;
-  autogenDemoEnabled: boolean;
-  note?: string;
-  changed?: Record<string, boolean>;
-}
+import type { FeatureFlagId, FeatureFlagsPatchBody, FeatureFlagsResponse } from '@mams/types';
 
 function buildParams(q: Record<string, string | number | undefined>) {
   const params = new URLSearchParams();
@@ -151,7 +146,7 @@ export const adminOverviewApi = {
 export const adminApi = {
   health: () => api.get<SystemHealthResponse>('/admin/health'),
   getFeatureFlags: () => api.get<FeatureFlagsResponse>('/admin/feature-flags'),
-  patchFeatureFlags: (body: { unmaskEnabled?: boolean; autogenDemoEnabled?: boolean }) =>
+  patchFeatureFlags: (body: FeatureFlagsPatchBody) =>
     api.patch<FeatureFlagsResponse>('/admin/feature-flags', body),
   ...adminOverviewApi,
 };
