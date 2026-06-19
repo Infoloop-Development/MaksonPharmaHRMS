@@ -64,11 +64,13 @@ export function Toggle({
   checked,
   onChange,
   label,
+  ariaLabel,
   disabled,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label?: string;
+  ariaLabel?: string;
   disabled?: boolean;
 }) {
   return (
@@ -76,6 +78,7 @@ export function Toggle({
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel ?? label}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={`flex items-center gap-2 group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}

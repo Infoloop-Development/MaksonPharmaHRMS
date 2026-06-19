@@ -95,6 +95,47 @@ export function getChartTypeLabel(chartType: AdminChartType): string {
   return CHART_TYPE_META[chartType].label;
 }
 
+/** Short label for "All" picker view, e.g. Present (bar) */
+export function getChartTypeShortLabel(chartType: AdminChartType): string {
+  const short: Record<AdminChartType, string> = {
+    line: 'line',
+    area: 'area',
+    bar: 'bar',
+    stacked_bar: 'stacked bar',
+    pie: 'pie',
+    donut: 'donut',
+    horizontal_bar: 'horizontal bar',
+  };
+  return short[chartType];
+}
+
+export type MetricChartPair = { chartType: AdminChartType; metricId: AdminChartMetricId };
+
+export function getAllMetricChartPairs(permissions: Permission[]): MetricChartPair[] {
+  const pairs: MetricChartPair[] = [];
+  for (const chartType of ALL_CHART_TYPES) {
+    for (const metricId of getMetricsForChartType(chartType, permissions)) {
+      pairs.push({ chartType, metricId });
+    }
+  }
+  return pairs;
+}
+
+export function allMetricsByCategory(
+  permissions: Permission[]
+): Record<MetricCategory, MetricChartPair[]> {
+  const out: Record<MetricCategory, MetricChartPair[]> = {
+    HR: [],
+    Governance: [],
+    Security: [],
+    Devices: [],
+  };
+  for (const pair of getAllMetricChartPairs(permissions)) {
+    out[METRIC_META[pair.metricId].category].push(pair);
+  }
+  return out;
+}
+
 export function getTrendSeries(
   analytics: AdminOverviewAnalyticsPayload,
   metricId: AdminChartMetricId

@@ -6,10 +6,15 @@ import {
   CHART_TYPE_META,
   METRIC_CATEGORIES,
   METRIC_META,
+  allMetricsByCategory,
+  getAllMetricChartPairs,
+  getChartTypeShortLabel,
   getDefaultMetricForChartType,
   getMetricsForChartType,
   metricsByCategory,
 } from '../../../lib/adminOverviewChartRegistry';
+
+type PickerView = 'all' | AdminChartType;
 
 export function AdminWidgetPicker({
   current,
@@ -22,6 +27,7 @@ export function AdminWidgetPicker({
   onSelect: (widget: Pick<AdminOverviewWidget, 'chartType' | 'metricId'>) => void;
   onClose: () => void;
 }) {
+  const [pickerView, setPickerView] = useState<PickerView>(current?.chartType ?? 'bar');
   const [chartType, setChartType] = useState<AdminChartType>(current?.chartType ?? 'bar');
   const [metricId, setMetricId] = useState<AdminChartMetricId>(
     current?.metricId ?? getDefaultMetricForChartType('bar', permissions)
@@ -29,20 +35,30 @@ export function AdminWidgetPicker({
 
   useEffect(() => {
     if (current) {
+      setPickerView(current.chartType);
       setChartType(current.chartType);
       setMetricId(current.metricId);
     }
   }, [current]);
 
   useEffect(() => {
+    if (pickerView === 'all') return;
     const allowed = getMetricsForChartType(chartType, permissions);
     if (!allowed.includes(metricId)) {
       setMetricId(getDefaultMetricForChartType(chartType, permissions));
     }
-  }, [chartType, permissions, metricId]);
+  }, [chartType, permissions, metricId, pickerView]);
 
   const grouped = metricsByCategory(chartType, permissions);
-  const allowedMetrics = getMetricsForChartType(chartType, permissions);
+  const allGrouped = allMetricsByCategory(permissions);
+  const allPairs = getAllMetricChartPairs(permissions);
+  const allowedMetrics = pickerView === 'all' ? allPairs.map((p) => p.metricId) : getMetricsForChartType(chartType, permissions);
+  const hasOptions = pickerView === 'all' ? allPairs.length > 0 : allowedMetrics.length > 0;
+
+  const selectPair = (type: AdminChartType, id: AdminChartMetricId) => {
+    setChartType(type);
+    setMetricId(id);
+  };
 
   return (
     <div
@@ -61,7 +77,9 @@ export function AdminWidgetPicker({
             Configure chart
           </h2>
           <p className="text-xs text-text-muted mt-1">
-            Pick a chart type on the left, then choose the data to display.
+            {pickerView === 'all'
+              ? 'Browse every chart and metric combination, or pick a chart type on the left.'
+              : 'Pick a chart type on the left, then choose the data to display.'}
           </p>
         </div>
 
@@ -69,6 +87,26 @@ export function AdminWidgetPicker({
           <div className="sm:w-[200px] shrink-0 border-b sm:border-b-0 sm:border-r border-border p-2 overflow-y-auto">
             <div className="text-xs font-bold uppercase text-text-muted px-2 py-1 mb-1">Chart type</div>
             <ul className="space-y-1">
+              <li>
+                <button
+                  type="button"
+                  disabled={allPairs.length === 0}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                    allPairs.length === 0
+                      ? 'opacity-40 cursor-not-allowed'
+                      : pickerView === 'all'
+                        ? 'bg-primary-bg text-primary-on-bg font-semibold'
+                        : 'hover:bg-surface2'
+                  }`}
+                  onClick={() => allPairs.length > 0 && setPickerView('all')}
+                >
+                  <span className="mr-1.5">⊞</span>
+                  All
+                  <span className="block text-[10px] text-text-muted font-normal mt-0.5">
+                    {allPairs.length} options
+                  </span>
+                </button>
+              </li>
               {ALL_CHART_TYPES.map((type) => {
                 const meta = CHART_TYPE_META[type];
                 const count = getMetricsForChartType(type, permissions).length;
@@ -81,11 +119,15 @@ export function AdminWidgetPicker({
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
                         disabled
                           ? 'opacity-40 cursor-not-allowed'
-                          : chartType === type
+                          : pickerView === type
                             ? 'bg-primary-bg text-primary-on-bg font-semibold'
                             : 'hover:bg-surface2'
                       }`}
-                      onClick={() => !disabled && setChartType(type)}
+                      onClick={() => {
+                        if (disabled) return;
+                        setPickerView(type);
+                        setChartType(type);
+                      }}
                     >
                       <span className="mr-1.5">{meta.icon}</span>
                       {meta.label}
@@ -100,10 +142,49 @@ export function AdminWidgetPicker({
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 min-h-[200px]">
-            {allowedMetrics.length === 0 ? (
+            {!hasOptions ? (
               <p className="text-sm text-text-muted p-4 text-center">
                 No metrics available for this chart type with your permissions.
               </p>
+            ) : pickerView === 'all' ? (
+              <ul className="space-y-3">
+                {METRIC_CATEGORIES.map((cat) => {
+                  const items = allGrouped[cat];
+                  if (!items.length) return null;
+                  return (
+                    <li key={cat}>
+                      <div className="text-xs font-bold uppercase text-text-muted mb-1 flex items-center gap-2">
+                        {cat}
+                        <span className="bg-surface2 px-1.5 py-0.5 rounded text-[10px]">{items.length}</span>
+                      </div>
+                      <ul className="space-y-1">
+                        {items.map(({ chartType: type, metricId: id }) => {
+                          const selected = chartType === type && metricId === id;
+                          return (
+                            <li key={`${type}-${id}`}>
+                              <button
+                                type="button"
+                                className={`dash-kpi-picker-option w-full text-left px-3 py-2 rounded text-sm hover:bg-surface2 ${
+                                  selected ? 'bg-primary-bg text-primary-on-bg font-semibold' : ''
+                                }`}
+                                onClick={() => selectPair(type, id)}
+                              >
+                                <div className="font-medium">
+                                  {METRIC_META[id].label}{' '}
+                                  <span className="font-normal opacity-80">
+                                    ({getChartTypeShortLabel(type)})
+                                  </span>
+                                </div>
+                                <div className="text-xs text-text-muted">{METRIC_META[id].description}</div>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
             ) : (
               <ul className="space-y-3">
                 {METRIC_CATEGORIES.map((cat) => {
@@ -146,7 +227,7 @@ export function AdminWidgetPicker({
           <button
             type="button"
             className="btn-primary btn-sm flex-1"
-            disabled={allowedMetrics.length === 0}
+            disabled={!hasOptions}
             onClick={() => {
               onSelect({ chartType, metricId });
               onClose();

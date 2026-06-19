@@ -78,6 +78,20 @@ const settingsSchema = new Schema(
     timeFormat: { type: String, enum: ['12h', '24h'], default: '12h' },
     companyLogo: { type: String, default: null },
     favicon: { type: String, default: null },
+    featureFlags: {
+      type: {
+        unmaskEnabled: { type: Boolean, default: null },
+        autogenDemoEnabled: { type: Boolean, default: null },
+        updatedAt: { type: Date, default: null },
+        updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+      },
+      default: () => ({
+        unmaskEnabled: null,
+        autogenDemoEnabled: null,
+        updatedAt: null,
+        updatedBy: null,
+      }),
+    },
   },
   { timestamps: true }
 );
