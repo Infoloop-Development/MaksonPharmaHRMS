@@ -22,6 +22,19 @@
   --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
   --color-rdp-accent: #1a2878;
   --color-rdp-accent-bg: #e8eaf5;
+  --color-brand-primary: #1a2878;
+  --color-brand-primary-rgb: 26 40 120;
+  --color-brand-primary-light: #2e3f99;
+  --color-brand-primary-light-rgb: 46 63 153;
+  --color-brand-primary-text: #ffffff;
+  --color-brand-secondary: #e82c2c;
+  --color-brand-secondary-rgb: 232 44 44;
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: rgba(255, 255, 255, 0.72);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.1);
+  --sidebar-active-bg: color-mix(in srgb, var(--color-brand-secondary) 25%, transparent);
+  --font-brand-sans: "DM Sans", system-ui, sans-serif;
 }
 
 .dark {
@@ -54,6 +67,7 @@ body {
   -webkit-font-smoothing: antialiased;
   background: var(--color-bg);
   color: var(--color-text);
+  font-family: var(--font-brand-sans);
 }
 
 input, select, textarea {
@@ -65,7 +79,8 @@ input, select, textarea {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-semibold text-sm transition-colors;
   }
   .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-light disabled:opacity-50;
+    @apply btn bg-primary hover:bg-primary-light disabled:opacity-50;
+    color: var(--color-brand-primary-text, #ffffff);
   }
   .btn-outline {
     @apply btn border border-border bg-surface text-text hover:bg-surface2 disabled:opacity-50;
@@ -530,7 +545,37 @@ input, select, textarea {
   width: 3px;
   height: 24px;
   border-radius: 0 3px 3px 0;
-  background: var(--color-red);
+  background: var(--color-brand-secondary, var(--color-red));
+}
+.sidebar-shell {
+  background-color: var(--color-brand-primary);
+  color: var(--sidebar-text);
+}
+.sidebar-shell .sidebar-divider {
+  border-color: var(--sidebar-border);
+}
+.sidebar-shell .sidebar-muted {
+  color: var(--sidebar-text-muted);
+}
+.sidebar-shell .sidebar-nav-link:not(.sidebar-nav-link--active) {
+  color: var(--sidebar-text-muted);
+}
+.sidebar-shell .sidebar-nav-link:not(.sidebar-nav-link--active):hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
+}
+.sidebar-shell .sidebar-nav-link--active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-text);
+}
+.sidebar-shell .sidebar-icon-btn:hover {
+  background: var(--sidebar-hover-bg);
+}
+.sidebar-shell .sidebar-logo-bg {
+  background: var(--sidebar-hover-bg);
+}
+.sidebar-shell .sidebar-avatar-bg {
+  background: color-mix(in srgb, var(--color-brand-secondary) 30%, transparent);
 }
 .sidebar-nav-scroll {
   scrollbar-width: thin;

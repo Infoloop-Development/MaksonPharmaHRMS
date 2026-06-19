@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ThemeProvider } from './store/theme';
+import { OrgBrandingProvider } from './store/orgBranding';
+import { bootstrapOrgBrandingFromCache } from './lib/orgBrandingCache';
 import './styles/index.css';
+
+bootstrapOrgBrandingFromCache();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,9 +26,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ThemeProvider>
-          <ErrorBoundary>
-            <App />
-          </ErrorBoundary>
+          <OrgBrandingProvider>
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
+          </OrgBrandingProvider>
         </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>

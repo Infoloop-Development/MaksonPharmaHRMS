@@ -19,6 +19,8 @@ export const activityApi = {
     if (q.entityType) params.set('entityType', q.entityType);
     if (q.from) params.set('from', q.from);
     if (q.to) params.set('to', q.to);
+    if (q.search) params.set('search', q.search);
+    if (q.category) params.set('category', q.category);
     const qs = params.toString();
     return api.get<ActivityListResponse>(`/activity/org${qs ? `?${qs}` : ''}`);
   },

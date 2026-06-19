@@ -24,6 +24,8 @@ vi.mock('../src/services/audit.service.js', async (importOriginal) => {
 const {
   logUiActivity,
   listMyActivity,
+  listOrgActivity,
+  buildCategoryFilter,
   assertUiPayloadSize,
   settingsSectionFromChangedFields,
   diffSettingsValues,
@@ -117,5 +119,47 @@ describe('activity.service', () => {
     const doc = { companyName: 'Same', cin: 'U123' };
     const { changedFields } = diffSettingsValues(doc, { companyName: 'Same', cin: 'U123' });
     expect(changedFields).toEqual([]);
+  });
+
+  it('buildCategoryFilter maps auth to login events', () => {
+    expect(buildCategoryFilter('auth')).toEqual({
+      eventType: { $in: ['login', 'logout', 'password_changed'] },
+    });
+  });
+
+  it('buildCategoryFilter maps company to settings sections', () => {
+    expect(buildCategoryFilter('company')).toEqual({
+      eventType: 'settings_changed',
+      'payload.section': { $in: ['company', 'compliance', 'brand_assets'] },
+    });
+  });
+
+  it('buildCategoryFilter returns null for all', () => {
+    expect(buildCategoryFilter('all')).toBeNull();
+  });
+
+  it('listOrgActivity applies category filter', async () => {
+    auditCount.mockResolvedValue(0);
+    auditFind.mockReturnValue({
+      sort: () => ({
+        skip: () => ({
+          limit: () => ({
+            lean: async () => [],
+          }),
+        }),
+      }),
+    });
+
+    await listOrgActivity({ page: 1, pageSize: 50, category: 'auth' });
+
+    expect(auditCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        $and: expect.arrayContaining([
+          expect.objectContaining({
+            eventType: { $in: ['login', 'logout', 'password_changed'] },
+          }),
+        ]),
+      })
+    );
   });
 });
