@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { activityApi, ORG_ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { usersApi } from '../../api/users';
-import { ActivityDescription } from '../../components/activity/ActivityDescription';
-import { activityPageBadge } from '../../lib/activityLabels';
-import type { Role } from '@mams/types';
+import { AuditLogActiveFilters, AuditLogResults } from '../../components/activity/AuditLogResults';
+import { AuditLogTabBar } from '../../components/activity/AuditLogTabBar';
+import { SearchableUserSelect } from '../../components/ui/SearchableUserSelect';
+import type { AuditLogCategory, Role } from '@mams/types';
 import { ROLE_LABELS } from '@mams/types';
 
 const PAGE_SIZE = 50;
@@ -13,24 +14,35 @@ export function AdminAudit() {
   const [page, setPage] = useState(1);
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState('');
-  const [eventType, setEventType] = useState('');
+  const [category, setCategory] = useState<AuditLogCategory>('all');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
   const { data, isLoading } = useQuery({
-    queryKey: [...ORG_ACTIVITY_QUERY_PREFIX, page, userId, role, eventType],
+    queryKey: [...ORG_ACTIVITY_QUERY_PREFIX, page, userId, role, category, debouncedSearch],
     queryFn: () =>
       activityApi.listOrg({
         page,
         pageSize: PAGE_SIZE,
         userId: userId || undefined,
         role: role || undefined,
-        eventType: eventType || undefined,
+        category: category === 'all' ? undefined : category,
+        search: debouncedSearch.trim() || undefined,
       }),
   });
 
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const selectedUser = users?.items.find((u) => u._id === userId);
+
+  const resetPage = () => setPage(1);
 
   const exportCsv = () => {
     if (!data?.items.length) return;
@@ -68,56 +80,110 @@ export function AdminAudit() {
         </button>
       </div>
 
+      <AuditLogTabBar
+        category={category}
+        onCategoryChange={(next) => {
+          setCategory(next);
+          resetPage();
+        }}
+      />
+
       <div className="card p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <label className="text-sm">
-          <span className="label block mb-1">User</span>
-          <select className="input" value={userId} onChange={(e) => { setUserId(e.target.value); setPage(1); }}>
-            <option value="">All users</option>
-            {users?.items.map((u) => (
-              <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
-            ))}
-          </select>
+        <label className="text-sm sm:col-span-1">
+          <span className="label block mb-1">Search</span>
+          <input
+            className="input"
+            type="search"
+            value={search}
+            placeholder="Search events…"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              resetPage();
+            }}
+          />
         </label>
-        <label className="text-sm">
+        <label className="text-sm sm:col-span-1">
+          <span className="label block mb-1">User</span>
+          <SearchableUserSelect
+            value={userId}
+            users={users?.items}
+            onChange={(id) => {
+              setUserId(id);
+              resetPage();
+            }}
+          />
+        </label>
+        <label className="text-sm sm:col-span-1">
           <span className="label block mb-1">Role</span>
-          <select className="input" value={role} onChange={(e) => { setRole(e.target.value); setPage(1); }}>
+          <select
+            className="input"
+            value={role}
+            onChange={(e) => {
+              setRole(e.target.value);
+              resetPage();
+            }}
+          >
             <option value="">All roles</option>
             {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
-              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+              <option key={r} value={r}>
+                {ROLE_LABELS[r]}
+              </option>
             ))}
           </select>
-        </label>
-        <label className="text-sm">
-          <span className="label block mb-1">Event type</span>
-          <input className="input" value={eventType} placeholder="e.g. user_created" onChange={(e) => { setEventType(e.target.value); setPage(1); }} />
         </label>
       </div>
 
       <div className="card p-4">
-        {isLoading && <div className="text-sm text-text-muted py-6 text-center">Loading audit…</div>}
-        {!isLoading && !data?.items.length && (
-          <div className="text-sm text-text-muted py-6 text-center">No matching events.</div>
-        )}
-        <div className="space-y-3">
-          {data?.items.map((row) => (
-            <div key={row.id} className="border border-border rounded-lg p-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-xs text-text-muted">{new Date(row.occurredAt).toLocaleString()}</span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-surface2">{activityPageBadge(row.eventType, row.payload)}</span>
-                {row.userName && (
-                  <span className="text-xs text-text-muted">{row.userName} · {row.userRole}</span>
-                )}
-              </div>
-              <ActivityDescription item={row} />
-            </div>
-          ))}
-        </div>
+        <AuditLogActiveFilters
+          filters={{
+            category,
+            userId,
+            userName: selectedUser?.name,
+            role,
+            search,
+          }}
+          onClearCategory={() => {
+            setCategory('all');
+            resetPage();
+          }}
+          onClearUser={() => {
+            setUserId('');
+            resetPage();
+          }}
+          onClearRole={() => {
+            setRole('');
+            resetPage();
+          }}
+          onClearSearch={() => {
+            setSearch('');
+            resetPage();
+          }}
+        />
+
+        <AuditLogResults items={data?.items} isLoading={isLoading} />
+
         {total > PAGE_SIZE && (
           <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="text-text-muted">Page {page} of {pageCount} ({total} events)</span>
+            <span className="text-text-muted">
+              Page {page} of {pageCount} ({total} events)
+            </span>
             <div className="flex gap-2">
-              <button type="button" className="btn-outline btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-              <button type="button" className="btn-outline btn-sm" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)}>Next</button>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                disabled={page >= pageCount}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </button>
             </div>
           </div>
         )}

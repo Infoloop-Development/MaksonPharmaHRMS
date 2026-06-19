@@ -7,9 +7,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#1A2878', light: '#2E3F99', bg: 'var(--color-primary-bg)' },
+        primary: {
+          DEFAULT: 'rgb(var(--color-brand-primary-rgb) / <alpha-value>)',
+          light: 'rgb(var(--color-brand-primary-light-rgb) / <alpha-value>)',
+          bg: 'var(--color-primary-bg)',
+        },
         accent: { DEFAULT: '#7AC142', dark: '#5A9931' },
-        red: { DEFAULT: 'var(--color-red)', bg: 'var(--color-red-bg)' },
+        red: { DEFAULT: 'rgb(var(--color-brand-secondary-rgb) / <alpha-value>)', bg: 'var(--color-red-bg)' },
         amber: { DEFAULT: '#f59e0b', bg: 'var(--color-amber-bg)' },
         green: { DEFAULT: '#73ae25', bg: 'var(--color-green-bg)', dark: '#5f9420' },
         'primary-on-bg': 'var(--color-primary-on-bg)',
@@ -25,7 +29,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-brand-sans)', 'DM Sans', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       boxShadow: {

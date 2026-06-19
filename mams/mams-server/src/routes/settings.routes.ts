@@ -5,6 +5,7 @@ import {
   ExportNamingSettingsSchema,
   FaviconSchema,
   LeaveQuotaResetPolicySchema,
+  OrgBrandingSchema,
   TimeFormatSchema,
 } from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
@@ -54,6 +55,7 @@ const SettingsPatchSchema = z.object({
   timeFormat: TimeFormatSchema.optional(),
   companyLogo: CompanyLogoSchema.optional(),
   favicon: FaviconSchema.optional(),
+  orgBranding: OrgBrandingSchema.optional(),
 });
 
 const ORG_SETTINGS_FIELDS = new Set([
@@ -75,6 +77,7 @@ const ORG_SETTINGS_FIELDS = new Set([
   'timeFormat',
   'companyLogo',
   'favicon',
+  'orgBranding',
   'exportNaming',
 ]);
 
@@ -120,6 +123,16 @@ router.patch('/', async (req, res, next) => {
 
     for (const [key, value] of Object.entries(patch)) {
       if (value === undefined) continue;
+      if (key === 'orgBranding' && value && typeof value === 'object') {
+        const existing = ((doc as Record<string, unknown>).orgBranding ?? {}) as Record<string, unknown>;
+        (doc as Record<string, unknown>).orgBranding = {
+          ...existing,
+          ...value,
+          updatedAt: new Date(),
+          updatedBy: req.auth!.sub,
+        };
+        continue;
+      }
       (doc as any)[key] = value;
     }
     await doc.save();

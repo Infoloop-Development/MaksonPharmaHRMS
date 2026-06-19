@@ -10,6 +10,7 @@ export * from './device.js';
 export * from './punchEvent.js';
 export * from './settings.js';
 export * from './brandAssets.js';
+export * from './orgBranding.js';
 export * from './exportNaming.js';
 export * from './activity.js';
 export * from './dashboardAttendance.js';

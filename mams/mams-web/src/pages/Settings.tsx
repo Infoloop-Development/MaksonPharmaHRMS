@@ -29,6 +29,7 @@ import { isUnmaskEnabled } from '../config/featureFlags';
 import { z } from 'zod';
 import { ActivityLogPanel } from '../components/activity/ActivityLogPanel';
 import { BrandAssetsCard } from '../components/settings/BrandAssetsCard';
+import { BrandThemeSection } from '../components/settings/BrandThemeSection';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
@@ -202,6 +203,7 @@ export function OrganizationSettingsPanel() {
     false;
 
   const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get });
+  const [logoVersion, setLogoVersion] = useState<string | null>(null);
 
   if (isLoading) return <div className="text-text-muted">Loading...</div>;
   if (!data) return <div className="text-red">Failed to load settings.</div>;
@@ -218,7 +220,14 @@ export function OrganizationSettingsPanel() {
         <TimeDisplayCard settings={data} canManage={canManage} />
       </SettingsLayoutCell>
       <SettingsLayoutCell full>
-        <BrandAssetsCard settings={data} canManage={canManage} />
+        <BrandAssetsCard
+          settings={data}
+          canManage={canManage}
+          onLogoUpdated={(url) => setLogoVersion(url ?? `removed-${Date.now()}`)}
+        />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell full>
+        <BrandThemeSection settings={data} canManage={canManage} logoVersion={logoVersion} />
       </SettingsLayoutCell>
       <SettingsLayoutCell>
         <CompanyInfoCard settings={data} canManage={canManage} />

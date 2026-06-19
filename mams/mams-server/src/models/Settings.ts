@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from 'mongoose';
-import { DEFAULT_EXPORT_NAMING } from '@mams/types';
+import { DEFAULT_EXPORT_NAMING, DEFAULT_ORG_BRANDING } from '@mams/types';
 
 /**
  * Singleton: there is exactly one Settings document.
@@ -78,6 +78,24 @@ const settingsSchema = new Schema(
     timeFormat: { type: String, enum: ['12h', '24h'], default: '12h' },
     companyLogo: { type: String, default: null },
     favicon: { type: String, default: null },
+    orgBranding: {
+      type: {
+        primaryColor: { type: String, default: DEFAULT_ORG_BRANDING.primaryColor },
+        secondaryColor: { type: String, default: DEFAULT_ORG_BRANDING.secondaryColor },
+        fontFamily: { type: String, default: DEFAULT_ORG_BRANDING.fontFamily },
+        logoPalette: { type: [String], default: () => [...DEFAULT_ORG_BRANDING.logoPalette] },
+        updatedAt: { type: Date, default: null },
+        updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+      },
+      default: () => ({
+        primaryColor: DEFAULT_ORG_BRANDING.primaryColor,
+        secondaryColor: DEFAULT_ORG_BRANDING.secondaryColor,
+        fontFamily: DEFAULT_ORG_BRANDING.fontFamily,
+        logoPalette: [...DEFAULT_ORG_BRANDING.logoPalette],
+        updatedAt: null,
+        updatedBy: null,
+      }),
+    },
     featureFlags: {
       type: {
         unmaskEnabled: { type: Boolean, default: null },
