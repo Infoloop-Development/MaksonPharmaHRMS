@@ -110,9 +110,10 @@ export async function getFeatureFlagsResponse(): Promise<FeatureFlagsResponse> {
 
   const flags = FEATURE_FLAG_CATALOG.map((entry) => {
     if (entry.source === 'featureFlags') {
+      const runtimeId = entry.id as 'unmaskEnabled' | 'autogenDemoEnabled';
       const mongoValue =
-        entry.id === 'unmaskEnabled' ? cached.unmaskEnabled ?? null : cached.autogenDemoEnabled ?? null;
-      const { enabled, effectiveSource, envValue } = runtimeFlagState(entry.id, mongoValue);
+        runtimeId === 'unmaskEnabled' ? cached.unmaskEnabled ?? null : cached.autogenDemoEnabled ?? null;
+      const { enabled, effectiveSource, envValue } = runtimeFlagState(runtimeId, mongoValue);
       return {
         ...entry,
         enabled,
@@ -192,7 +193,7 @@ async function patchSettingsFlag(
   const patch = { [field]: enabled };
   const { before, after, changedFields } = diffSettingsValues(docBefore, patch);
 
-  (doc as Record<string, unknown>)[field] = enabled;
+  Object.assign(doc, { [field]: enabled });
   await doc.save();
 
   if (changedFields.length > 0) {
