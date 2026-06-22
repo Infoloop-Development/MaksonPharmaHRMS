@@ -265,7 +265,7 @@ function SettingsLayoutCell({
   return <div className={full ? 'settings-layout__full settings-layout__cell' : 'settings-layout__cell'}>{children}</div>;
 }
 
-function SectionCard({
+export function SectionCard({
   title,
   children,
   footer,

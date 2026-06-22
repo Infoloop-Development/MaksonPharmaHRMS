@@ -30,7 +30,7 @@ function buildNav(isCompliant: boolean) {
   return nav;
 }
 
-export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: boolean; onClose: () => void; collapsed:boolean; onToggleCollapsed: () => void; }) {
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const location = useLocation();
@@ -45,13 +45,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   }, [location.pathname, onClose]);
 
   return (
-    <aside
-      className={`sidebar-shell fixed top-0 left-0 bottom-0 w-[250px] max-w-[85vw] flex flex-col z-30 transition-transform duration-200 ease-out lg:translate-x-0 ${
+     <aside
+      className={`sidebar-shell fixed top-0 left-0 bottom-0 w-[250px] max-w-[85vw] flex flex-col z-30 transition-all duration-200 ease-out lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
-      }`}
+      } ${collapsed ? 'lg:w-[76px]' : 'lg:w-[250px]'}`}
     >
       <div className="px-4 lg:px-6 py-4 lg:py-5 border-b sidebar-divider flex items-start justify-between gap-2">
-        <div>
+        <div className={collapsed ? 'lg:hidden' : ''}>
           {settings?.companyLogo && (
             <img
               src={settings.companyLogo}
@@ -62,6 +62,23 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           <div className="text-[10px] tracking-[2px] uppercase sidebar-muted mb-1">Attendance System</div>
           <h1 className="text-base font-bold">{settings?.companyName ?? 'Makson Group'}</h1>
         </div>
+        {collapsed && settings?.companyLogo && (
+          <img
+            src={settings.companyLogo}
+            alt="Company logo"
+            className="hidden lg:block w-9 h-9 rounded-md object-contain sidebar-logo-bg p-0.5 mx-auto"
+          />
+        )}
+        <button
+          type="button"
+          className="sidebar-icon-btn hidden lg:flex w-8 h-8 rounded-md items-center justify-center shrink-0 touch-target-sm"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={onToggleCollapsed}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={collapsed ? 'rotate-180' : ''}>
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
         <button
           type="button"
           className="sidebar-icon-btn lg:hidden w-10 h-10 rounded-md flex items-center justify-center shrink-0 touch-target"
@@ -77,33 +94,38 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Administration</div>
             <NavLink
               to="/admin"
+              title={collapsed ? "Admin Console" : undefined}
               className={({ isActive }) =>
                 `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
-                  isActive ? 'sidebar-nav-link--active font-semibold' : ''
+                  collapsed ? 'lg:justify-center': ''}
+                  ${isActive ? 'sidebar-nav-link--active font-semibold' : ''
                 }`
               }
             >
               <NavIcon name="settings" />
-              <span>Admin Console</span>
+              {!collapsed && <span className="lg:inline">Admin Console</span>}
             </NavLink>
-            <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 pt-3 font-semibold">HR modules</div>
+            {!collapsed && (
+              <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 pt-3 font-semibold">HR modules</div>
+            )}
           </>
         )}
-        {user && isOrgAdminRole(user.role) ? null : (
+        {(!user || !isOrgAdminRole(user.role)) && !collapsed && (
           <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Navigation</div>
         )}
         {buildNav(isCompliant).map((n) => (
           <NavLink
             key={n.to}
             to={n.to}
+            title={collapsed ? n.label : undefined}
             className={({ isActive }) =>
               `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
-                isActive ? 'sidebar-nav-link--active font-semibold' : ''
-              }`
+                collapsed ? 'lg:justify-center' : ''
+              } ${isActive ? 'sidebar-nav-link--active font-semibold' : ''}`
             }
           >
             <NavIcon name={n.icon} />
-            <span>{n.label}</span>
+            {!collapsed && <span>{n.label}</span>}
           </NavLink>
         ))}
       </nav>
