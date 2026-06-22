@@ -26,7 +26,7 @@ function OutsideShiftBadge({ punch }: { punch: PunchRow }) {
   }
   if (punch.outsideMainShift === false) {
     return (
-      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-bg text-green-dark">
+      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-bg text-green-on-bg">
         OK
       </span>
     );
@@ -75,7 +75,7 @@ export function PunchCardList({
             <span
               className={`px-2 py-1 rounded text-[10px] font-semibold shrink-0 ${
                 p.punchType === 'IN'
-                  ? 'bg-green-bg text-green-dark'
+                  ? 'bg-green-bg text-green-on-bg'
                   : p.punchType === 'OUT'
                     ? 'bg-amber-bg text-amber'
                     : 'bg-surface2 text-text-muted'

@@ -52,7 +52,7 @@ export function useActivityLog() {
 
   const logDashboardAction = useCallback(
     (
-      eventType: 'ui.dashboard.filter' | 'ui.dashboard.export_xlsx',
+      eventType: 'ui.dashboard.filter' | 'ui.dashboard.export_xlsx' | 'ui.dashboard.export_pdf',
       payload: Record<string, unknown>
     ) => {
       logUi(eventType, 'dashboard', eventType.replace('ui.dashboard.', ''), payload);

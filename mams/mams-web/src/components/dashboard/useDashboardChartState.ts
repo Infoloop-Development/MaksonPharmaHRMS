@@ -11,6 +11,8 @@ import '../../lib/chartSetup';
 import type { DashboardCharts as DashboardChartsPayload } from '../../api/dashboard';
 import type { BarMetric } from '../../lib/dashboardKpiRegistry';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../lib/format';
+import { useTheme } from '../../hooks/useTheme';
+import { getChartColors } from '../../lib/chartColors';
 
 export const BAR_CHART_HEIGHT = 'h-[200px]';
 export const DONUT_CHART_SIZE = 'w-[160px] h-[160px]';
@@ -22,19 +24,6 @@ const ROUNDED_ALL = {
   topRight: BAR_RADIUS,
   bottomLeft: BAR_RADIUS,
   bottomRight: BAR_RADIUS,
-};
-
-export const CHART_COLORS = {
-  navy: '#1A2878',
-  presentInactive: '#B0BFD8',
-  red: '#E82C2C',
-  redInactive: '#f5a8a8',
-  amber: '#f59e0b',
-  amberInactive: '#fcd9a0',
-  muted: '#8492a6',
-  text: '#1a1f36',
-  border: '#e2e6ed',
-  green: '#73ae25',
 };
 
 function dimColor(hex: string, alpha = 0.35): string {
@@ -65,6 +54,12 @@ export function useDashboardChartState({
   statusFilter,
   onStatusFilterChange,
 }: UseDashboardChartStateProps) {
+  const { resolvedTheme } = useTheme();
+  const CHART_COLORS = useMemo(
+    () => getChartColors(resolvedTheme === 'dark'),
+    [resolvedTheme],
+  );
+
   const data = chartsData;
   const isInitialLoad = !data && chartsFetching;
   const donutRefreshing = chartsFetching && Boolean(data);
@@ -254,7 +249,7 @@ export function useDashboardChartState({
         },
       } satisfies ChartOptions<'bar'>,
     };
-  }, [data, selectedDayIndex, hoveredDayIndex, onSelectedDateChange, barMetric, barLabel]);
+  }, [data, selectedDayIndex, hoveredDayIndex, onSelectedDateChange, barMetric, barLabel, CHART_COLORS]);
 
   const donutMeta = useMemo(() => {
     if (!data) return null;
@@ -304,7 +299,7 @@ export function useDashboardChartState({
       all || isLate || isPresent ? CHART_COLORS.amber : dimColor(CHART_COLORS.amber),
       all || isAbsent || isLeave ? CHART_COLORS.red : dimColor(CHART_COLORS.red),
     ];
-    const hoverColors = ['#141f5c', '#d97706', '#c41f1f'];
+    const hoverColors = [CHART_COLORS.navy, CHART_COLORS.amber, CHART_COLORS.red];
     const offsets = [
       isOnTime || isPresent ? 10 : 0,
       isLate ? 10 : isPresent ? 8 : 0,
@@ -356,7 +351,7 @@ export function useDashboardChartState({
         },
       } satisfies ChartOptions<'doughnut'>,
     };
-  }, [data, donutMeta, statusFilter, onStatusFilterChange]);
+  }, [data, donutMeta, statusFilter, onStatusFilterChange, CHART_COLORS]);
 
   const clickLegend = (seg: 'present' | 'absent' | 'late') => {
     const map: Record<typeof seg, DashboardAttendanceStatusFilter> = {

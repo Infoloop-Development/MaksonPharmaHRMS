@@ -1,4 +1,5 @@
 import { api } from './client';
+import { apiBasePath } from './apiBase';
 import type {
   VisitorField,
   VisitorFormCreate,
@@ -96,8 +97,7 @@ export const visitorsApi = {
     locale: VisitorFormLocale = 'en'
   ) => {
     const { accessToken } = (await import('../store/auth')).useAuth.getState();
-    const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-    const base = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+    const base = apiBasePath();
     const fd = new FormData();
     fd.append('file', file);
     fd.append('kind', kind);

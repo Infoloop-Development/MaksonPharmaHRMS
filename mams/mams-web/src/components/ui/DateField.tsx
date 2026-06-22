@@ -54,11 +54,11 @@ export function DateField({ id, label, value, onChange, error, hint }: Props) {
 
       {open && (
         <div
-          className="absolute z-[60] mt-1 rounded-lg border border-border bg-white p-3 shadow-floating mams-day-picker"
+          className="absolute z-[60] mt-1 rounded-lg border border-border bg-surface p-3 shadow-floating mams-day-picker"
           style={
             {
-              '--rdp-accent-color': '#1A2878',
-              '--rdp-accent-background-color': '#E8EAF5',
+              '--rdp-accent-color': 'var(--color-rdp-accent)',
+              '--rdp-accent-background-color': 'var(--color-rdp-accent-bg)',
             } as CSSProperties
           }
         >

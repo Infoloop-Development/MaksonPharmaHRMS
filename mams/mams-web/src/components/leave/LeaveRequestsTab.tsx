@@ -267,7 +267,7 @@ export function LeaveRequestsTab({
                 <tr key={row._id} className="border-b border-border/60 hover:bg-surface2/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary-bg text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary-bg text-primary-on-bg text-xs font-bold flex items-center justify-center shrink-0">
                         {emp?.name ? employeeInitials(emp.name) : '?'}
                       </div>
                       <div>

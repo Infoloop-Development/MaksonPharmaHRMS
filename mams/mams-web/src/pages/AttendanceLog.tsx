@@ -191,7 +191,7 @@ export function AttendanceLog() {
         <div className="flex items-center gap-2 shrink-0">
           <GiveMeATourButton onClick={tour.onReplayTour} />
         {isLiveMode && (
-          <span className="px-3 py-1 rounded-full bg-green-bg text-green-dark text-xs font-semibold flex items-center gap-1.5 shrink-0" data-tour-id="attendance-live-badge">
+          <span className="px-3 py-1 rounded-full bg-green-bg text-green-on-bg text-xs font-semibold flex items-center gap-1.5 shrink-0" data-tour-id="attendance-live-badge">
             <span className="w-2 h-2 rounded-full bg-green animate-pulse" />
             LIVE
           </span>
@@ -380,7 +380,7 @@ export function AttendanceLog() {
                   <td className="px-4 py-2.5 font-mono text-xs">{p.biometricId}</td>
                   <td className="px-4 py-2.5">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                      p.punchType === 'IN' ? 'bg-green-bg text-green-dark' :
+                      p.punchType === 'IN' ? 'bg-green-bg text-green-on-bg' :
                       p.punchType === 'OUT' ? 'bg-amber-bg text-amber' :
                       'bg-surface2 text-text-muted'
                     }`}>{p.punchType}</span>
@@ -395,7 +395,7 @@ export function AttendanceLog() {
                       </span>
                     )}
                     {p.punchType === 'IN' && p.outsideMainShift === false && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-bg text-green-dark">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-bg text-green-on-bg">
                         OK
                       </span>
                     )}

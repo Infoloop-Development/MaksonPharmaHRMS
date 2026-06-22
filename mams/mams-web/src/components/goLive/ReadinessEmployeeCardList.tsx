@@ -14,7 +14,7 @@ export function ReadinessEmployeeCardList({ items }: { items: EmployeeRow[] }) {
   return (
     <div className="space-y-2 md:hidden max-h-48 overflow-y-auto">
       {items.map((e) => (
-        <div key={e.id} className="border border-border rounded p-3 text-xs bg-white">
+        <div key={e.id} className="border border-border rounded p-3 text-xs bg-surface">
           <div className="flex items-start justify-between gap-2 mb-2">
             <Link to={`/employees/${e.id}`} className="font-semibold text-primary hover:underline">
               {e.name}

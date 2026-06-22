@@ -47,7 +47,7 @@ export function LeaveApplicationCardList({
           <div key={row._id} className="card p-4">
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-primary-bg text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-full bg-primary-bg text-primary-on-bg text-xs font-bold flex items-center justify-center shrink-0">
                   {emp?.name ? employeeInitials(emp.name) : '?'}
                 </div>
                 <div className="min-w-0">

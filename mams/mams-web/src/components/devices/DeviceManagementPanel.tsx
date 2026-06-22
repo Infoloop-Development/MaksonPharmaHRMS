@@ -97,6 +97,26 @@ export function DeviceManagementPanel({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => devicesApi.delete(id),
+    onSuccess: () => {
+      toast('Device deleted', 'success');
+      qc.invalidateQueries({ queryKey: ['devices'] });
+      qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : 'Delete failed';
+      toast(msg, 'error');
+    },
+  });
+
+  const handleDelete = (device: Device) => {
+    const ok = window.confirm(
+      `Delete device "${device.name}" (${device.serialNumber})?\n\nThis frees the serial number so you can register it again. Existing attendance punches are kept.`
+    );
+    if (ok) deleteMutation.mutate(device._id);
+  };
+
   const allDevices = data?.items ?? [];
   const filtered = useMemo(() => {
     return allDevices.filter((d) => {
@@ -258,6 +278,7 @@ export function DeviceManagementPanel({
         onSync={(id) => syncMutation.mutate(id)}
         onTest={handleTest}
         onEdit={(d) => setEditDevice(d)}
+        onDelete={handleDelete}
       />
       </div>
 

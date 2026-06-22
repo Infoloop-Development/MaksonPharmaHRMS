@@ -25,7 +25,7 @@ export function toMaskedEmployee(doc: EmployeeDoc): EmployeeMasked {
     bankAccountNumber: maskTail(doc.bankAccountNumber, 4),
     ifsc: maskTail(doc.ifsc, 4),
     accountHolderName: maskTail(doc.accountHolderName, 4),
-    accountType: maskTail(doc.accountType, 0) || 'XXXX',
+    accountType: doc.accountType as EmployeeMasked['accountType'],
     bankName: maskTail(doc.bankName, 4),
     pfNumber: maskTail(doc.pfNumber, 4),
     esiNumber: maskTail(doc.esiNumber, 4),

@@ -11,15 +11,23 @@ import publicVisitorRouter from './routes/publicVisitor.routes.js';
 import { errorHandler } from './middleware/error.js';
 import { requestContext } from './middleware/requestContext.js';
 
+function parseCorsOrigins(value: string): string[] {
+  return value.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export function buildApp() {
   const app = express();
   app.set('trust proxy', 1);
 
   app.use(helmet());
+  const configuredOrigins = parseCorsOrigins(env.CORS_ORIGIN);
+  const publicAppOrigin = env.PUBLIC_APP_URL.trim();
   const corsOrigins =
     env.NODE_ENV === 'development'
-      ? Array.from(new Set([env.CORS_ORIGIN, 'http://localhost:5173', 'http://127.0.0.1:5173']))
-      : [env.CORS_ORIGIN];
+      ? Array.from(new Set([...configuredOrigins, 'http://localhost:5173', 'http://127.0.0.1:5173']))
+      : Array.from(
+          new Set([...configuredOrigins, ...(publicAppOrigin ? [publicAppOrigin] : [])].filter(Boolean))
+        );
   app.use(
     cors({
       origin(origin, cb) {

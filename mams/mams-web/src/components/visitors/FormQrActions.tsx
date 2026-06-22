@@ -24,7 +24,7 @@ function QrStickerPreview({
 
   return (
     <div
-      className={`flex flex-col items-center text-center shrink-0 rounded border border-border bg-white ${
+      className={`flex flex-col items-center text-center shrink-0 rounded border border-border bg-surface ${
         compact ? 'w-fit gap-1 p-2' : 'max-w-[240px] gap-2 p-2'
       }`}
     >
@@ -91,7 +91,7 @@ export function FormQrPreview({ publicUrl, size = 96 }: { publicUrl: string; siz
       alt="QR code for visitor form"
       width={size}
       height={size}
-      className="rounded border border-border bg-white"
+      className="rounded border border-border bg-surface"
     />
   );
 }

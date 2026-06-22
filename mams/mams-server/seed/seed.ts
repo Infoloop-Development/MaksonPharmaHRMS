@@ -1,7 +1,8 @@
 /**
  * Seed script.
- * Creates: 2 seed users, 1 settings doc, 1,800 employees, 9 devices,
- * 7 days of attendance plus tomorrow (IST) for dashboard demo, using Smart Anchor v2 over generated punches.
+ * Creates: 2 seed users, 1 settings doc, 1,800 employees, 10 devices,
+ * attendance for rolling IST days plus optional demo anchor (SEED_DEMO_ANCHOR_DATE),
+ * audit logs, and leave demo data using Smart Anchor v2.
  *
  * Idempotent on the master collections: drops & re-creates them.
  * Run: npm run seed
@@ -18,6 +19,7 @@ import { DeviceModel } from '../src/models/Device.js';
 import { SettingsModel } from '../src/models/Settings.js';
 import { AttendanceRawModel } from '../src/models/AttendanceRaw.js';
 import { AttendanceDerivedModel } from '../src/models/AttendanceDerived.js';
+import { AuditLogModel } from '../src/models/AuditLog.js';
 import { recomputeDerived } from '../src/services/attendance.service.js';
 import { smartAnchorV2 } from '../src/services/smartAnchor.js';
 import { PERMISSIONS_BY_ROLE, type ComplianceShift } from '@mams/types';
@@ -28,7 +30,12 @@ import { seededRandom } from '../src/utils/prng.js';
 import { fromZonedTime } from 'date-fns-tz';
 import type { Types } from 'mongoose';
 import { seedLeaveData, wipeLeaveCollections } from './leaveSeed.js';
-import { date } from 'zod/v4';
+import { seedAuditData } from './auditSeed.js';
+import {
+  barChartSeedDays,
+  buildMergedSeedDays,
+  resolveDemoAnchorDate,
+} from './seedDateRanges.js';
 
 const IST = 'Asia/Kolkata';
 
@@ -37,6 +44,8 @@ const ABS_RATES = [0.09, 0.065, 0.055, 0.07, 0.11, 0.16, 0.22];
 const LATE_RATES = [0.15, 0.10, 0.09, 0.11, 0.14, 0.07, 0.05];
 
 const SeedUsersEnvSchema = z.object({
+  SEED_ORG_ADMIN_EMAIL: z.string().email().default('org.admin@makson-group.com'),
+  SEED_ORG_ADMIN_NAME: z.string().min(1).default('Organization Admin'),
   SEED_HR_ADMIN_EMAIL: z.string().email().default('hr.admin@makson-group.com'),
   SEED_HR_COMPLIANCE_EMAIL: z.string().email().default('hr.compliance@makson-group.com'),
   SEED_DEFAULT_PASSWORD: z.string().min(8).default('makson2026'),
@@ -46,6 +55,10 @@ const SeedUsersEnvSchema = z.object({
 
 function seedUserOptions() {
   return SeedUsersEnvSchema.parse(process.env);
+}
+
+function resolveDemoAnchorFromEnv(): string {
+  return resolveDemoAnchorDate(new Date());
 }
 
 async function main() {
@@ -62,6 +75,7 @@ async function main() {
     DeviceModel.deleteMany({}),
     AttendanceRawModel.collection.deleteMany({}),
     AttendanceDerivedModel.deleteMany({}),
+    AuditLogModel.deleteMany({}),
     wipeLeaveCollections(),
   ]);
   logger.info('Wiped master collections');
@@ -69,6 +83,16 @@ async function main() {
   // Users (credentials from env with Makson defaults — login reads these rows from DB)
   const passwordHash = await bcrypt.hash(seedUsers.SEED_DEFAULT_PASSWORD, 10);
   const users = await UserModel.create([
+    {
+      email: seedUsers.SEED_ORG_ADMIN_EMAIL.toLowerCase(),
+      passwordHash,
+      name: seedUsers.SEED_ORG_ADMIN_NAME,
+      role: 'org.admin',
+      permissions: PERMISSIONS_BY_ROLE['org.admin'],
+      viewMode: 'real',
+      isActive: true,
+      mustChangePassword: false,
+    },
     {
       email: seedUsers.SEED_HR_ADMIN_EMAIL.toLowerCase(),
       passwordHash,
@@ -90,8 +114,9 @@ async function main() {
       mustChangePassword: false,
     },
   ]);
-  const adminUser = users[0]!;
+  const adminUser = users[1]!;
   logger.info('Created seed users', {
+    orgAdminEmail: seedUsers.SEED_ORG_ADMIN_EMAIL,
     adminEmail: seedUsers.SEED_HR_ADMIN_EMAIL,
     complianceEmail: seedUsers.SEED_HR_COMPLIANCE_EMAIL,
   });
@@ -136,19 +161,23 @@ async function main() {
   await seedLeaveData({
     adminUserId: adminUser._id,
     sampleEmployeeIds: empDocs.slice(0, 3).map((e) => e._id),
+    anchorDate: resolveDemoAnchorFromEnv(),
   });
 
   await SettingsModel.updateOne({}, { $set: { employeeCodeSequence: 1800 } });
   logger.info('Set employeeCodeSequence to 1800 for next modal hire (MKS1801)');
 
-  // Attendance: last 7 days + tomorrow (IST) so dashboard bar/pie still work on the next demo day.
-  const today = new Date();
-  const days: { date: string; weekdayIdx: number }[] = [];
-  // i: 6..0 = past week through today; -1 = tomorrow (IST calendar day)
-  for (const i of [6, 5, 4, 3, 2, 1, 0, -1]) {
-    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-    days.push({ date: utcToIstDateString(d), weekdayIdx: dayIdxIst(d) });
-  }
+  // Attendance: rolling IST window + optional demo anchor (SEED_DEMO_ANCHOR_DATE).
+  const now = new Date();
+  const { days, anchorDate, rollingDays, anchorDays } = buildMergedSeedDays(now);
+  logger.info('Seed date ranges', {
+    anchorDate,
+    rollingFrom: rollingDays[0]?.date,
+    rollingTo: rollingDays[rollingDays.length - 1]?.date,
+    totalDays: days.length,
+    anchorFrom: anchorDays[0]?.date,
+    anchorTo: anchorDays[anchorDays.length - 1]?.date,
+  });
 
   let rawTotal = 0;
   for (const day of days) {
@@ -212,7 +241,7 @@ async function main() {
       rawTotal += rawBatch.length;
     }
   }
-  logger.info(`Created ${rawTotal} raw attendance records (7 days + tomorrow)`);
+  logger.info(`Created ${rawTotal} raw attendance records (${days.length} IST days)`);
 
   // Recompute derived for every (active emp, day) pair.
   // For a real seed at 1,800 employees * 7 days = 12,600 derived rows. Run in batches.
@@ -229,14 +258,32 @@ async function main() {
   logger.info(`Computed ${derivedCount} attendance_derived records via Smart Anchor v2`);
 
   const activeEmps = empDocs.filter((e) => e.status === 'Active');
-  // Bar chart uses last 7 IST days (excludes tomorrow). Apply consistent demo rows so
-  // bar present counts, donut breakdown, and attendance table align per day.
-  const barChartDays = days.slice(0, 7);
-  for (const day of barChartDays) {
+  const demoDays = barChartSeedDays(days, now);
+  for (const day of demoDays) {
     await applyDashboardDayDemo(activeEmps, day.date, day.weekdayIdx);
   }
 
-  for (const day of barChartDays) {
+  const auditCount = await seedAuditData({
+    dates: days.map((d) => d.date),
+    users: users.map((u) => ({ _id: u._id, email: u.email, role: u.role })),
+  });
+
+  const anchorLoginAt = new Date(`${anchorDate}T10:30:00+05:30`);
+  const recentLoginAt = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  await Promise.all(
+    users.map((u, i) =>
+      UserModel.updateOne(
+        { _id: u._id },
+        {
+          $set: {
+            lastLoginAt: i === 0 ? anchorLoginAt : recentLoginAt,
+          },
+        }
+      )
+    )
+  );
+
+  for (const day of demoDays) {
     const present = await AttendanceDerivedModel.countDocuments({ date: day.date, status: 'Present' });
     const absent = await AttendanceDerivedModel.countDocuments({
       date: day.date,
@@ -250,14 +297,23 @@ async function main() {
     });
   }
 
+  const anchorPresent = await AttendanceDerivedModel.countDocuments({
+    date: anchorDate,
+    status: 'Present',
+  });
+  const anchorAbsent = await AttendanceDerivedModel.countDocuments({
+    date: anchorDate,
+    status: { $in: ['Absent', 'Weekly Off', 'Half Day'] },
+  });
+  logger.info('Demo anchor snapshot', {
+    anchorDate,
+    present: anchorPresent,
+    absent: anchorAbsent,
+    auditLogs: auditCount,
+  });
+
   logger.info('Seed done');
   await disconnectDb();
-}
-
-function dayIdxIst(d: Date): number {
-  // Monday = 0 ... Sunday = 6, matching ABS_RATES index ordering.
-  const day = d.getUTCDay(); // 0=Sun..6=Sat in UTC; close enough for our seed
-  return day === 0 ? 6 : day - 1;
 }
 
 function pad(n: number): string {
