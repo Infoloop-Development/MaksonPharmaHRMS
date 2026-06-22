@@ -6,8 +6,6 @@ describe('validatePermissionsForRole', () => {
   it('accepts compliant role defaults', () => {
     const r = validatePermissionsForRole('hr.compliance', [
       'read.compliant',
-      'approve.adjust',
-      'approve.regularization',
       'approve.leave',
       'read.leave',
     ]);
@@ -15,8 +13,6 @@ describe('validatePermissionsForRole', () => {
     if (!r.ok) return;
     expect(r.permissions).toEqual([
       'read.compliant',
-      'approve.adjust',
-      'approve.regularization',
       'approve.leave',
       'read.leave',
     ]);
@@ -35,7 +31,6 @@ describe('validatePermissionsForRole', () => {
   it('rejects forbidden permission for compliance', () => {
     const r = validatePermissionsForRole('hr.compliance', [
       'read.compliant',
-      'approve.adjust',
       'manage.org_users',
     ]);
     expect(r.ok).toBe(false);
@@ -64,7 +59,6 @@ describe('ROLE_PERMISSION_CAP', () => {
   it('rejects manage.export_naming for compliance role', () => {
     const r = validatePermissionsForRole('hr.compliance', [
       'read.compliant',
-      'approve.adjust',
       'manage.export_naming',
     ]);
     expect(r.ok).toBe(false);

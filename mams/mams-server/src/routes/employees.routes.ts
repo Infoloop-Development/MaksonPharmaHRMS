@@ -54,7 +54,7 @@ router.get('/', async (req, res, next) => {
       .limit(q.pageSize);
 
     res.json({
-      items: items.map((d) => toMaskedEmployee(d.toObject() as any)),
+      items: items.map((d) => toMaskedEmployee(d.toObject() as any, req.auth!.viewMode)),
       total,
       page: q.page,
       pageSize: q.pageSize,
@@ -72,7 +72,7 @@ router.get('/:id', async (req, res, next) => {
     }
     const doc = await EmployeeModel.findById(req.params.id);
     if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
-    res.json(toMaskedEmployee(doc.toObject() as any));
+    res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
   } catch (err) {
     next(err);
   }
@@ -165,7 +165,7 @@ router.post('/', manageEmployeesGate, async (req, res, next) => {
       },
       { entityType: 'employee', entityId: created._id, payload: { empCode: created.empCode } }
     );
-    res.status(201).json(toMaskedEmployee(created.toObject() as any));
+    res.status(201).json(toMaskedEmployee(created.toObject() as any, req.auth!.viewMode));
   } catch (err) {
     next(err);
   }
@@ -193,7 +193,7 @@ router.patch('/:id', manageEmployeesGate, async (req, res, next) => {
       },
       { entityType: 'employee', entityId: doc._id, payload: { changedFields: Object.keys(partial) } }
     );
-    res.json(toMaskedEmployee(doc.toObject() as any));
+    res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
   } catch (err) {
     next(err);
   }

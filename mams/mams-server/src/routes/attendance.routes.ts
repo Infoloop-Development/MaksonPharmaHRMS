@@ -9,6 +9,13 @@ import { getRawPunchStats } from '../services/attendanceRawStats.service.js';
 const router = Router();
 router.use(requireAuth);
 
+function blockCompliantView(req: Parameters<Parameters<typeof router.get>[1]>[0],res: any,next: any){
+  if (req.auth?.viewMode === 'compliant'){
+    return res.status(403).json({code:'forbidden',message: 'Not available in compliance view'});
+  }
+  next();
+}
+
 const QuerySchema = z.object({
   date: z.string().optional(),
   startDate: z.string().optional(),
@@ -58,7 +65,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/raw/stats', async (req, res, next) => {
+router.get('/raw/stats', blockCompliantView, async (req, res, next) => {
   try {
     const q = AttendanceRawStatsQuerySchema.parse(req.query);
     res.json(await getRawPunchStats(q));
@@ -67,7 +74,7 @@ router.get('/raw/stats', async (req, res, next) => {
   }
 });
 
-router.get('/raw', async (req, res, next) => {
+router.get('/raw', blockCompliantView, async (req, res, next) => {
   try {
     const q = AttendanceRawListQuerySchema.parse(req.query);
     const result = await listRawPunches(q);
@@ -78,7 +85,7 @@ router.get('/raw', async (req, res, next) => {
 });
 
 // Live raw punch feed - polled every ~5s by the AttendanceLog page.
-router.get('/raw/recent', async (req, res, next) => {
+router.get('/raw/recent', blockCompliantView, async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit ?? 50), 200);
     const result = await listRawPunches({

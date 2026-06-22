@@ -38,9 +38,6 @@ export function Reports() {
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Reports</h1>
-          <div className="text-sm text-text-muted">
-            View mode: <Badge tone={isCompliant ? 'amber' : 'blue'}>{isCompliant ? 'COMPLIANT (8-hour)' : 'REAL (12-hour)'}</Badge>
-          </div>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>

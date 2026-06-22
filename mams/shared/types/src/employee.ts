@@ -117,6 +117,7 @@ export type EmployeePatchBody = z.infer<typeof EmployeePatchBodySchema>;
 // What gets returned to clients - sensitive fields are MASKED strings by default
 export const EmployeeMaskedSchema = EmployeeBaseSchema.extend({
   id: z.string(),
+  timeShift: TimeShiftSchema.optional(),
   pan: z.string(), // 'XXXXXX1234' format
   aadhaar: z.string(),
   bankAccountNumber: z.string(),
