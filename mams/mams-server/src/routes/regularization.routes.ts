@@ -76,9 +76,7 @@ router.get('/preview', async (req, res, next) => {
     const [employee, derived, raws] = await Promise.all([
       EmployeeModel.findById(q.employeeId).select('name empCode').lean(),
       AttendanceDerivedModel.findOne({ employeeId: q.employeeId, date: q.date }).lean(),
-      req.auth!.viewMode === 'compliant'
-        ? Promise.resolve([])
-        : AttendanceRawModel.find({ employeeId: q.employeeId, rawDate: q.date })
+      AttendanceRawModel.find({ employeeId: q.employeeId, rawDate: q.date })
         .sort({ rawTimestamp: 1 })
         .lean(),
     ]);
@@ -91,17 +89,13 @@ router.get('/preview', async (req, res, next) => {
       derived: derived
         ? {
             status: derived.status,
-            realEntryAt: req.auth!.viewMode === 'compliant'
-            ? (derived.compliantEntryAt ? utcToIstTimeString(derived.compliantEntryAt).slice(0, 5) : null)
-            : (derived.realEntryAt ? utcToIstTimeString(derived.realEntryAt).slice(0, 5) : null),
-            realExitAt: req.auth!.viewMode === 'compliant'
-            ? (derived.compliantExitAt ? utcToIstTimeString(derived.compliantExitAt).slice(0, 5) : null)
-            : (derived.realExitAt ? utcToIstTimeString(derived.realExitAt).slice(0, 5) : null),
+            realEntryAt: derived.realEntryAt ? utcToIstTimeString(derived.realEntryAt).slice(0, 5) : null,
+            realExitAt: derived.realExitAt ? utcToIstTimeString(derived.realExitAt).slice(0, 5) : null,
             dayType: derived.dayType,
           }
         : null,
-      rawPunchCount: req.auth!.viewMode === 'compliant' ? 0 : raws.length,
-      rawPunches: req.auth!.viewMode === 'compliant' ? [] : raws.map((r) => ({
+      rawPunchCount: raws.length,
+      rawPunches: raws.map((r) => ({
         punchType: r.punchType,
         time: formatRawPunchTime(r.rawTimestamp),
         source: (r.rawPayload as { source?: string } | undefined)?.source ?? 'device',

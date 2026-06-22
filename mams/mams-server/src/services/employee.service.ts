@@ -6,7 +6,7 @@ import type { EmployeeMasked, EmployeeUnmasked } from '@mams/types';
  * Convert a raw Mongoose Employee doc to the masked API response shape.
  * Sensitive fields are show-last-4 with X padding (Aadhaar formatted XXXX XXXX 1234).
  */
-export function toMaskedEmployee(doc: EmployeeDoc): EmployeeMasked {
+export function toMaskedEmployee(doc: EmployeeDoc, viewMode: 'real' | 'compliant' = 'real'): EmployeeMasked {
   return {
     id: String(doc._id),
     empCode: doc.empCode,
@@ -15,7 +15,7 @@ export function toMaskedEmployee(doc: EmployeeDoc): EmployeeMasked {
     department: doc.department,
     designation: doc.designation,
     location: doc.location,
-    timeShift: doc.timeShift as 'Day' | 'Night',
+    timeShift: viewMode === 'compliant' ? undefined: (doc.timeShift as 'Day' | 'Night'),
     alternateShift: doc.alternateShift as 'A' | 'B' | 'C',
     weeklyOff: (doc.weeklyOff ?? []) as EmployeeMasked['weeklyOff'],
     joinDate: doc.joinDate.toISOString(),
@@ -36,9 +36,9 @@ export function toMaskedEmployee(doc: EmployeeDoc): EmployeeMasked {
   };
 }
 
-export function toUnmaskedEmployee(doc: EmployeeDoc): EmployeeUnmasked {
+export function toUnmaskedEmployee(doc: EmployeeDoc, viewMode: 'real' | 'compliant' = 'real'): EmployeeUnmasked {
   return {
-    ...toMaskedEmployee(doc),
+    ...toMaskedEmployee(doc, viewMode),
     pan: doc.pan,
     aadhaar: doc.aadhaar,
     bankAccountNumber: doc.bankAccountNumber,

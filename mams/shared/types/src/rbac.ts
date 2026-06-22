@@ -48,8 +48,6 @@ export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
   ],
   'hr.compliance': [
     'read.compliant',
-    'approve.adjust',
-    'approve.regularization',
     'approve.leave',
     'read.leave',
     'read.visitors',
@@ -86,8 +84,6 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
   ],
   'hr.compliance': [
     'read.compliant',
-    'approve.adjust',
-    'approve.regularization',
     'approve.leave',
     'read.leave',
     'read.visitors',
