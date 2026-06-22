@@ -1,7 +1,7 @@
 import type { VisitorField, VisitorFormLocale, VisitorIntro, VisitorPublicSubmit } from '@mams/types';
+import { apiBasePath } from './apiBase';
 
-const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const BASE = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+const BASE = apiBasePath();
 
 export class PublicVisitorError extends Error {
   constructor(

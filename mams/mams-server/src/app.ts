@@ -21,10 +21,13 @@ export function buildApp() {
 
   app.use(helmet());
   const configuredOrigins = parseCorsOrigins(env.CORS_ORIGIN);
+  const publicAppOrigin = env.PUBLIC_APP_URL.trim();
   const corsOrigins =
     env.NODE_ENV === 'development'
       ? Array.from(new Set([...configuredOrigins, 'http://localhost:5173', 'http://127.0.0.1:5173']))
-      : configuredOrigins;
+      : Array.from(
+          new Set([...configuredOrigins, ...(publicAppOrigin ? [publicAppOrigin] : [])].filter(Boolean))
+        );
   app.use(
     cors({
       origin(origin, cb) {
