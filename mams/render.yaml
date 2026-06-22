@@ -27,6 +27,9 @@ services:
         value: "true"
       - key: MAIL_ENABLED
         value: "false"
-      # Set these in the Render dashboard (secrets / your URLs):
-      # MONGO_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
-      # CORS_ORIGIN, PUBLIC_APP_URL
+      - key: CORS_ORIGIN
+        value: "https://maksonhrms.netlify.app"
+      - key: PUBLIC_APP_URL
+        value: "https://maksonhrms.netlify.app"
+      # Set these in the Render dashboard (secrets):
+      # MONGO_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
