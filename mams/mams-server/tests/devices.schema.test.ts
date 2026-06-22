@@ -72,4 +72,14 @@ describe('Device create schema', () => {
     });
     expect(r.success).toBe(true);
   });
+
+  it('accepts eSSL patch body with null integrationConfig fields from MongoDB', () => {
+    const r = DeviceIntegrationConfigSchema.safeParse({
+      pushToken: null,
+      pullBaseUrl: null,
+      apiKey: null,
+      pullIntervalMinutes: null,
+    });
+    expect(r.success).toBe(true);
+  });
 });
