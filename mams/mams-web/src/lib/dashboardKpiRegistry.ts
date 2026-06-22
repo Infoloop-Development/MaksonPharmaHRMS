@@ -55,7 +55,9 @@ const METRIC_ACCENTS: Record<DashboardKpiMetricId, Accent> = {
   night_shift: 'primary',
 };
 
-export function getMetricLabel(id: DashboardKpiMetricId, values: KpiDayValues): string {
+export function getMetricLabel(id: DashboardKpiMetricId, values: KpiDayValues, isCompliant = false): string {
+  if (isCompliant && id === 'day_shift') return 'Shift A';
+  if (isCompliant && id === 'night_shift') return 'Shift B+C';
   return METRIC_LABELS[id](values);
 }
 
@@ -117,7 +119,9 @@ export function getMetricSub(id: DashboardKpiMetricId, v: KpiDayValues): string 
   }
 }
 
-export function getMetricPickerLabel(id: DashboardKpiMetricId): string {
+export function getMetricPickerLabel(id: DashboardKpiMetricId, isCompliant = false): string {
+  if (isCompliant && id === 'day_shift') return 'Shift A';
+  if (isCompliant && id === 'night_shift') return 'Shift B+C';
   return METRIC_LABELS[id]({ weekday: '', total: 0, present: 0, absent: 0, late: 0, onTime: 0, weeklyOff: 0, halfDay: 0, dayShiftPresent: 0, nightShiftPresent: 0 });
 }
 

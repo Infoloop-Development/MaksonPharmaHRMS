@@ -5,6 +5,11 @@ import { fmtIstHeaderDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { authApi } from '../api/auth';
+import { clearFirstLoginSession } from '../lib/onboarding/session';
+import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
 function pageTitle(pathname: string): string {
   if (pathname === '/dashboard' || pathname === '/') return 'Dashboard';
@@ -34,10 +39,24 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   }, []);
 
   const isCompliant = user?.viewMode === 'compliant';
-  const badgeFull = isCompliant ? 'COMPLIANT VIEW (8-hour)' : 'REAL VIEW (12-hour)';
-  const badgeShort = isCompliant ? 'COMPLIANT' : 'REAL';
   const title = pageTitle(location.pathname);
   const { fmtTime } = useTimeDisplay();
+  const refreshToken = useAuth((s) => s.refreshToken);
+  const clear = useAuth((s) => s.clear);
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const onLogout = async() => {
+    try{
+      if (refreshToken) await authApi.logout(refreshToken);
+    } catch{
+
+    } finally{
+      clear();
+      clearFirstLoginSession();
+      qc.removeQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+      navigate('/login');
+    }
+  };
 
   return (
     <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-2 sticky top-0 z-10">
@@ -54,26 +73,10 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
         </button>
         <div className="min-w-0">
           <h1 className="text-base md:text-lg font-bold truncate">{title}</h1>
-          <span
-            title={badgeFull}
-            className={`md:hidden inline-block mt-0.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${
-              isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
-            }`}
-          >
-            {badgeShort}
-          </span>
         </div>
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
-        <span
-          title={badgeFull}
-          className={`hidden md:inline text-[11px] font-semibold px-2.5 py-1.5 rounded-full ${
-            isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary'
-          }`}
-        >
-          {badgeFull}
-        </span>
         <div className="text-right">
           <div className="font-mono text-sm font-semibold tracking-wide text-text">
             <span
@@ -84,7 +87,25 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
           </div>
           <div className="text-[11px] text-text-subtle mt-0.5">{fmtIstHeaderDate(now)}</div>
         </div>
+
+        {isCompliant && (
+          <div className="flex items-center gap-2.5 border-1 border-border pl-3">
+            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0">
+              {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
+            </div>
+
+            <div className="hidden md:flex flex-col items-end">
+              <div className="text-[12px] font-semibold truncate max-w-[120px]">{user?.name}</div>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="text-[11px] text-text-muted hover:text-red transition-colors">
+                  Sign out
+                </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
-  );
+  );  
 }

@@ -366,7 +366,7 @@ function MonthlyReport() {
               { key: 'absent', label: 'Absent', mono: true },
               { key: 'weeklyOff', label: 'Weekly Off', mono: true },
               { key: 'totalHrs', label: 'Total Hrs', mono: true },
-              { key: 'ot', label: 'OT Hrs', mono: true },
+              ...(isCompliant ? [] : [{ key: 'ot', label: 'OT Hrs', mono: true }]),
               { key: 'equivDays', label: 'Equiv. Days', mono: true },
             ],
             rows: data.rows.map((r) => ({
@@ -410,14 +410,14 @@ function MonthlyReport() {
                 <th className="px-4 py-3 font-semibold">Absent</th>
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Weekly Off</th>
                 <th className="px-4 py-3 font-semibold">Total Hrs</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">OT</th>
+                {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">OT</th>}
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">Equiv. Days</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {isLoading && <tr><td colSpan={9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+              {isLoading && <tr><td colSpan={isCompliant ? 8 : 9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
+                <tr><td colSpan={isCompliant ? 8 : 9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
               )}
               {data?.rows.map((r) => (
                 <tr key={r.employeeId} className="hover:bg-surface2/50">
@@ -428,7 +428,7 @@ function MonthlyReport() {
                   <td className="px-4 py-2.5 font-mono text-xs">{r.absentDays}</td>
                   <td className="px-4 py-2.5 font-mono text-xs hidden lg:table-cell">{r.weeklyOffDays}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(isCompliant ? r.totalCompliantHours : r.totalRealNetHours)}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{fmtHours(r.totalOtHours)}</td>
+                  {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{fmtHours(r.totalOtHours)}</td>}
                   <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{r.equivalentDays?.toFixed(1) ?? '—'}</td>
                 </tr>
               ))}
@@ -443,6 +443,7 @@ function MonthlyReport() {
 function DepartmentReport() {
   const { logReportsAction } = useActivityLog();
   const toast = useToast((s) => s.push);
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
@@ -484,8 +485,8 @@ function DepartmentReport() {
               { key: 'employees', label: 'Employees', mono: true },
               { key: 'present', label: 'Present', mono: true },
               { key: 'absent', label: 'Absent', mono: true },
-              { key: 'compliantHrs', label: 'Compliant Hrs', mono: true },
-              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'compliantHrs', label: isCompliant ? 'Compliant Hrs' : 'Net Hrs', mono: true },
+              ...(isCompliant ? [] : [{ key: 'ot', label: 'OT Hrs', mono: true }]),
               { key: 'rate', label: 'Attendance Rate', mono: true },
             ],
             rows: data.rows.map((r) => ({
@@ -520,15 +521,15 @@ function DepartmentReport() {
               <th className="px-4 py-3 font-semibold">Employees</th>
               <th className="px-4 py-3 font-semibold">Present</th>
               <th className="px-4 py-3 font-semibold">Absent</th>
-              <th className="px-4 py-3 font-semibold">Compliant Hrs</th>
-              <th className="px-4 py-3 font-semibold">OT Hrs</th>
+              <th className="px-4 py-3 font-semibold">{isCompliant ? 'Compliant Hrs' : 'Net Hrs'}</th>
+              {!isCompliant && <th className="px-4 py-3 font-semibold">OT Hrs</th>}
               <th className="px-4 py-3 font-semibold">Attendance Rate</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+            {isLoading && <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
             {!isLoading && !data?.rows.length && (
-              <tr><td colSpan={7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
+              <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
             )}
             {data?.rows.map((r) => (
               <tr key={r.department} className="hover:bg-surface2/50">
@@ -537,7 +538,7 @@ function DepartmentReport() {
                 <td className="px-4 py-2.5">{r.presentDays}</td>
                 <td className="px-4 py-2.5">{r.absentDays}</td>
                 <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalCompliantHours)}</td>
-                <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>
+                {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>}
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     <div className="w-24 h-2 bg-surface2 rounded-full overflow-hidden">
@@ -559,6 +560,7 @@ function DepartmentReport() {
 function LocationReport() {
   const { logReportsAction } = useActivityLog();
   const toast = useToast((s) => s.push);
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
@@ -600,8 +602,8 @@ function LocationReport() {
               { key: 'employees', label: 'Employees', mono: true },
               { key: 'present', label: 'Present', mono: true },
               { key: 'absent', label: 'Absent', mono: true },
-              { key: 'compliantHrs', label: 'Compliant Hrs', mono: true },
-              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'compliantHrs', label: isCompliant ? 'Compliant Hrs' : 'Net Hrs', mono: true },
+              ...(isCompliant ? [] : [{ key: 'ot', label: 'OT Hrs', mono: true }]),
               { key: 'rate', label: 'Attendance Rate', mono: true },
             ],
             rows: data.rows.map((r) => ({
@@ -648,7 +650,7 @@ function LocationReport() {
               <span className="font-mono text-xs">{r.attendanceRate.toFixed(0)}% rate</span>
             </div>
             <div className="mt-3 text-xs text-text-muted">
-              {fmtHours(r.totalCompliantHours)} compliant · {fmtHours(r.totalOtHours)} OT
+              {fmtHours(r.totalCompliantHours)} compliant{!isCompliant && ` · ${fmtHours(r.totalOtHours)} OT`}
             </div>
           </div>
         ))}
@@ -663,15 +665,15 @@ function LocationReport() {
                 <th className="px-4 py-3 font-semibold">Employees</th>
                 <th className="px-4 py-3 font-semibold">Present</th>
                 <th className="px-4 py-3 font-semibold">Absent</th>
-                <th className="px-4 py-3 font-semibold">Compliant Hrs</th>
-                <th className="px-4 py-3 font-semibold">OT Hrs</th>
+                <th className="px-4 py-3 font-semibold">{isCompliant ? 'Compliant Hrs' : 'Net Hrs'}</th>
+                {!isCompliant && <th className="px-4 py-3 font-semibold">OT Hrs</th>}
                 <th className="px-4 py-3 font-semibold">Attendance Rate</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+              {isLoading && <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
+                <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
               )}
               {data?.rows.map((r) => (
                 <tr key={r.location} className="hover:bg-surface2/50">
@@ -680,7 +682,7 @@ function LocationReport() {
                   <td className="px-4 py-2.5">{fmtNumber(r.presentDays)}</td>
                   <td className="px-4 py-2.5">{fmtNumber(r.absentDays)}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalCompliantHours)}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>
+                  {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>}
                   <td className="px-4 py-2.5 font-mono text-xs">{r.attendanceRate.toFixed(0)}%</td>
                 </tr>
               ))}

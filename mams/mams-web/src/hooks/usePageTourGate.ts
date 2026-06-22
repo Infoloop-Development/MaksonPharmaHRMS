@@ -7,6 +7,7 @@ export function useShouldAutoStartTour(tourId: OnboardingTourId) {
   const tourCompleted = (user?.completedOnboardingTours ?? []).includes(tourId);
   return (
     Boolean(user) &&
+    user!.viewMode != 'compliant' &&
     !user!.mustChangePassword &&
     !tourCompleted &&
     hasFirstLoginSession()
