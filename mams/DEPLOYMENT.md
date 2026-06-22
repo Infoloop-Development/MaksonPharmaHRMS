@@ -14,13 +14,27 @@ Netlify **cannot** run `mams-server` as a normal Express app. The browser never 
 
 ## Architecture
 
+**Recommended (Netlify proxy — no browser CORS):**
+
 ```
-Browser  →  https://your-app.netlify.app     (Netlify: mams-web)
-                ↓ VITE_API_BASE_URL
-           https://your-api.onrender.com      (API: mams-server)
+Browser  →  https://maksonhrms.netlify.app/api/...   (same origin)
+                ↓ Netlify redirect proxy
+           https://mams-api-xvso.onrender.com/api/...  (Render: mams-server)
                 ↓ MONGO_URI
-           mongodb+srv://...mongodb.net/...    (MongoDB Atlas)
+           mongodb+srv://...mongodb.net/...             (MongoDB Atlas)
 ```
+
+Leave `VITE_API_BASE_URL` **empty** on Netlify. The SPA calls `/api` on the Netlify host; [`netlify.toml`](netlify.toml) proxies to Render.
+
+**Alternative (direct API URL — requires Render CORS):**
+
+```
+Browser  →  https://maksonhrms.netlify.app
+                ↓ VITE_API_BASE_URL (cross-origin)
+           https://mams-api-xvso.onrender.com
+```
+
+Only use this if you must call Render directly from the browser. Set `CORS_ORIGIN` on Render to the **exact** Netlify URL.
 
 ---
 
@@ -75,8 +89,8 @@ Copy from `mams-server/.env.example`. **Required in production:**
 | `MONGO_URI` | `mongodb+srv://...` | Atlas connection string |
 | `JWT_ACCESS_SECRET` | *(32+ random chars)* | `openssl rand -base64 32` |
 | `JWT_REFRESH_SECRET` | *(32+ random chars)* | Different from access secret |
-| `CORS_ORIGIN` | `https://your-app.netlify.app` | **Exact** Netlify URL, no trailing slash |
-| `PUBLIC_APP_URL` | `https://your-app.netlify.app` | Used for visitor form public links & emails |
+| `CORS_ORIGIN` | `https://maksonhrms.netlify.app` | **Exact** Netlify URL, no trailing slash. Comma-separate multiple origins if needed. Required if the browser calls Render directly; still recommended as a safety net. |
+| `PUBLIC_APP_URL` | `https://maksonhrms.netlify.app` | Used for visitor form public links & emails |
 | `TZ` | `Asia/Kolkata` | |
 | `LOG_LEVEL` | `info` | |
 | `FEATURE_UNMASK_ENABLED` | `true` or `false` | Demo vs production |
@@ -89,7 +103,20 @@ Optional mail (user welcome emails):
 | `APP_PUBLIC_URL` | `https://your-app.netlify.app` |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Your SMTP provider |
 
-After deploy, note the API URL, e.g. `https://mams-api.onrender.com` (no `/api` suffix).
+After deploy, note the API URL, e.g. `https://mams-api-xvso.onrender.com` (no `/api` suffix).
+
+**Render dashboard (required once):** Environment → set `CORS_ORIGIN` and `PUBLIC_APP_URL` to `https://maksonhrms.netlify.app`, then **Manual Deploy**. Values in [`render.yaml`](render.yaml) are not applied automatically unless you use Render Blueprint sync.
+
+**Verify CORS after Render deploy:**
+
+```bash
+curl -s -D - -o NUL -X OPTIONS "https://mams-api-xvso.onrender.com/api/auth/login" \
+  -H "Origin: https://maksonhrms.netlify.app" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type"
+```
+
+Expected response header: `access-control-allow-origin: https://maksonhrms.netlify.app`
 
 ---
 
@@ -105,22 +132,22 @@ After deploy, note the API URL, e.g. `https://mams-api.onrender.com` (no `/api` 
 
 ### Netlify environment variables
 
-Site settings → **Environment variables** → **Production** (and Preview if needed):
+Site settings → **Environment variables** → **Production**:
 
 | Key | Value | Required |
 |-----|--------|----------|
-| `VITE_API_BASE_URL` | `https://mams-api.onrender.com` | **Yes** — full API origin, **no** trailing slash, **no** `/api` |
+| `VITE_API_BASE_URL` | *(leave unset)* | **No** — use same-origin `/api` via Netlify proxy (see [`netlify.toml`](netlify.toml)). **Remove** this var if it was set previously. |
 | `VITE_FEATURE_UNMASK_ENABLED` | `true` or `false` | Optional (default true) |
 | `VITE_FEATURE_AUTOGEN_DEMO_ENABLED` | `false` | Recommended off in production |
 
-**Important:** Vite bakes `VITE_*` at **build time**. After changing env vars, trigger **Clear cache and deploy**.
+**Important:** Vite bakes `VITE_*` at **build time**. After changing env vars, trigger **Clear cache and deploy site**.
 
 ### Custom domain
 
-If you use `https://mams.makson-group.com` on Netlify:
+If you use a custom domain on Netlify:
 
-- Set `CORS_ORIGIN` and `PUBLIC_APP_URL` on the API to that same URL.
-- Set `VITE_API_BASE_URL` to your API URL (can be `https://api.makson-group.com`).
+- Set `CORS_ORIGIN` and `PUBLIC_APP_URL` on Render to that same URL.
+- Keep `VITE_API_BASE_URL` unset unless you intentionally call the API cross-origin.
 
 ---
 
@@ -136,8 +163,8 @@ JWT_ACCESS_SECRET=your-long-random-secret-here
 JWT_REFRESH_SECRET=another-long-random-secret-here
 JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
-CORS_ORIGIN=https://your-app.netlify.app
-PUBLIC_APP_URL=https://your-app.netlify.app
+CORS_ORIGIN=https://maksonhrms.netlify.app
+PUBLIC_APP_URL=https://maksonhrms.netlify.app
 LOG_LEVEL=info
 TZ=Asia/Kolkata
 SMART_ANCHOR_VERSION=v2.0.0
@@ -145,23 +172,25 @@ FEATURE_UNMASK_ENABLED=true
 MAIL_ENABLED=false
 ```
 
-### `mams-web/.env` (only needed for **local** production builds)
+### `mams-web/.env` (local dev only)
 
 ```env
-VITE_API_BASE_URL=https://mams-api.onrender.com
+# Leave empty — Vite proxies /api to localhost:3001
+VITE_API_BASE_URL=
 VITE_FEATURE_UNMASK_ENABLED=true
 VITE_FEATURE_AUTOGEN_DEMO_ENABLED=false
 ```
 
-On Netlify you set these in the UI instead of a file.
+On Netlify, do **not** set `VITE_API_BASE_URL` (use the `/api` proxy in `netlify.toml`).
 
 ---
 
 ## 5. Checklist after deploy
 
-- [ ] API health: open `https://YOUR-API-URL/api/...` or login from the Netlify site.
-- [ ] Login works (`hr.admin@makson-group.com` after seed).
-- [ ] Browser devtools → Network: requests go to `VITE_API_BASE_URL/api/...`, not `localhost`.
+- [ ] API health: `https://mams-api-xvso.onrender.com/api/health` returns `{"status":"ok"}`.
+- [ ] Login works at `https://maksonhrms.netlify.app` (`hr.admin@makson-group.com` after seed).
+- [ ] Browser devtools → Network: login goes to `https://maksonhrms.netlify.app/api/auth/login` (not Render directly).
+- [ ] If using direct Render URL in browser: curl OPTIONS shows `access-control-allow-origin` (see §2).
 - [ ] Visitor public form links use `PUBLIC_APP_URL` (check a form’s “copy link” URL).
 - [ ] Biometric devices: punch URL must hit your **API** host (`/iclock/...`), not Netlify.
 
