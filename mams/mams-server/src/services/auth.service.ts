@@ -121,7 +121,7 @@ export function userPublic(user: UserDoc) {
     mustChangePassword: user.mustChangePassword ?? false,
     lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
     completedOnboardingTours: user.completedOnboardingTours ?? [],
-    themePreference: user.themePreference ?? 'system',
+    themePreference: user.themePreference ?? 'light',
   };
 }
 

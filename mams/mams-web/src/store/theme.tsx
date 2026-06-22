@@ -23,7 +23,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>(
-    () => user?.themePreference ?? readCachedThemePreference() ?? 'system'
+    () => user?.themePreference ?? readCachedThemePreference() ?? 'light'
   );
   const [busy, setBusy] = useState(false);
 
