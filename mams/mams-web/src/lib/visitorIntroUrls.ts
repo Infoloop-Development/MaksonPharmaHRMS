@@ -1,8 +1,8 @@
 import type { VisitorIntro, VisitorIntroVideo } from '@mams/types';
+import { apiRootUrl } from '../api/apiBase';
 
 function apiBase(): string {
-  const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-  return apiRoot ? apiRoot.replace(/\/$/, '') : '';
+  return apiRootUrl();
 }
 
 export function publicIntroMediaUrl(slug: string, storageKey: string): string {

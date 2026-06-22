@@ -1,7 +1,7 @@
 import { useAuth } from '../store/auth';
+import { apiBasePath } from './apiBase';
 
-const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const BASE = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+const BASE = apiBasePath();
 
 export interface CsvImportResult {
   totalRows: number;

@@ -1,8 +1,8 @@
 import { useAuth } from '../store/auth';
+import { apiBasePath, apiRootUrl } from './apiBase';
 
-/** Empty in dev/production Netlify → same-origin `/api` (Vite or Netlify proxy). */
-const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const BASE = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+const apiRoot = apiRootUrl();
+const BASE = apiBasePath();
 
 function networkErrorMessage(): string {
   const target = BASE || '/api';
