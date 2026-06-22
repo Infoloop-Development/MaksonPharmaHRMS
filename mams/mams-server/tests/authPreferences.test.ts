@@ -24,7 +24,7 @@ describe('UpdatePreferencesRequestSchema', () => {
 });
 
 describe('UserPublicSchema', () => {
-  it('defaults themePreference to system', () => {
+  it('defaults themePreference to light', () => {
     const parsed = UserPublicSchema.parse({
       id: '1',
       email: 'hr.admin@makson-group.com',
@@ -36,6 +36,6 @@ describe('UserPublicSchema', () => {
       mustChangePassword: false,
       lastLoginAt: null,
     });
-    expect(parsed.themePreference).toBe('system');
+    expect(parsed.themePreference).toBe('light');
   });
 });

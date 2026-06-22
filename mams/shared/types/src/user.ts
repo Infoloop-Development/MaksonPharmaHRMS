@@ -58,7 +58,7 @@ export const UserPublicSchema = z.object({
   mustChangePassword: z.boolean(),
   lastLoginAt: z.string().datetime().nullable(),
   completedOnboardingTours: z.array(z.string()).default([]),
-  themePreference: ThemePreferenceSchema.default('system'),
+  themePreference: ThemePreferenceSchema.default('light'),
 });
 export type UserPublic = z.infer<typeof UserPublicSchema>;
 
