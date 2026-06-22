@@ -1,4 +1,9 @@
+import { useAuth } from '../../store/auth';
+
 export function GiveMeATourButton({ onClick }: { onClick: () => void }) {
+  const viewMode = useAuth((s) => s.user?.viewMode);
+  if (viewMode === 'compliant') return null;
+  
   return (
     <button
       type="button"

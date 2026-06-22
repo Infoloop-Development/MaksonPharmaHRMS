@@ -24,6 +24,7 @@ import {
   syncActiveMetricFromFilters,
 } from '../lib/dashboardKpiRegistry';
 import { fmtDate, fmtWeekdayShort } from '../lib/format';
+import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { usePageTourController } from '../hooks/usePageTourController';
@@ -44,6 +45,7 @@ function invalidateActivity(qc: ReturnType<typeof useQueryClient>) {
 }
 
 export function Dashboard() {
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const toast = useToast((s) => s.push);
   const queryClient = useQueryClient();
   const { logFilterDebounced } = useActivityLog();
@@ -157,9 +159,9 @@ export function Dashboard() {
 
   const onFilterChange = useCallback((next: DashboardKpiFilterState) => {
     setStatusFilter(next.statusFilter);
-    setShiftFilter(next.shiftFilter);
+    setShiftFilter(isCompliant ? 'All' : next.shiftFilter);
     setActiveKpiMetric(next.activeMetric);
-  }, []);
+  }, [isCompliant]);
 
   const onStatusFilterChange = useCallback((status: DashboardAttendanceStatusFilter) => {
     setStatusFilter(status);
@@ -337,7 +339,7 @@ export function Dashboard() {
       </div>
         <div className="flex items-center gap-2 shrink-0 mt-0.5">
           <GiveMeATourButton onClick={tour.onReplayTour} />
-        {!isEditingKpi && !isEditingLayout && (
+        {!isCompliant && !isEditingKpi && !isEditingLayout && (
           <button
             type="button"
             className="dash-kpi-edit-btn shrink-0"

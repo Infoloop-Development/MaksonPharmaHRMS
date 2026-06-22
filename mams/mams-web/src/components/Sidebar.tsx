@@ -23,14 +23,18 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
 ];
 
 const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
+const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/regularization', '/visitors', '/autogeneration-demo']);
 
-function buildNav() {
-  if (!isAutogenDemoEnabled()) return [...BASE_NAV];
-  return [...BASE_NAV.slice(0, 4), AUTOGEN_NAV, ...BASE_NAV.slice(4)];
+function buildNav(isCompliant: boolean) {
+  let nav = [...BASE_NAV];
+  if (isAutogenDemoEnabled()) nav = [...nav.slice(0,4), AUTOGEN_NAV, ...nav.slice(4)];
+  if (isCompliant) nav = nav.filter((n) => !COMPLAINCE_HIDDEN_ROUTES.has(n.to));
+  return nav;
 }
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const user = useAuth((s) => s.user);
+  const isCompliant = user?.viewMode === 'compliant';
   const refreshToken = useAuth((s) => s.refreshToken);
   const clear = useAuth((s) => s.clear);
   const qc = useQueryClient();
@@ -88,7 +92,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       </div>
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
         <div className="text-[10px] uppercase tracking-[2px] opacity-40 px-3 pb-2 font-semibold">Navigation</div>
-        {buildNav().map((n) => (
+        {buildNav(isCompliant).map((n) => (
           <NavLink
             key={n.to}
             to={n.to}
@@ -105,25 +109,27 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           </NavLink>
         ))}
       </nav>
-      <div className="p-4 border-t border-white/10">
-        <div className="flex items-center gap-2.5 p-2 rounded-md">
-          <div className="w-9 h-9 rounded-md bg-red/30 flex items-center justify-center font-bold text-sm">
-            {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
+      {!isCompliant && (
+        <div className="p-4 border-t border-white/10">
+          <div className="flex items-center gap-2.5 p-2 rounded-md">
+            <div className="w-9 h-9 rounded-md bg-red/30 flex items-center justify-center font-bold text-sm">
+              {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-semibold truncate">{user?.name ?? 'Unknown'}</div>
+              <div className="text-[11px] opacity-60 truncate">{user?.role ?? ''}</div>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold truncate">{user?.name ?? 'Unknown'}</div>
-            <div className="text-[11px] opacity-60 truncate">{user?.role ?? ''}</div>
-          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-2 flex items-center gap-2.5 text-[12px] text-white/60 hover:text-white px-2 py-2 touch-target w-full rounded-md hover:bg-white/10 transition-colors"
+          >
+            <NavIcon name="signOut" />
+            <span>Sign out</span>
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onLogout}
-          className="mt-2 flex items-center gap-2.5 text-[12px] text-white/60 hover:text-white px-2 py-2 touch-target w-full rounded-md hover:bg-white/10 transition-colors"
-        >
-          <NavIcon name="signOut" />
-          <span>Sign out</span>
-        </button>
-      </div>
+      )}
     </aside>
   );
 }

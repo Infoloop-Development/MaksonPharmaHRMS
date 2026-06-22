@@ -28,6 +28,7 @@ export function Employees() {
   const pageSize = 50;
   const user = useAuth((s) => s.user);
   const canManage = user?.permissions.includes('manage.users') ?? false;
+  const isCompliant = user?.viewMode === 'compliant';
   const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({
@@ -117,17 +118,17 @@ export function Employees() {
                 <th className="px-4 py-3 font-semibold">Department</th>
                 <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Shift</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>
+                {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>}
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">Joined</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={isCompliant ? 8 : 9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {error && (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
+                <tr><td colSpan={isCompliant ? 8 : 9} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
@@ -138,8 +139,8 @@ export function Employees() {
                   </td>
                   <td className="px-4 py-3">{e.department}</td>
                   <td className="px-4 py-3 text-xs text-text-muted">{e.location}</td>
-                  <td className="px-4 py-3">{e.timeShift}</td>
-                  <td className="px-4 py-3 font-mono text-xs hidden xl:table-cell">{e.alternateShift}</td>
+                  <td className="px-4 py-3">{isCompliant ? e.alternateShift : e.timeShift}</td>
+                  {!isCompliant && <td className="px-4 py-3 font-mono text-xs hidden xl:table-cell">{e.alternateShift}</td>}
                   <td className="px-4 py-3 text-xs text-text-muted hidden xl:table-cell">{fmtDate(e.joinDate.slice(0, 10))}</td>
                   <td className="px-4 py-3">
                     <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>

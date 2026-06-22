@@ -15,6 +15,7 @@ import { Visitors } from './pages/Visitors';
 import { PublicVisitorForm } from './pages/PublicVisitorForm';
 import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
+import { ComplianceSettings } from './pages/ComplianceSettings';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
 
@@ -32,6 +33,11 @@ function RequireAuthSession({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function SettingsGate(){
+  const viewMode = useAuth((s) => s.user?.viewMode);
+  return viewMode === 'compliant' ? <ComplianceSettings /> : <Settings />;
 }
 
 export function App() {
@@ -69,7 +75,7 @@ export function App() {
         <Route path="leave" element={<Leave />} />
         <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="settings" element={<SettingsGate />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -16,6 +16,7 @@ import {
 } from './dashboardAttendanceUi';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
+import { useAuth } from '../../store/auth';
 
 type ShiftFilter = 'All' | 'Day' | 'Night';
 type StatusFilter = DashboardAttendanceStatusFilter;
@@ -89,6 +90,7 @@ export function DashboardAttendanceTable({
   const { logDashboardAction } = useActivityLog();
   const formatCell = useDisplayAttendanceCell();
   const { fmtHhmm } = useTimeDisplay();
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
   const dayShift = settings?.realShifts.find((s) => s.id === 'Day');
   const nightShift = settings?.realShifts.find((s) => s.id === 'Night');
@@ -233,11 +235,13 @@ export function DashboardAttendanceTable({
           </option>
         ))}
       </select>
-      <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
-        <option value="All">All Time Shifts</option>
-        <option value="Day">{dayShiftLabel}</option>
-        <option value="Night">{nightShiftLabel}</option>
-      </select>
+      {!isCompliant &&(
+        <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+          <option value="All">All Time Shifts</option>
+          <option value="Day">{dayShiftLabel}</option>
+          <option value="Night">{nightShiftLabel}</option>
+        </select>
+      )}
       <select
         className="w-full"
         value={status}
@@ -291,11 +295,13 @@ export function DashboardAttendanceTable({
               </option>
             ))}
           </select>
-          <select value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
-            <option value="All">All Time Shifts</option>
-            <option value="Day">{dayShiftLabel}</option>
-            <option value="Night">{nightShiftLabel}</option>
-          </select>
+          {!isCompliant &&(
+            <select value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+              <option value="All">All Time Shifts</option>
+              <option value="Day">{dayShiftLabel}</option>
+              <option value="Night">{nightShiftLabel}</option>
+            </select>
+          )}
           <select
             value={status}
             onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}

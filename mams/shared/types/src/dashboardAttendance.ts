@@ -40,7 +40,7 @@ export const DashboardAttendanceRowSchema = z.object({
   employeeName: z.string(),
   empCode: z.string(),
   department: z.string(),
-  timeShift: DashboardAttendanceTimeShiftSchema,
+  timeShift: z.string(),
   entryStamp: z.string(),
   exitStamp: z.string(),
   totalHoursWorked: z.number().nullable(),

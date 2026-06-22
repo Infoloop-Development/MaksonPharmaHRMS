@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../../store/auth';
 import {
   DndContext,
   closestCorners,
@@ -61,6 +62,7 @@ function SortableKpiSlot({
   onCardClick: () => void;
   onPickMetric: () => void;
 }) {
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: metricId,
     disabled: !isEditing,
@@ -90,7 +92,7 @@ function SortableKpiSlot({
         </button>
       )}
       <DashboardStatCard
-        label={getMetricLabel(metricId, values)}
+        label={getMetricLabel(metricId, values,isCompliant)}
         value={getMetricValue(metricId, values)}
         sub={getMetricSub(metricId, values)}
         accent={getMetricAccent(metricId)}

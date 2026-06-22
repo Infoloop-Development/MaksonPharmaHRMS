@@ -19,7 +19,8 @@ import { SettingsModel } from '../src/models/Settings.js';
 import { AttendanceRawModel } from '../src/models/AttendanceRaw.js';
 import { AttendanceDerivedModel } from '../src/models/AttendanceDerived.js';
 import { recomputeDerived } from '../src/services/attendance.service.js';
-import { PERMISSIONS_BY_ROLE } from '@mams/types';
+import { smartAnchorV2 } from '../src/services/smartAnchor.js';
+import { PERMISSIONS_BY_ROLE, type ComplianceShift } from '@mams/types';
 import { generateEmployees } from './generators.js';
 import { utcToIstDateString } from '../src/utils/time.js';
 import { logger } from '../src/utils/logger.js';
@@ -27,6 +28,7 @@ import { seededRandom } from '../src/utils/prng.js';
 import { fromZonedTime } from 'date-fns-tz';
 import type { Types } from 'mongoose';
 import { seedLeaveData, wipeLeaveCollections } from './leaveSeed.js';
+import { date } from 'zod/v4';
 
 const IST = 'Asia/Kolkata';
 
@@ -267,7 +269,7 @@ function pad(n: number): string {
  * Ensures bar (present count), donut (on-time/delay/on-leave), and table rows stay consistent.
  */
 async function applyDashboardDayDemo(
-  activeEmps: Array<{ _id: Types.ObjectId; empCode: string; timeShift: 'Day' | 'Night' }>,
+  activeEmps: Array<{ _id: Types.ObjectId; empCode: string; timeShift: 'Day' | 'Night'; alternateShift: ComplianceShift }>,
   demoDate: string,
   weekdayIdx: number
 ) {
@@ -317,6 +319,7 @@ async function applyDashboardDayDemo(
       emp.timeShift === 'Day' ? `${demoDate}T19:00:00` : `${demoDate}T06:00:00`;
     const realEntryAt = fromZonedTime(entryIst, IST);
     const realExitAt = fromZonedTime(exitIst, IST);
+    const saDelay = smartAnchorV2({employeeId: String(emp._id), date: demoDate, alternateShift: emp.alternateShift,realEntryAt,realExitAt});
     await AttendanceDerivedModel.updateOne(
       { employeeId: emp._id, date: demoDate },
       {
@@ -330,6 +333,8 @@ async function applyDashboardDayDemo(
           breakMinutes: 30,
           compliantHours: 8,
           otHours: 0,
+          compliantEntryAt: saDelay.compliantEntryAt,
+          compliantExitAt: saDelay.compliantExitAt,
         },
       }
     );
@@ -342,6 +347,7 @@ async function applyDashboardDayDemo(
       emp.timeShift === 'Day' ? `${demoDate}T17:30:00` : `${demoDate}T03:30:00`;
     const realEntryAt = fromZonedTime(entryIst, IST);
     const realExitAt = fromZonedTime(exitIst, IST);
+    const saOnTime = smartAnchorV2({ employeeId: String(emp._id), date: demoDate, alternateShift: emp.alternateShift,realEntryAt,realExitAt});
     await AttendanceDerivedModel.updateOne(
       { employeeId: emp._id, date: demoDate },
       {
@@ -355,6 +361,8 @@ async function applyDashboardDayDemo(
           breakMinutes: 30,
           compliantHours: 8,
           otHours: 0,
+          compliantEntryAt: saOnTime.compliantEntryAt,
+          compliantExitAt: saOnTime.compliantExitAt,
         },
       }
     );

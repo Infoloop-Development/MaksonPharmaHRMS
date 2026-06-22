@@ -13,6 +13,13 @@ import { AdjustmentCreateSchema, AdjustmentDecisionSchema } from '@mams/types';
 const router = Router();
 router.use(requireAuth);
 
+router.use((req, res, next) => {
+  if (req.auth?.viewMode === 'compliant') {
+    return res.status(403).json({ code: 'forbidden', message: 'Not available in compliance view' });
+  }
+  next();
+});
+
 const ListQuerySchema = z.object({
   status: z.enum(['Pending', 'Approved', 'Rejected']).optional(),
   employeeId: z.string().optional(),
