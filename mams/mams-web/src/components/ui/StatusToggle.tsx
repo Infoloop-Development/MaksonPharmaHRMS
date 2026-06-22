@@ -23,7 +23,7 @@ export function StatusToggle({ value, onChange, error }: Props) {
             active ? 'justify-start bg-green' : 'justify-end bg-red',
           ].join(' ')}
         >
-          <span className="h-7 w-7 rounded-full bg-white shadow-md shrink-0" />
+          <span className="h-7 w-7 rounded-full bg-surface shadow-md shrink-0" />
         </button>
         <div className="flex flex-col">
           <span className={`text-sm font-semibold ${active ? 'text-green' : 'text-red'}`}>

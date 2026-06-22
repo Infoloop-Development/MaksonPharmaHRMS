@@ -1,13 +1,8 @@
 import nodemailer from 'nodemailer';
 import type { Role } from '@mams/types';
+import { ROLE_LABELS } from '@mams/types';
 import { getAppPublicUrl, getSmtpConfig, getSmtpFrom, isMailEnabled } from '../config/mail.js';
 import { logger } from '../utils/logger.js';
-
-const ROLE_LABELS: Record<Role, string> = {
-  'hr.admin': 'HR Admin',
-  'hr.compliance': 'Compliance Officer',
-  'it.admin': 'IT Admin',
-};
 
 let transport: nodemailer.Transporter | null = null;
 

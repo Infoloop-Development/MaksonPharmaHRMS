@@ -27,8 +27,8 @@ export function Employees() {
   const [addOpen, setAddOpen] = useState(false);
   const pageSize = 50;
   const user = useAuth((s) => s.user);
-  const canManage = user?.permissions.includes('manage.users') ?? false;
   const isCompliant = user?.viewMode === 'compliant';
+  const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
   const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({
@@ -359,7 +359,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
 function ResultStat({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'amber' | 'red' }) {
   const tones: Record<'green' | 'amber' | 'red', string> = {
-    green: 'bg-green-bg text-green-dark',
+    green: 'bg-green-bg text-green-on-bg',
     amber: 'bg-amber-bg text-amber',
     red: 'bg-red-bg text-red',
   };

@@ -5,6 +5,7 @@ import {
   ExportNamingSettingsSchema,
   FaviconSchema,
   LeaveQuotaResetPolicySchema,
+  OrgBrandingSchema,
   TimeFormatSchema,
 } from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
@@ -54,9 +55,10 @@ const SettingsPatchSchema = z.object({
   timeFormat: TimeFormatSchema.optional(),
   companyLogo: CompanyLogoSchema.optional(),
   favicon: FaviconSchema.optional(),
+  orgBranding: OrgBrandingSchema.optional(),
 });
 
-const MANAGE_SETTINGS_FIELDS = new Set([
+const ORG_SETTINGS_FIELDS = new Set([
   'companyName',
   'cin',
   'gstin',
@@ -75,7 +77,21 @@ const MANAGE_SETTINGS_FIELDS = new Set([
   'timeFormat',
   'companyLogo',
   'favicon',
+  'orgBranding',
+  'exportNaming',
 ]);
+
+function canEditOrgSettings(perms: string[]): boolean {
+  return perms.includes('manage.org_settings') || perms.includes('manage.settings');
+}
+
+function canEditExportNaming(perms: string[]): boolean {
+  return (
+    perms.includes('manage.org_settings') ||
+    perms.includes('manage.export_naming') ||
+    perms.includes('manage.settings')
+  );
+}
 
 router.patch('/', async (req, res, next) => {
   try {
@@ -89,13 +105,13 @@ router.patch('/', async (req, res, next) => {
     }
 
     const perms = req.auth!.permissions;
-    const touchesSettings = changedKeys.some((k) => MANAGE_SETTINGS_FIELDS.has(k));
+    const touchesOrgSettings = changedKeys.some((k) => ORG_SETTINGS_FIELDS.has(k));
     const touchesExportNaming = changedKeys.includes('exportNaming');
-    if (touchesSettings && !perms.includes('manage.settings')) {
-      res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.settings' });
+    if (touchesOrgSettings && !canEditOrgSettings(perms)) {
+      res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.org_settings' });
       return;
     }
-    if (touchesExportNaming && !perms.includes('manage.export_naming')) {
+    if (touchesExportNaming && !canEditExportNaming(perms)) {
       res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.export_naming' });
       return;
     }
@@ -107,6 +123,18 @@ router.patch('/', async (req, res, next) => {
 
     for (const [key, value] of Object.entries(patch)) {
       if (value === undefined) continue;
+      if (key === 'orgBranding' && value && typeof value === 'object') {
+        const existing = (doc.toObject().orgBranding ?? {}) as Record<string, unknown>;
+        Object.assign(doc, {
+          orgBranding: {
+            ...existing,
+            ...(value as Record<string, unknown>),
+            updatedAt: new Date(),
+            updatedBy: req.auth!.sub,
+          },
+        });
+        continue;
+      }
       (doc as any)[key] = value;
     }
     await doc.save();

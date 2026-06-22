@@ -14,6 +14,7 @@ function DeviceCard({
   onSync,
   onTest,
   onEdit,
+  onDelete,
 }: {
   d: Device;
   canManage: boolean;
@@ -21,6 +22,7 @@ function DeviceCard({
   onSync: (id: string) => void;
   onTest: (id: string) => void;
   onEdit: (device: Device) => void;
+  onDelete: (device: Device) => void;
 }) {
   const { fmtTime } = useTimeDisplay();
   const connState = getDeviceConnectionState(d);
@@ -96,20 +98,29 @@ function DeviceCard({
       </dl>
 
       {canManage && (
-        <div className="flex gap-2 pt-3 mt-3 border-t border-border">
-          <button type="button" className="btn-outline flex-1 min-h-[40px] text-xs" onClick={() => onTest(d._id)}>
-            Test
-          </button>
+        <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-border">
+          <div className="flex gap-2">
+            <button type="button" className="btn-outline flex-1 min-h-[40px] text-xs" onClick={() => onTest(d._id)}>
+              Test
+            </button>
+            <button
+              type="button"
+              className="btn-outline flex-1 min-h-[40px] text-xs"
+              onClick={() => onSync(d._id)}
+              disabled={!!syncing[d._id]}
+            >
+              {syncing[d._id] ? '…' : 'Sync'}
+            </button>
+            <button type="button" className="btn-outline flex-1 min-h-[40px] text-xs" onClick={() => onEdit(d)}>
+              Edit
+            </button>
+          </div>
           <button
             type="button"
-            className="btn-outline flex-1 min-h-[40px] text-xs"
-            onClick={() => onSync(d._id)}
-            disabled={!!syncing[d._id]}
+            className="btn-outline min-h-[40px] text-xs text-red border-red/30 hover:bg-red/5 w-full"
+            onClick={() => onDelete(d)}
           >
-            {syncing[d._id] ? '…' : 'Sync'}
-          </button>
-          <button type="button" className="btn-outline flex-1 min-h-[40px] text-xs" onClick={() => onEdit(d)}>
-            Edit
+            Delete
           </button>
         </div>
       )}
@@ -125,6 +136,7 @@ export function DeviceCardGrid({
   onSync,
   onTest,
   onEdit,
+  onDelete,
 }: {
   devices: Device[];
   isLoading: boolean;
@@ -133,6 +145,7 @@ export function DeviceCardGrid({
   onSync: (id: string) => void;
   onTest: (id: string) => void;
   onEdit: (device: Device) => void;
+  onDelete: (device: Device) => void;
 }) {
   if (isLoading) {
     return <div className="card p-10 text-center text-text-muted text-sm">Loading...</div>;
@@ -152,6 +165,7 @@ export function DeviceCardGrid({
           onSync={onSync}
           onTest={onTest}
           onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

@@ -28,7 +28,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         {...props}
-        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition ${props.className ?? ''}`}
+        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition ${props.className ?? ''}`}
       />
     );
   }
@@ -40,7 +40,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
       <textarea
         ref={ref}
         {...props}
-        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-y min-h-[80px] ${props.className ?? ''}`}
+        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-y min-h-[80px] ${props.className ?? ''}`}
       />
     );
   }
@@ -52,7 +52,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
       <select
         ref={ref}
         {...props}
-        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition ${props.className ?? ''}`}
+        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition ${props.className ?? ''}`}
       >
         {children}
       </select>
@@ -64,11 +64,13 @@ export function Toggle({
   checked,
   onChange,
   label,
+  ariaLabel,
   disabled,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label?: string;
+  ariaLabel?: string;
   disabled?: boolean;
 }) {
   return (
@@ -76,6 +78,7 @@ export function Toggle({
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel ?? label}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={`flex items-center gap-2 group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -84,7 +87,7 @@ export function Toggle({
         className={`w-10 h-6 rounded-full relative transition ${checked ? 'bg-primary' : 'bg-border'}`}
       >
         <span
-          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${
+          className={`absolute top-0.5 w-5 h-5 rounded-full bg-surface shadow transition-all ${
             checked ? 'left-[18px]' : 'left-0.5'
           }`}
         />

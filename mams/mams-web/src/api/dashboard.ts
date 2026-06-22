@@ -9,9 +9,9 @@ import type {
 import { parseContentDispositionFilename } from '@mams/types';
 import { api } from './client';
 import { useAuth } from '../store/auth';
+import { apiBasePath } from './apiBase';
 
-const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const BASE = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+const BASE = apiBasePath();
 
 export type DashboardAttendanceQueryParams = {
   date: string;

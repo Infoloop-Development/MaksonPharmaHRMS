@@ -1,4 +1,4 @@
-import type { ExportNamingSettings, TimeFormat } from '@mams/types';
+import type { ExportNamingSettings, OrgBranding, TimeFormat } from '@mams/types';
 import { api } from './client';
 
 export interface ShiftWindow {
@@ -30,6 +30,7 @@ export interface Settings {
   timeFormat: TimeFormat;
   companyLogo: string | null;
   favicon: string | null;
+  orgBranding?: OrgBranding & { updatedAt?: string | null; updatedBy?: string | null };
 }
 
 export const settingsApi = {

@@ -121,7 +121,23 @@ export function userPublic(user: UserDoc) {
     mustChangePassword: user.mustChangePassword ?? false,
     lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
     completedOnboardingTours: user.completedOnboardingTours ?? [],
+    themePreference: user.themePreference ?? 'system',
   };
+}
+
+export async function updateUserPreferences(userId: string, prefs: { themePreference?: 'light' | 'dark' | 'system' }) {
+  const update: Record<string, unknown> = {};
+  if (prefs.themePreference !== undefined) {
+    update.themePreference = prefs.themePreference;
+  }
+  if (Object.keys(update).length === 0) {
+    throw new ApiError(400, 'validation_error', 'Provide at least one preference to update');
+  }
+  const user = await UserModel.findByIdAndUpdate(userId, { $set: update }, { new: true });
+  if (!user || !user.isActive) {
+    throw new ApiError(401, 'unauthorized', 'User not found or inactive');
+  }
+  return user;
 }
 
 export async function completeOnboardingTour(userId: string, tour: string) {

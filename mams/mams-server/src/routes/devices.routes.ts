@@ -84,9 +84,27 @@ function refineHanvonConfig(data: z.infer<typeof DeviceBaseSchema>, ctx: z.Refin
 const DeviceCreateSchema = DeviceBaseSchema.superRefine(refineHanvonConfig);
 const DevicePatchSchema = DeviceBaseSchema.partial();
 
+/** Mongoose returns null for unused integration fields; Zod rejects null on optional strings. */
+function normalizeDeviceBody(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return body;
+  const record = { ...(body as Record<string, unknown>) };
+  const ic = record.integrationConfig;
+  if (ic && typeof ic === 'object') {
+    const cleaned = Object.fromEntries(
+      Object.entries(ic as Record<string, unknown>).filter(([, v]) => v != null && v !== '')
+    );
+    if (Object.keys(cleaned).length === 0) {
+      delete record.integrationConfig;
+    } else {
+      record.integrationConfig = cleaned;
+    }
+  }
+  return record;
+}
+
 router.post('/', requirePermission('manage.devices'), async (req, res, next) => {
   try {
-    const body = DeviceCreateSchema.parse(req.body);
+    const body = DeviceCreateSchema.parse(normalizeDeviceBody(req.body));
     const exists = await DeviceModel.findOne({ serialNumber: body.serialNumber });
     if (exists) throw new ApiError(409, 'duplicate_serial', 'A device with this serial number already exists');
 
@@ -110,7 +128,7 @@ router.patch('/:id', requirePermission('manage.devices'), async (req, res, next)
   try {
     const id = req.params.id ?? '';
     if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Device not found');
-    const body = DevicePatchSchema.parse(req.body);
+    const body = DevicePatchSchema.parse(normalizeDeviceBody(req.body));
     const doc = await DeviceModel.findByIdAndUpdate(id, { $set: body }, { new: true });
     if (!doc) throw new ApiError(404, 'not_found', 'Device not found');
     await audit(
@@ -119,6 +137,29 @@ router.patch('/:id', requirePermission('manage.devices'), async (req, res, next)
       { entityType: 'device', entityId: doc._id, payload: { changedFields: Object.keys(body) } }
     );
     res.json(doc);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:id', requirePermission('manage.devices'), async (req, res, next) => {
+  try {
+    const id = req.params.id ?? '';
+    if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Device not found');
+    const doc = await DeviceModel.findById(id);
+    if (!doc) throw new ApiError(404, 'not_found', 'Device not found');
+
+    await DeviceModel.findByIdAndDelete(id);
+    await audit(
+      'device_deleted',
+      { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
+      {
+        entityType: 'device',
+        entityId: doc._id,
+        payload: { serialNumber: doc.serialNumber, model: doc.model, vendor: doc.vendor },
+      }
+    );
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

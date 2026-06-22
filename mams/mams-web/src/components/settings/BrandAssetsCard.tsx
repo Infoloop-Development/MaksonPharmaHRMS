@@ -115,7 +115,15 @@ function UploadZone({
   );
 }
 
-export function BrandAssetsCard({ settings, canManage }: { settings: Settings; canManage: boolean }) {
+export function BrandAssetsCard({
+  settings,
+  canManage,
+  onLogoUpdated,
+}: {
+  settings: Settings;
+  canManage: boolean;
+  onLogoUpdated?: (dataUrl: string | null) => void;
+}) {
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -139,7 +147,12 @@ export function BrandAssetsCard({ settings, canManage }: { settings: Settings; c
     }
     patchMu.mutate(
       { companyLogo: result.dataUrl },
-      { onSuccess: () => toast('Company logo updated', 'success') }
+      {
+        onSuccess: () => {
+          onLogoUpdated?.(result.dataUrl);
+          toast('Company logo updated', 'success');
+        },
+      }
     );
   };
 
@@ -174,7 +187,15 @@ export function BrandAssetsCard({ settings, canManage }: { settings: Settings; c
   };
 
   const removeLogo = () => {
-    patchMu.mutate({ companyLogo: null }, { onSuccess: () => toast('Logo removed', 'success') });
+    patchMu.mutate(
+      { companyLogo: null },
+      {
+        onSuccess: () => {
+          onLogoUpdated?.(null);
+          toast('Logo removed', 'success');
+        },
+      }
+    );
   };
 
   const removeFavicon = () => {

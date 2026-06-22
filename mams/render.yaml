@@ -1,0 +1,35 @@
+# Render — MAMS API (mams-server)
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: mams-api
+    runtime: node
+    rootDir: mams
+    buildCommand: npm install --include=dev && npm run build:server
+    startCommand: npm run start:server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: TZ
+        value: Asia/Kolkata
+      - key: LOG_LEVEL
+        value: info
+      - key: JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES
+        value: 7d
+      - key: SMART_ANCHOR_VERSION
+        value: v2.0.0
+      - key: FEATURE_UNMASK_ENABLED
+        value: "true"
+      - key: MAIL_ENABLED
+        value: "false"
+      - key: CORS_ORIGIN
+        value: "https://maksonhrms.netlify.app"
+      - key: PUBLIC_APP_URL
+        value: "https://maksonhrms.netlify.app"
+      # Set these in the Render dashboard (secrets):
+      # MONGO_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET

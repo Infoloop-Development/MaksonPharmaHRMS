@@ -12,12 +12,12 @@ export type DeviceSyncStatus = z.infer<typeof DeviceSyncStatusSchema>;
 /** Per-vendor integration settings stored on the device document. */
 export const DeviceIntegrationConfigSchema = z.object({
   /** Hanvon push webhook shared secret (validated on ingest). */
-  pushToken: z.string().min(8).optional(),
+  pushToken: z.string().min(8).nullish(),
   /** Hanvon pull API base URL, e.g. http://192.168.0.50:8080 */
-  pullBaseUrl: z.string().url().optional(),
+  pullBaseUrl: z.string().url().nullish(),
   /** Hanvon API key / device password for pull mode. */
-  apiKey: z.string().optional(),
-  pullIntervalMinutes: z.coerce.number().int().min(1).max(1440).optional(),
+  apiKey: z.string().nullish(),
+  pullIntervalMinutes: z.coerce.number().int().min(1).max(1440).nullish(),
 });
 export type DeviceIntegrationConfig = z.infer<typeof DeviceIntegrationConfigSchema>;
 

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link ,useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 import { fmtIstHeaderDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { ThemeToggle } from './ui/ThemeToggle';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
-import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
 import { clearFirstLoginSession } from '../lib/onboarding/session';
@@ -23,11 +23,21 @@ function pageTitle(pathname: string): string {
   if (pathname === '/devices') return 'Devices';
   if (pathname === '/settings') return 'Settings';
   if (pathname === '/autogeneration-demo' && isAutogenDemoEnabled()) return 'Auto Genrated Shift Demo';
+  if (pathname.startsWith('/admin')) {
+    if (pathname === '/admin') return 'Admin Overview';
+    if (pathname.startsWith('/admin/users')) return 'Users & Roles';
+    if (pathname.startsWith('/admin/organization')) return 'Organization';
+    if (pathname.startsWith('/admin/security')) return 'Security';
+    if (pathname.startsWith('/admin/audit')) return 'Audit Log';
+    if (pathname.startsWith('/admin/health')) return 'System Health';
+    if (pathname.startsWith('/admin/feature-flags')) return 'Feature Flags';
+    return 'Administration';
+  }
   if (pathname === '/change-password') return 'Change Password';
   return 'MAMS';
 }
 
-export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
+export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () => void; title?: string }) {
   const user = useAuth((s) => s.user);
   const location = useLocation();
   const isOnline = useOnlineStatus();
@@ -39,7 +49,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   }, []);
 
   const isCompliant = user?.viewMode === 'compliant';
-  const title = pageTitle(location.pathname);
+  const title = titleOverride ?? pageTitle(location.pathname);
   const { fmtTime } = useTimeDisplay();
   const refreshToken = useAuth((s) => s.refreshToken);
   const clear = useAuth((s) => s.clear);
@@ -77,6 +87,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
+        <ThemeToggle compact />
         <div className="text-right">
           <div className="font-mono text-sm font-semibold tracking-wide text-text">
             <span
@@ -88,23 +99,24 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
           <div className="text-[11px] text-text-subtle mt-0.5">{fmtIstHeaderDate(now)}</div>
         </div>
 
-        {isCompliant && (
-          <div className="flex items-center gap-2.5 border-1 border-border pl-3">
-            <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0">
-              {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
-            </div>
-
-            <div className="hidden md:flex flex-col items-end">
-              <div className="text-[12px] font-semibold truncate max-w-[120px]">{user?.name}</div>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="text-[11px] text-text-muted hover:text-red transition-colors">
-                  Sign out
-                </button>
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-2.5 border-1 border-border pl-3">
+          <Link to="/settings" className="hidden md:inline text-[12px] font-semibold truncate max-w-[120px] hover:underline">
+            {user?.name}
+          </Link>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="text-[11px] text-text-muted hover:text-red transition-colors shrink-0"
+          >
+            Sign out
+          </button>
+          <Link
+            to="/settings"
+            className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0"
+          >
+            {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
+          </Link>
+        </div>
       </div>
     </header>
   );  

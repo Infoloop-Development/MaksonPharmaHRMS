@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
-import type { ActivityListQuery, UiActivityLogBody } from '@mams/types';
+import type { ActivityListQuery, AuditLogCategory, OrgActivityListQuery, UiActivityLogBody } from '@mams/types';
 import { AuditLogModel } from '../models/AuditLog.js';
+import { UserModel } from '../models/User.js';
 import { audit } from './audit.service.js';
 import { ApiError } from '../middleware/error.js';
 import { isUnmaskEnabled } from '../config/featureFlags.js';
@@ -10,12 +11,61 @@ const MAX_PAYLOAD_BYTES = 4096;
 /** Event types hidden from self-service Activity (noise / security). */
 const HIDDEN_SELF_SERVICE = new Set(['login_failed', 'welcome_email_failed']);
 
-function hiddenEventTypes(): string[] {
+function hiddenSelfServiceEventTypes(): string[] {
   const hidden = [...HIDDEN_SELF_SERVICE];
   if (!isUnmaskEnabled()) {
     hidden.push('unmask_succeeded', 'unmask_failed');
   }
   return hidden;
+}
+
+function hiddenOrgEventTypes(): string[] {
+  const hidden = ['welcome_email_failed'];
+  if (!isUnmaskEnabled()) {
+    hidden.push('unmask_succeeded', 'unmask_failed');
+  }
+  return hidden;
+}
+
+export function buildCategoryFilter(category: AuditLogCategory): Record<string, unknown> | null {
+  switch (category) {
+    case 'all':
+      return null;
+    case 'auth':
+      return { eventType: { $in: ['login', 'logout', 'password_changed'] } };
+    case 'company':
+      return {
+        eventType: 'settings_changed',
+        'payload.section': { $in: ['company', 'compliance', 'brand_assets'] },
+      };
+    case 'users':
+      return { eventType: { $in: ['user_created', 'user_updated', 'sessions_revoked'] } };
+    case 'employees':
+      return { eventType: { $in: ['employee_created', 'employee_updated', 'csv_import'] } };
+    case 'settings':
+      return {
+        $or: [
+          { eventType: 'feature_flags_changed' },
+          {
+            eventType: 'settings_changed',
+            'payload.section': { $nin: ['company', 'compliance', 'brand_assets'] },
+          },
+        ],
+      };
+    case 'security':
+      return { eventType: { $in: ['unmask_succeeded', 'unmask_failed', 'login_failed'] } };
+    default:
+      return null;
+  }
+}
+
+function csvImportFilter(): Record<string, unknown> {
+  return {
+    $or: [
+      { eventType: { $ne: 'csv_import' } },
+      { eventType: 'csv_import', 'payload.successCount': { $gt: 0 } },
+    ],
+  };
 }
 
 export function assertUiPayloadSize(payload: Record<string, unknown> | undefined): void {
@@ -44,11 +94,8 @@ export async function listMyActivity(userId: string, q: ActivityListQuery) {
   const uid = new Types.ObjectId(userId);
   const filter = {
     userId: uid,
-    eventType: { $nin: hiddenEventTypes() },
-    $or: [
-      { eventType: { $ne: 'csv_import' } },
-      { eventType: 'csv_import', 'payload.successCount': { $gt: 0 } },
-    ],
+    eventType: { $nin: hiddenSelfServiceEventTypes() },
+    ...csvImportFilter(),
   };
 
   const [total, rows] = await Promise.all([
@@ -68,6 +115,94 @@ export async function listMyActivity(userId: string, q: ActivityListQuery) {
     entityId: r.entityId ? String(r.entityId) : null,
     payload: (r.payload ?? {}) as Record<string, unknown>,
   }));
+
+  return { items, total, page: q.page, pageSize: q.pageSize };
+}
+
+export async function listOrgActivity(q: OrgActivityListQuery) {
+  const andConditions: Record<string, unknown>[] = [
+    { eventType: { $nin: hiddenOrgEventTypes() } },
+    csvImportFilter(),
+  ];
+
+  if (q.category && q.category !== 'all') {
+    const categoryFilter = buildCategoryFilter(q.category);
+    if (categoryFilter) andConditions.push(categoryFilter);
+  } else if (q.eventType) {
+    andConditions.push({ eventType: q.eventType });
+  }
+
+  const filter: Record<string, unknown> = { $and: andConditions };
+
+  if (q.userId && Types.ObjectId.isValid(q.userId)) {
+    filter.userId = new Types.ObjectId(q.userId);
+  }
+  if (q.entityType) filter.entityType = q.entityType;
+  if (q.from || q.to) {
+    const occurredAt: Record<string, Date> = {};
+    if (q.from) occurredAt.$gte = new Date(q.from);
+    if (q.to) occurredAt.$lte = new Date(q.to);
+    filter.occurredAt = occurredAt;
+  }
+
+  let userIdsForRole: Types.ObjectId[] | null = null;
+  if (q.role) {
+    const users = await UserModel.find({ role: q.role }).select('_id').lean();
+    userIdsForRole = users.map((u) => u._id as Types.ObjectId);
+    if (userIdsForRole.length === 0) {
+      return { items: [], total: 0, page: q.page, pageSize: q.pageSize };
+    }
+    if (filter.userId) {
+      const uid = filter.userId as Types.ObjectId;
+      if (!userIdsForRole.some((id) => id.equals(uid))) {
+        return { items: [], total: 0, page: q.page, pageSize: q.pageSize };
+      }
+    } else {
+      filter.userId = { $in: userIdsForRole };
+    }
+  }
+
+  if (q.search?.trim()) {
+    const re = new RegExp(q.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    andConditions.push({ $or: [{ eventType: re }, { entityType: re }] });
+  }
+
+  const [total, rows] = await Promise.all([
+    AuditLogModel.countDocuments(filter),
+    AuditLogModel.find(filter)
+      .sort({ occurredAt: -1 })
+      .skip((q.page - 1) * q.pageSize)
+      .limit(q.pageSize)
+      .lean(),
+  ]);
+
+  const userIds = [...new Set(rows.map((r) => (r.userId ? String(r.userId) : null)).filter(Boolean))] as string[];
+  const userMap = new Map<string, { name: string; email: string; role: string }>();
+  if (userIds.length > 0) {
+    const users = await UserModel.find({ _id: { $in: userIds } })
+      .select('name email role')
+      .lean();
+    for (const u of users) {
+      userMap.set(String(u._id), { name: u.name, email: u.email, role: u.role });
+    }
+  }
+
+  const items = rows.map((r) => {
+    const uid = r.userId ? String(r.userId) : null;
+    const actor = uid ? userMap.get(uid) : undefined;
+    return {
+      id: String(r._id),
+      occurredAt: (r.occurredAt ?? r.createdAt).toISOString(),
+      eventType: r.eventType,
+      entityType: r.entityType ?? null,
+      entityId: r.entityId ? String(r.entityId) : null,
+      payload: (r.payload ?? {}) as Record<string, unknown>,
+      userId: uid,
+      userName: actor?.name ?? null,
+      userEmail: actor?.email ?? null,
+      userRole: actor?.role ?? null,
+    };
+  });
 
   return { items, total, page: q.page, pageSize: q.pageSize };
 }
@@ -123,7 +258,7 @@ export function settingsSectionFromChangedFields(fields: string[]): string {
   const smartAnchor = new Set(['smartAnchorEnabled']);
   const confidentiality = new Set(['confidentialityNoticeEnabled', 'confidentialityNoticeText']);
   const exportNaming = new Set(['exportNaming']);
-  const brandAssets = new Set(['companyLogo', 'favicon']);
+  const brandAssets = new Set(['companyLogo', 'favicon', 'orgBranding']);
   const timeDisplay = new Set(['timeFormat']);
 
   if (fields.some((f) => brandAssets.has(f))) return 'brand_assets';

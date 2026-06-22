@@ -1,8 +1,8 @@
+import { deviceIntegrationRootUrl } from '../../api/apiBase';
+
 /** API base used for device integration URLs shown to HR admins. */
 export function apiBaseUrl(): string {
-  const env = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  if (env && env.trim()) return env.replace(/\/$/, '');
-  return `${window.location.origin.replace(/:\d+$/, ':3001')}`;
+  return deviceIntegrationRootUrl();
 }
 
 export function getDeviceIntegrationUrls() {

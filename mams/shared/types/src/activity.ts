@@ -30,6 +30,45 @@ export const ActivityListQuerySchema = z.object({
 });
 export type ActivityListQuery = z.infer<typeof ActivityListQuerySchema>;
 
+export const AuditLogCategorySchema = z.enum([
+  'all',
+  'auth',
+  'company',
+  'users',
+  'employees',
+  'settings',
+  'security',
+]);
+export type AuditLogCategory = z.infer<typeof AuditLogCategorySchema>;
+
+export type AuditLogCategoryEntry = {
+  id: AuditLogCategory;
+  label: string;
+  shortLabel?: string;
+};
+
+export const AUDIT_LOG_CATEGORIES: AuditLogCategoryEntry[] = [
+  { id: 'all', label: 'All events', shortLabel: 'All' },
+  { id: 'auth', label: 'Sign in / out', shortLabel: 'Auth' },
+  { id: 'company', label: 'Company info', shortLabel: 'Company' },
+  { id: 'users', label: 'Users & access', shortLabel: 'Users' },
+  { id: 'employees', label: 'Employees', shortLabel: 'Employees' },
+  { id: 'settings', label: 'Settings & flags', shortLabel: 'Settings' },
+  { id: 'security', label: 'Security', shortLabel: 'Security' },
+];
+
+export const OrgActivityListQuerySchema = ActivityListQuerySchema.extend({
+  userId: z.string().optional(),
+  role: z.string().optional(),
+  eventType: z.string().optional(),
+  entityType: z.string().optional(),
+  category: AuditLogCategorySchema.optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  search: z.string().optional(),
+});
+export type OrgActivityListQuery = z.infer<typeof OrgActivityListQuerySchema>;
+
 export const ActivityListItemSchema = z.object({
   id: z.string(),
   occurredAt: z.string().datetime(),
@@ -37,6 +76,10 @@ export const ActivityListItemSchema = z.object({
   entityType: z.string().nullable(),
   entityId: z.string().nullable(),
   payload: z.record(z.unknown()),
+  userId: z.string().nullable().optional(),
+  userName: z.string().nullable().optional(),
+  userEmail: z.string().nullable().optional(),
+  userRole: z.string().nullable().optional(),
 });
 export type ActivityListItem = z.infer<typeof ActivityListItemSchema>;
 

@@ -36,22 +36,22 @@ describe('validatePermissionsForRole', () => {
     const r = validatePermissionsForRole('hr.compliance', [
       'read.compliant',
       'approve.adjust',
-      'manage.users',
+      'manage.org_users',
     ]);
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.message).toContain('manage.users');
+    expect(r.message).toContain('manage.org_users');
   });
 
   it('dedupes duplicates', () => {
     const r = validatePermissionsForRole('hr.admin', [
       'read.real',
       'read.real',
-      'manage.settings',
+      'manage.employees',
     ] as Permission[]);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.permissions).toEqual(['read.real', 'manage.settings']);
+    expect(r.permissions).toEqual(['read.real', 'manage.employees']);
   });
 
   it('rejects empty set', () => {
@@ -70,32 +70,31 @@ describe('ROLE_PERMISSION_CAP', () => {
     expect(r.ok).toBe(false);
   });
 
-  it('accepts manage.export_naming for hr.admin', () => {
+  it('rejects manage.export_naming for hr.admin', () => {
     const r = validatePermissionsForRole('hr.admin', ['read.real', 'manage.export_naming']);
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
   });
 
-  it('hr.admin cap includes all Permission enum values', () => {
+  it('hr.admin cap includes core HR permissions', () => {
     const cap = ROLE_PERMISSION_CAP['hr.admin'];
-    const all: Permission[] = [
+    const core: Permission[] = [
       'read.real',
-      'read.compliant',
-      'write.adjust',
-      'approve.adjust',
-      'write.regularization',
-      'approve.regularization',
-      'unmask.sensitive',
-      'manage.users',
+      'manage.employees',
       'manage.devices',
-      'manage.settings',
-      'manage.export_naming',
-      'read.leave',
-      'write.leave',
-      'approve.leave',
       'manage.leave',
+      'read.visitors',
+      'manage.visitors',
     ];
-    for (const p of all) {
+    for (const p of core) {
       expect(cap).toContain(p);
     }
+    expect(cap).not.toContain('manage.org_users');
+  });
+
+  it('org.admin cap includes governance permissions', () => {
+    const cap = ROLE_PERMISSION_CAP['org.admin'];
+    expect(cap).toContain('manage.org_users');
+    expect(cap).toContain('manage.org_settings');
+    expect(cap).toContain('read.org_audit');
   });
 });

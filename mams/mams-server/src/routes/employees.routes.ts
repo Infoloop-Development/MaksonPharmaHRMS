@@ -12,7 +12,7 @@ import {
 import { EmployeeModel } from '../models/Employee.js';
 import { toMaskedEmployee } from '../services/employee.service.js';
 import { allocateNextEmpCode, previewNextEmpCode } from '../services/employeeCode.service.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { isUnmaskEnabled } from '../config/featureFlags.js';
 import { audit, logUnmask, logUnmaskActivity } from '../services/audit.service.js';
@@ -22,8 +22,10 @@ const router = Router();
 
 router.use(requireAuth);
 
+const manageEmployeesGate = requireAnyPermission('manage.employees', 'manage.users');
+
 // Preview next server-allocated emp code (must be before /:id)
-router.get('/next-code', requirePermission('manage.users'), async (_req, res, next) => {
+router.get('/next-code', requireAnyPermission('manage.employees', 'manage.users'), async (_req, res, next) => {
   try {
     const nextEmpCode = await previewNextEmpCode();
     res.json({ nextEmpCode });
@@ -125,7 +127,7 @@ router.post('/:id/unmask', requirePermission('unmask.sensitive'), async (req, re
       throw new ApiError(403, 'forbidden', 'You are not allowed to unmask this field');
     }
 
-    const rawValue = (doc as Record<string, unknown>)[field];
+    const rawValue = (doc as unknown as Record<string, unknown>)[field];
     const value = rawValue == null ? '' : String(rawValue);
 
     await logUnmask(req.auth!.sub, doc._id, field, auditCtx);
@@ -138,7 +140,7 @@ router.post('/:id/unmask', requirePermission('unmask.sensitive'), async (req, re
 });
 
 // CREATE
-router.post('/', requirePermission('manage.users'), async (req, res, next) => {
+router.post('/', manageEmployeesGate, async (req, res, next) => {
   try {
     const body = EmployeeCreateBodySchema.parse(req.body);
     const empCode = await allocateNextEmpCode();
@@ -170,7 +172,7 @@ router.post('/', requirePermission('manage.users'), async (req, res, next) => {
 });
 
 // UPDATE
-router.patch('/:id', requirePermission('manage.users'), async (req, res, next) => {
+router.patch('/:id', manageEmployeesGate, async (req, res, next) => {
   try {
     if (!Types.ObjectId.isValid(req.params.id ?? '')) {
       throw new ApiError(404, 'not_found', 'Employee not found');

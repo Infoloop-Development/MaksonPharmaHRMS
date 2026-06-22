@@ -1,8 +1,19 @@
 import { useAuth } from '../store/auth';
+import { apiBasePath, apiRootUrl } from './apiBase';
 
-/** Empty in dev → same-origin `/api` so Vite proxies to the API (see vite.config.ts). */
-const apiRoot = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const BASE = (apiRoot ? apiRoot.replace(/\/$/, '') : '') + '/api';
+const apiRoot = apiRootUrl();
+const BASE = apiBasePath();
+
+function networkErrorMessage(): string {
+  const target = BASE || '/api';
+  if (import.meta.env.DEV) {
+    return `Cannot reach API (${target}). Start the server: cd mams && npm run dev:server`;
+  }
+  if (apiRoot) {
+    return `Cannot reach API (${target}). Check that Render CORS_ORIGIN includes this site’s URL, or leave VITE_API_BASE_URL empty so Netlify proxies /api.`;
+  }
+  return `Cannot reach API (${target}). The Netlify /api proxy or API server may be down — try again in a minute.`;
+}
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public details?: unknown) {
@@ -23,10 +34,7 @@ async function rawRequest<T>(method: string, path: string, body?: unknown, retri
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (e) {
-    const msg =
-      e instanceof TypeError
-        ? `Cannot reach API (${BASE || '/api'}). Start the server: cd mams && npm run dev:server`
-        : String(e);
+    const msg = e instanceof TypeError ? networkErrorMessage() : String(e);
     throw new ApiError(0, 'network_error', msg);
   }
 
@@ -40,10 +48,7 @@ async function rawRequest<T>(method: string, path: string, body?: unknown, retri
         body: JSON.stringify({ refreshToken }),
       });
     } catch (e) {
-      const msg =
-        e instanceof TypeError
-          ? `Cannot reach API (${BASE || '/api'}). Start the server: cd mams && npm run dev:server`
-          : String(e);
+      const msg = e instanceof TypeError ? networkErrorMessage() : String(e);
       throw new ApiError(0, 'network_error', msg);
     }
     if (refreshed.ok) {
