@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import * as XLSX from 'xlsx';
 import { DashboardAttendanceQuerySchema, DashboardKpiConfigSchema, DashboardLayoutSchema } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
@@ -25,11 +24,7 @@ import {
 } from '../services/dashboardAttendance.service.js';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from '../services/exportFileName.service.js';
-import {
-  brandingFromSettingsDoc,
-  buildCsvFooter,
-  buildXlsxHeaderRows,
-} from '../services/exportBranding.service.js';
+import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -171,9 +166,8 @@ router.get('/attendance.xlsx', async (req, res, next) => {
     const rows = await listDashboardAttendanceForExport(exportQuery, req.auth!.viewMode);
 
     const settingsDoc = await SettingsModel.findOne().lean();
-    const branding = brandingFromSettingsDoc(settingsDoc);
 
-    const dataHeader = [
+    const headers = [
       'Employee',
       'ID',
       'Department',
@@ -194,28 +188,8 @@ router.get('/attendance.xlsx', async (req, res, next) => {
       r.displayStatus,
     ]);
 
-    const footerRows = buildCsvFooter(branding).map((line) => [line.replace(/^"|"$/g, '')]);
-    const sheetAoA = [
-      ...buildXlsxHeaderRows(branding, {
-        reportType: 'Dashboard Attendance Export',
-        period: parsed.date,
-      }),
-      [],
-      dataHeader,
-      ...dataRows,
-      [],
-      ...footerRows,
-    ];
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(sheetAoA);
-    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
+    const buffer = buildPlainXlsxBuffer(headers, dataRows, 'Attendance');
+    res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
     const filename = buildExportFileName(
       'dashboardAttendanceXlsx',
       {

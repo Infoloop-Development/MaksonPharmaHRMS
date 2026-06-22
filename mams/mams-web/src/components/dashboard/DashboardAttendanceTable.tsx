@@ -152,7 +152,7 @@ export function DashboardAttendanceTable({
   const shift = shiftFilter;
   const status = statusFilter;
   const [page, setPage] = useState(1);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
   const [sortCol, setSortCol] = useState<SortCol>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
@@ -231,9 +231,9 @@ export function DashboardAttendanceTable({
     return sortDir === 'asc' ? '▲' : '▼';
   };
 
-  const onExport = async () => {
+  const onExportPdf = async () => {
     if (!selectedDate) return;
-    setExporting(true);
+    setExporting('pdf');
     try {
       const settingsData = settings ?? (await settingsApi.get());
       const branding = brandingFromSettings(settingsData);
@@ -276,7 +276,33 @@ export function DashboardAttendanceTable({
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
-      setExporting(false);
+      setExporting(null);
+    }
+  };
+
+  const onExportExcel = async () => {
+    if (!selectedDate) return;
+    setExporting('excel');
+    try {
+      await dashboardApi.downloadAttendanceXlsx({
+        date: selectedDate,
+        search: debouncedSearch.trim() || undefined,
+        department: department || undefined,
+        timeShift: shift === 'All' ? undefined : shift,
+        status,
+      });
+      logDashboardAction('ui.dashboard.export_xlsx', {
+        date: selectedDate,
+        search: debouncedSearch.trim() || undefined,
+        department: department || undefined,
+        timeShift: shift === 'All' ? undefined : shift,
+        status,
+      });
+      toast('Excel download started', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -285,16 +311,27 @@ export function DashboardAttendanceTable({
   const filterDefaults = { department: '', shift: 'All' as ShiftFilter, status: 'All' as StatusFilter };
   const activeCount = countActiveFilters({ department, shift, status }, filterDefaults);
 
-  const exportButton = (
-    <button
-      type="button"
-      className="btn-green shrink-0"
-      onClick={onExport}
-      disabled={exporting || isInitialLoad}
-    >
-      <DownloadIcon />
-      {exporting ? 'Exporting…' : 'Export PDF'}
-    </button>
+  const exportButtons = (
+    <>
+      <button
+        type="button"
+        className="btn-outline shrink-0"
+        onClick={() => void onExportExcel()}
+        disabled={exporting !== null || isInitialLoad}
+      >
+        <DownloadIcon />
+        {exporting === 'excel' ? 'Exporting…' : 'Export Excel'}
+      </button>
+      <button
+        type="button"
+        className="btn-green shrink-0"
+        onClick={() => void onExportPdf()}
+        disabled={exporting !== null || isInitialLoad}
+      >
+        <DownloadIcon />
+        {exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
+      </button>
+    </>
   );
 
   const searchField = (
@@ -353,7 +390,7 @@ export function DashboardAttendanceTable({
           search={searchField}
           activeCount={activeCount}
           onClear={clearFilters}
-          actions={exportButton}
+          actions={exportButtons}
           desktopClassName="hidden"
           className="w-full md:hidden"
         >
@@ -391,7 +428,7 @@ export function DashboardAttendanceTable({
             <option value="Weekly Off">Weekly Off</option>
             <option value="Half Day">Half Day</option>
           </select>
-          {exportButton}
+          {exportButtons}
         </div>
       </div>
 

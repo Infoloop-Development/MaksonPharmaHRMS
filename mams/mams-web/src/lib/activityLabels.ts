@@ -242,6 +242,11 @@ export function formatActivityDescription(item: ActivityListItem): string {
       const parts = filterParts(p, ['startDate', 'endDate', 'department', 'location']);
       return `Printed ${tab} report${parts ? ` (${parts})` : ''}`;
     }
+    case 'ui.reports.export_xlsx': {
+      const tab = p.tab ?? 'daily';
+      const parts = filterParts(p, ['startDate', 'endDate', 'yearMonth', 'department', 'location']);
+      return `Exported ${tab} report Excel${parts ? ` (${parts})` : ''}`;
+    }
     case 'ui.reports.export_csv': {
       const parts = filterParts(p, ['startDate', 'endDate', 'department', 'location']);
       return `Exported daily report CSV${parts ? ` (${parts})` : ''}`;

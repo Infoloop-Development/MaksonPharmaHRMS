@@ -44,7 +44,7 @@ export function useActivityLog() {
   );
 
   const logReportsAction = useCallback(
-    (eventType: 'ui.reports.filter' | 'ui.reports.print' | 'ui.reports.export_csv', payload: Record<string, unknown>) => {
+    (eventType: 'ui.reports.filter' | 'ui.reports.print' | 'ui.reports.export_csv' | 'ui.reports.export_xlsx', payload: Record<string, unknown>) => {
       logUi(eventType, 'reports', eventType.replace('ui.reports.', ''), payload);
     },
     [logUi]
