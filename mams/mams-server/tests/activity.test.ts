@@ -138,6 +138,12 @@ describe('activity.service', () => {
     expect(buildCategoryFilter('all')).toBeNull();
   });
 
+  it('buildCategoryFilter maps employees to employee lifecycle events', () => {
+    expect(buildCategoryFilter('employees')).toEqual({
+      eventType: { $in: ['employee_created', 'employee_updated', 'employee_deleted', 'csv_import'] },
+    });
+  });
+
   it('listOrgActivity applies category filter', async () => {
     auditCount.mockResolvedValue(0);
     auditFind.mockReturnValue({

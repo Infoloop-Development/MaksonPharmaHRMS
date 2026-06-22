@@ -9,6 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
+import { EmployeeDeleteModal } from './EmployeeDeleteModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 import { EmployeeCardList } from '../components/employees/EmployeeCardList';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
@@ -17,6 +18,8 @@ import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { employeesTourScript } from '../lib/onboarding/scripts/employeesTourScript';
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
+import type { EmployeeMasked } from '@mams/types';
+
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
 export function Employees() {
@@ -25,6 +28,8 @@ export function Employees() {
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
+  const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
   const pageSize = 50;
   const user = useAuth((s) => s.user);
   const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
@@ -52,6 +57,8 @@ export function Employees() {
     closeModals: () => {
       setImportOpen(false);
       setAddOpen(false);
+      setEditEmployee(null);
+      setDeleteEmployee(null);
     },
   };
 
@@ -104,7 +111,14 @@ export function Employees() {
       </div>
 
       <div data-tour-id="employees-list">
-      <EmployeeCardList items={data?.items} isLoading={isLoading} error={!!error} />
+      <EmployeeCardList
+        items={data?.items}
+        isLoading={isLoading}
+        error={!!error}
+        canManage={canManage}
+        onEdit={setEditEmployee}
+        onDelete={setDeleteEmployee}
+      />
 
       <div className="card overflow-hidden hidden md:block" data-tour-id="employees-table">
         <div className="tbl-scroll">
@@ -120,21 +134,22 @@ export function Employees() {
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">Joined</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
+                {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={canManage ? 10 : 9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {error && (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
+                <tr><td colSpan={canManage ? 10 : 9} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
                   <td className="px-4 py-3 font-mono text-xs">{e.empCode}</td>
                   <td className="px-4 py-3 font-mono text-xs text-text-muted">{e.biometricId}</td>
                   <td className="px-4 py-3 font-medium">
-                    <Link to={`/employees/${e.id}`} className="text-primary hover:underline">{e.name}</Link>
+                    <Link to={`/employees/${e.id}`} className="text-link font-medium hover:underline">{e.name}</Link>
                   </td>
                   <td className="px-4 py-3">{e.department}</td>
                   <td className="px-4 py-3 text-xs text-text-muted">{e.location}</td>
@@ -144,6 +159,18 @@ export function Employees() {
                   <td className="px-4 py-3">
                     <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
                   </td>
+                  {canManage && (
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button type="button" className="btn-outline btn-sm" onClick={() => setEditEmployee(e)}>
+                          Edit
+                        </button>
+                        <button type="button" className="btn-outline btn-sm text-red" onClick={() => setDeleteEmployee(e)}>
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -166,6 +193,12 @@ export function Employees() {
 
       {importOpen && <CsvImportModal onClose={() => setImportOpen(false)} />}
       {addOpen && <EmployeesAddModal onClose={() => setAddOpen(false)} />}
+      {editEmployee && (
+        <EmployeesAddModal mode="edit" employee={editEmployee} onClose={() => setEditEmployee(null)} />
+      )}
+      {deleteEmployee && (
+        <EmployeeDeleteModal employee={deleteEmployee} onClose={() => setDeleteEmployee(null)} />
+      )}
     </div>
   );
 }
@@ -248,7 +281,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
               {' '}
               <button
                 type="button"
-                className="text-primary font-semibold underline hover:no-underline"
+                className="text-link font-semibold underline hover:no-underline"
                 disabled={templateBusy}
                 onClick={onDownloadTemplate}
               >

@@ -13,6 +13,8 @@ import { useAuth } from '../store/auth';
 import { fmtDate } from '../lib/format';
 import { UnmaskPasswordModal } from '../components/employees/UnmaskPasswordModal';
 import { isUnmaskEnabled } from '../config/featureFlags';
+import { EmployeesAddModal } from './EmployeesAddModal';
+import { EmployeeDeleteModal } from './EmployeeDeleteModal';
 
 export function EmployeeDetail() {
   const { id } = useParams();
@@ -22,7 +24,12 @@ export function EmployeeDetail() {
   const [pendingField, setPendingField] = useState<SensitiveUnmaskField | null>(null);
   const [unmaskLoading, setUnmaskLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const qc = useQueryClient();
+
+  const canManage =
+    user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
 
   const grants = user?.unmaskFieldGrants ?? [];
   const hasLegacyUnmask =
@@ -72,15 +79,27 @@ export function EmployeeDetail() {
   return (
     <div>
       <div className="mb-4">
-        <Link to="/employees" className="text-sm text-primary hover:underline">
+        <Link to="/employees" className="text-sm text-link hover:underline">
           {'←'} Back to employees
         </Link>
       </div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">{data.name}</h1>
-        <div className="text-sm text-text-muted font-mono">
-          {data.empCode} · {data.biometricId}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{data.name}</h1>
+          <div className="text-sm text-text-muted font-mono">
+            {data.empCode} · {data.biometricId}
+          </div>
         </div>
+        {canManage && (
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-outline" onClick={() => setEditOpen(true)}>
+              Edit
+            </button>
+            <button type="button" className="btn-outline text-red" onClick={() => setDeleteOpen(true)}>
+              Delete
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -128,6 +147,13 @@ export function EmployeeDetail() {
           passwordError={passwordError}
           onClearPasswordError={() => setPasswordError(null)}
         />
+      )}
+
+      {editOpen && (
+        <EmployeesAddModal mode="edit" employee={data} onClose={() => setEditOpen(false)} />
+      )}
+      {deleteOpen && (
+        <EmployeeDeleteModal employee={data} onClose={() => setDeleteOpen(false)} redirectOnSuccess />
       )}
     </div>
   );

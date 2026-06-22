@@ -3,6 +3,7 @@ import type {
   EmployeeListQuery,
   EmployeeListResponse,
   EmployeeMasked,
+  EmployeePatchBody,
   SensitiveUnmaskField,
 } from '@mams/types';
 import { api } from './client';
@@ -16,6 +17,8 @@ export const employeesApi = {
   getOne: (id: string) => api.get<EmployeeMasked>(`/employees/${id}`),
   previewNextCode: () => api.get<{ nextEmpCode: string }>('/employees/next-code'),
   create: (body: EmployeeCreateBody) => api.post<EmployeeMasked>('/employees', body),
+  update: (id: string, body: EmployeePatchBody) => api.patch<EmployeeMasked>(`/employees/${id}`, body),
+  delete: (id: string) => api.delete<void>(`/employees/${id}`),
   unmask: (
     id: string,
     field: SensitiveUnmaskField,
