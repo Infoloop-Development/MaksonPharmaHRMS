@@ -3,8 +3,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EmployeeCreateBodySchema,
   EmployeeCreateStep1Schema,
+  EmployeePatchBodySchema,
   MAKSON_DEPARTMENTS,
   WeekdaySchema,
+  type EmployeeMasked,
 } from '@mams/types';
 import { employeesApi } from '../api/employees';
 import { ApiError } from '../api/client';
@@ -72,9 +74,55 @@ function issuesToRecord(issues: { path: (string | number)[]; message: string }[]
   return out;
 }
 
-export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
+const SENSITIVE_KEYS = [
+  'pan',
+  'aadhaar',
+  'pfNumber',
+  'esiNumber',
+  'bankAccountNumber',
+  'ifsc',
+  'bankName',
+  'accountHolderName',
+  'accountType',
+] as const;
+
+function draftFromEmployee(employee: EmployeeMasked): Draft {
+  return {
+    biometricId: employee.biometricId,
+    name: employee.name,
+    department: employee.department,
+    designation: employee.designation,
+    location: employee.location,
+    timeShift: employee.timeShift,
+    alternateShift: employee.alternateShift,
+    weeklyOff: employee.weeklyOff[0] ?? 'Sunday',
+    joinDate: employee.joinDate.slice(0, 10),
+    gender: employee.gender,
+    status: employee.status,
+    pan: '',
+    aadhaar: '',
+    bankAccountNumber: '',
+    ifsc: '',
+    bankName: '',
+    accountHolderName: '',
+    accountType: employee.accountType,
+    pfNumber: '',
+    esiNumber: '',
+  };
+}
+
+export function EmployeesAddModal({
+  onClose,
+  mode = 'create',
+  employee,
+}: {
+  onClose: () => void;
+  mode?: 'create' | 'edit';
+  employee?: EmployeeMasked;
+}) {
+  const isEdit = mode === 'edit' && !!employee;
   const [step, setStep] = useState<1 | 2>(1);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [draft, setDraft] = useState<Draft>(() => (isEdit && employee ? draftFromEmployee(employee) : emptyDraft()));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,6 +132,7 @@ export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
   const { data: nextCodeData, isLoading: nextCodeLoading } = useQuery({
     queryKey: ['employees', 'next-code'],
     queryFn: () => employeesApi.previewNextCode(),
+    enabled: !isEdit,
   });
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
@@ -143,6 +192,61 @@ export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
 
   const onSubmit = async () => {
     setFormError(null);
+    if (isEdit && employee) {
+      const step1Parsed = EmployeeCreateStep1Schema.safeParse(step1Payload);
+      if (!step1Parsed.success) {
+        setFieldErrors(issuesToRecord(step1Parsed.error.issues));
+        setStep(1);
+        return;
+      }
+      const patch: Record<string, unknown> = { ...step1Parsed.data };
+      for (const key of SENSITIVE_KEYS) {
+        const raw = draft[key];
+        if (typeof raw === 'string' && raw.trim()) {
+          patch[key] = raw;
+        }
+      }
+      const parsed = EmployeePatchBodySchema.safeParse(patch);
+      if (!parsed.success) {
+        setFieldErrors(issuesToRecord(parsed.error.issues));
+        const paths = parsed.error.issues.map((i) => i.path[0]);
+        if (paths.some((p) => SENSITIVE_KEYS.includes(String(p) as (typeof SENSITIVE_KEYS)[number]))) {
+          setStep(2);
+        } else {
+          setStep(1);
+        }
+        return;
+      }
+      setBusy(true);
+      try {
+        await employeesApi.update(employee.id, parsed.data);
+        toast('Employee updated', 'success');
+        qc.invalidateQueries({ queryKey: ['employees'] });
+        qc.invalidateQueries({ queryKey: ['employee', employee.id] });
+        qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+        onClose();
+      } catch (e: unknown) {
+        if (e instanceof ApiError) {
+          if (e.status === 400 && Array.isArray((e.details as { issues?: unknown })?.issues)) {
+            const issues = (e.details as { issues: { path: (string | number)[]; message: string }[] }).issues;
+            setFieldErrors(issuesToRecord(issues));
+            setFormError('Fix the highlighted fields.');
+            return;
+          }
+          if (e.status === 409) {
+            setFormError(e.message);
+            return;
+          }
+          setFormError(e.message);
+          return;
+        }
+        setFormError('Could not update employee.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const parsed = EmployeeCreateBodySchema.safeParse(fullPayload);
     if (!parsed.success) {
       setFieldErrors(issuesToRecord(parsed.error.issues));
@@ -212,14 +316,14 @@ export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
         </button>
       ) : (
         <button type="button" className="btn-primary" onClick={onSubmit} disabled={busy}>
-          {busy ? 'Saving…' : 'Save employee'}
+          {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Save employee'}
         </button>
       )}
     </>
   );
 
   return (
-    <Modal open onClose={onClose} title="Add employee" size="xl" footer={footer}>
+    <Modal open onClose={onClose} title={isEdit ? 'Edit employee' : 'Add employee'} size="xl" footer={footer}>
       <div className="space-y-6 text-sm">
         <div className="flex gap-2 border-b border-border pb-4">
           <div
@@ -254,9 +358,11 @@ export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
                 <div>
                   <div className="label">Employee code</div>
                   <div className="input bg-surface2 font-mono text-text font-semibold flex items-center min-h-[42px]">
-                    {nextCodeLoading ? '…' : (nextCodeData?.nextEmpCode ?? '—')}
+                    {isEdit ? employee?.empCode : nextCodeLoading ? '…' : (nextCodeData?.nextEmpCode ?? '—')}
                   </div>
-                  <p className="mt-1 text-[11px] text-text-subtle">Assigned automatically when you save.</p>
+                  <p className="mt-1 text-[11px] text-text-subtle">
+                    {isEdit ? 'Employee code cannot be changed.' : 'Assigned automatically when you save.'}
+                  </p>
                 </div>
                 <div>
                   <label htmlFor="add-bio" className="label">Biometric ID</label>
@@ -330,6 +436,12 @@ export function EmployeesAddModal({ onClose }: { onClose: () => void }) {
 
         {step === 2 && (
           <div className="space-y-8 animate-[fadeIn_0.15s_ease-out]">
+            {isEdit && (
+              <p className="text-xs text-text-muted bg-surface2 border border-border rounded px-3 py-2">
+                Leave sensitive and bank fields blank to keep current values. Enter a value only when you need to change
+                it.
+              </p>
+            )}
             <p className="text-xs text-text-muted">
               PAN and IFSC are normalised to uppercase. Aadhaar: 12 digits (format only in Phase 1). Bank account: 9–18 digits. ESI: 10 or 17 digits.
             </p>
