@@ -1,14 +1,9 @@
-import * as XLSX from 'xlsx';
 import type { ExportTypeKey } from '@mams/types';
 import { ADMIN_OVERVIEW_TABLE_COLUMNS } from '@mams/types';
 import type { AdminOverviewTableKind } from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from './exportFileName.service.js';
-import {
-  brandingFromSettingsDoc,
-  buildCsvFooter,
-  buildXlsxHeaderRows,
-} from './exportBranding.service.js';
+import { buildPlainXlsxBuffer } from './plainXlsx.service.js';
 import {
   auditPageBadge,
   listAdminOverviewDevices,
@@ -22,14 +17,6 @@ import {
 } from './dashboardAttendance.service.js';
 
 const EXPORT_PAGE_SIZE = 5000;
-
-const REPORT_LABELS: Record<AdminOverviewTableKind, string> = {
-  attendance: 'Admin Overview Attendance',
-  users: 'Admin Overview Users',
-  audit: 'Admin Overview Audit',
-  devices: 'Admin Overview Devices',
-  employees: 'Admin Overview Employees',
-};
 
 const EXPORT_TYPE_KEYS: Record<AdminOverviewTableKind, ExportTypeKey> = {
   attendance: 'adminOverviewAttendanceXlsx',
@@ -62,26 +49,8 @@ function cellExportValue(col: string, row: Record<string, unknown>): string | nu
   return typeof val === 'number' ? val : String(val);
 }
 
-function buildSheet(
-  branding: ReturnType<typeof brandingFromSettingsDoc>,
-  reportType: string,
-  period: string | undefined,
-  headers: string[],
-  dataRows: (string | number)[][]
-): Buffer {
-  const footerRows = buildCsvFooter(branding).map((line) => [line.replace(/^"|"$/g, '')]);
-  const sheetAoA = [
-    ...buildXlsxHeaderRows(branding, { reportType, period }),
-    [],
-    headers,
-    ...dataRows,
-    [],
-    ...footerRows,
-  ];
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(sheetAoA);
-  XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+function buildSheet(headers: string[], dataRows: (string | number)[][], sheetName = 'Data'): Buffer {
+  return buildPlainXlsxBuffer(headers, dataRows, sheetName);
 }
 
 export async function exportAdminOverviewTableXlsx(
@@ -90,14 +59,11 @@ export async function exportAdminOverviewTableXlsx(
   viewMode: 'real' | 'compliant'
 ): Promise<{ buffer: Buffer; filename: string }> {
   const settingsDoc = await SettingsModel.findOne().lean();
-  const branding = brandingFromSettingsDoc(settingsDoc);
   const columns = parseColumns(kind, query.columns);
   const headers = columnLabels(kind, columns);
-  const reportType = REPORT_LABELS[kind];
   const exportKey = EXPORT_TYPE_KEYS[kind];
 
   let dataRows: (string | number)[][] = [];
-  let period: string | undefined;
   let fileContext: {
     department?: string;
     location?: string;
@@ -107,7 +73,6 @@ export async function exportAdminOverviewTableXlsx(
 
   if (kind === 'attendance') {
     const date = query.date ?? '';
-    period = date;
     fileContext = { ...fileContext, department: query.department, asOfDate: date };
     const rows = await listDashboardAttendanceForExport(
       {
@@ -165,6 +130,8 @@ export async function exportAdminOverviewTableXlsx(
       search: query.search,
       role: query.role,
       eventType: query.eventType,
+      category: query.category as never,
+      userId: query.userId,
     });
     const items = result.items.map((row) => ({
       ...row,
@@ -174,7 +141,7 @@ export async function exportAdminOverviewTableXlsx(
     fileContext.asOfDate = new Date().toISOString().slice(0, 10);
   }
 
-  const buffer = buildSheet(branding, reportType, period, headers, dataRows);
+  const buffer = buildSheet(headers, dataRows);
   const filename = buildExportFileName(exportKey, fileContext, settingsDoc?.exportNaming, settingsDoc?.companyName);
   return { buffer, filename };
 }

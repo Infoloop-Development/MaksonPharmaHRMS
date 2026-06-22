@@ -1,4 +1,5 @@
 import { api } from './client';
+import { downloadAuthenticatedExport } from '../lib/downloadExport';
 import type {
   HolidayCreate,
   HolidayPatch,
@@ -110,12 +111,15 @@ export const leaveApi = {
   cancel: (id: string, note?: string) =>
     api.patch<LeaveApplicationItem>(`/leave/applications/${id}/cancel`, { note }),
 
-  exportCsvUrl: (params: Record<string, string | undefined>) => {
+  downloadApplicationsXlsx: (params: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
       if (v) q.set(k, v);
     }
-    return `/api/leave/applications/export.csv?${q.toString()}`;
+    return downloadAuthenticatedExport(
+      `/leave/applications/export.xlsx?${q.toString()}`,
+      'leave-applications.xlsx'
+    );
   },
 
   listTypes: () => api.get<{ items: LeaveTypeItem[] }>('/leave/types'),

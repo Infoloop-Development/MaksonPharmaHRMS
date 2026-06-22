@@ -9,12 +9,8 @@ import type {
   DashboardAttendanceListResponse,
   DashboardAttendanceQuery,
 } from '@mams/types';
-import { parseContentDispositionFilename } from '@mams/types';
 import { api } from './client';
-import { useAuth } from '../store/auth';
-import { apiBasePath } from './apiBase';
-
-const BASE = apiBasePath();
+import { downloadAuthenticatedExport } from '../lib/downloadExport';
 
 export interface SystemHealthResponse {
   api: string;
@@ -120,27 +116,11 @@ export const adminOverviewApi = {
       `/admin/overview/devices?${buildParams(params)}`
     );
   },
-  downloadTableXlsx: async (
-    kind: AdminOverviewTableKind,
-    q: Record<string, string | undefined>
-  ) => {
-    const token = useAuth.getState().accessToken;
-    const res = await fetch(`${BASE}/admin/overview/${kind}.xlsx?${buildParams(q)}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) {
-      const payload = await res.json().catch(() => ({}));
-      throw new Error((payload as { message?: string }).message ?? `Export failed (${res.status})`);
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download =
-      parseContentDispositionFilename(res.headers.get('Content-Disposition')) ?? `${kind}-export.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  },
+  downloadTableXlsx: (kind: AdminOverviewTableKind, q: Record<string, string | undefined>) =>
+    downloadAuthenticatedExport(
+      `/admin/overview/${kind}.xlsx?${buildParams(q)}`,
+      `${kind}-export.xlsx`
+    ),
 };
 
 export const adminApi = {

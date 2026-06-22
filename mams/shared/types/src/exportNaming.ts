@@ -19,11 +19,11 @@ export const ExportDateFormatSchema = z.enum(['YYYYMMDD', 'DDMMYY']);
 export type ExportDateFormat = z.infer<typeof ExportDateFormatSchema>;
 
 export const EXPORT_TYPE_LABELS: Record<ExportTypeKey, string> = {
-  dailyReportCsv: 'Daily report (CSV)',
-  monthlyReportCsv: 'Monthly summary (CSV)',
-  departmentReportCsv: 'Department report (CSV)',
-  locationReportCsv: 'Location report (CSV)',
-  leaveApplicationsCsv: 'Leave applications (CSV)',
+  dailyReportCsv: 'Daily report (Excel)',
+  monthlyReportCsv: 'Monthly summary (Excel)',
+  departmentReportCsv: 'Department report (Excel)',
+  locationReportCsv: 'Location report (Excel)',
+  leaveApplicationsCsv: 'Leave applications (Excel)',
   dashboardAttendanceXlsx: 'Dashboard attendance (Excel)',
   adminOverviewAttendanceXlsx: 'Admin overview attendance (Excel)',
   adminOverviewEmployeesXlsx: 'Admin overview employees (Excel)',
@@ -47,11 +47,11 @@ export const EXPORT_REPORT_TYPE_CODES: Record<ExportTypeKey, string> = {
 };
 
 export const EXPORT_FILE_EXTENSIONS: Record<ExportTypeKey, string> = {
-  dailyReportCsv: 'csv',
-  monthlyReportCsv: 'csv',
-  departmentReportCsv: 'csv',
-  locationReportCsv: 'csv',
-  leaveApplicationsCsv: 'csv',
+  dailyReportCsv: 'xlsx',
+  monthlyReportCsv: 'xlsx',
+  departmentReportCsv: 'xlsx',
+  locationReportCsv: 'xlsx',
+  leaveApplicationsCsv: 'xlsx',
   dashboardAttendanceXlsx: 'xlsx',
   adminOverviewAttendanceXlsx: 'xlsx',
   adminOverviewEmployeesXlsx: 'xlsx',

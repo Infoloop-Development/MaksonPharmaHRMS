@@ -6,12 +6,8 @@ import type {
   DashboardKpiConfig,
   DashboardLayout,
 } from '@mams/types';
-import { parseContentDispositionFilename } from '@mams/types';
 import { api } from './client';
-import { useAuth } from '../store/auth';
-import { apiBasePath } from './apiBase';
-
-const BASE = apiBasePath();
+import { downloadAuthenticatedExport } from '../lib/downloadExport';
 
 export type DashboardAttendanceQueryParams = {
   date: string;
@@ -79,23 +75,9 @@ export const dashboardApi = {
   attendance: (q: DashboardAttendanceQueryParams) =>
     api.get<DashboardAttendanceListResponse>(`/dashboard/attendance?${buildParams(q)}`),
   departments: () => api.get<DashboardDepartmentsResponse>('/dashboard/attendance/departments'),
-  downloadAttendanceXlsx: async (q: Omit<DashboardAttendanceQueryParams, 'page' | 'pageSize'>) => {
-    const token = useAuth.getState().accessToken;
-    const res = await fetch(`${BASE}/dashboard/attendance.xlsx?${buildParams(q)}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) {
-      const payload = await res.json().catch(() => ({}));
-      throw new Error((payload as { message?: string }).message ?? `Export failed (${res.status})`);
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download =
-      parseContentDispositionFilename(res.headers.get('Content-Disposition')) ??
-      `Attendance_${q.date}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  },
+  downloadAttendanceXlsx: (q: Omit<DashboardAttendanceQueryParams, 'page' | 'pageSize'>) =>
+    downloadAuthenticatedExport(
+      `/dashboard/attendance.xlsx?${buildParams(q)}`,
+      `Attendance_${q.date}.xlsx`
+    ),
 };
