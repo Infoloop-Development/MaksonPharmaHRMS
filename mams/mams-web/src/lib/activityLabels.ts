@@ -292,6 +292,8 @@ export function formatActivityDescription(item: ActivityListItem): string {
     }
     case 'device_registered':
       return `Registered device ${p.serialNumber ?? ''} (${p.vendor ?? 'eSSL'})`.trim();
+    case 'device_deleted':
+      return `Deleted device ${p.serialNumber ?? ''} (${p.vendor ?? 'eSSL'})`.trim();
     case 'devices_synced_all':
       return `Sync all devices (${p.deviceCount ?? 0} unit(s))`;
     case 'device_synced':

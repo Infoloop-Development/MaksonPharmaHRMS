@@ -9,6 +9,7 @@ export function DeviceTable({
   onSync,
   onTest,
   onEdit,
+  onDelete,
 }: {
   devices: Device[];
   isLoading: boolean;
@@ -17,6 +18,7 @@ export function DeviceTable({
   onSync: (id: string) => void;
   onTest: (id: string) => void;
   onEdit: (device: Device) => void;
+  onDelete: (device: Device) => void;
 }) {
   return (
     <DeviceCardGrid
@@ -27,6 +29,7 @@ export function DeviceTable({
       onSync={onSync}
       onTest={onTest}
       onEdit={onEdit}
+      onDelete={onDelete}
     />
   );
 }

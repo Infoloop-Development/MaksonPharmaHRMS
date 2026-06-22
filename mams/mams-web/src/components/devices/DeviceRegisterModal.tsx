@@ -28,6 +28,16 @@ function emptyForm(): DeviceCreate {
   };
 }
 
+function cleanIntegrationConfig(
+  cfg: DeviceCreate['integrationConfig']
+): DeviceCreate['integrationConfig'] {
+  if (!cfg) return undefined;
+  const cleaned = Object.fromEntries(
+    Object.entries(cfg).filter(([, v]) => v != null && v !== '')
+  );
+  return Object.keys(cleaned).length > 0 ? (cleaned as DeviceCreate['integrationConfig']) : undefined;
+}
+
 function formFromDevice(d: Device): DeviceCreate {
   return {
     deviceCode: d.deviceCode,
@@ -40,8 +50,18 @@ function formFromDevice(d: Device): DeviceCreate {
     location: d.location,
     ipAddress: d.ipAddress ?? '',
     notes: d.notes ?? '',
-    integrationConfig: d.integrationConfig ?? {},
+    integrationConfig: cleanIntegrationConfig(d.integrationConfig),
   };
+}
+
+function buildDevicePayload(form: DeviceCreate): DeviceCreate {
+  const payload: DeviceCreate = { ...form };
+  if (payload.vendor === 'eSSL') {
+    delete payload.integrationConfig;
+  } else {
+    payload.integrationConfig = cleanIntegrationConfig(payload.integrationConfig);
+  }
+  return payload;
 }
 
 export function DeviceRegisterModal({
@@ -64,10 +84,12 @@ export function DeviceRegisterModal({
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () =>
-      isEdit && editDevice
-        ? devicesApi.update(editDevice._id, form)
-        : devicesApi.create(form),
+    mutationFn: () => {
+      const payload = buildDevicePayload(form);
+      return isEdit && editDevice
+        ? devicesApi.update(editDevice._id, payload)
+        : devicesApi.create(payload);
+    },
     onSuccess: () => {
       toast(isEdit ? 'Device updated' : 'Device registered', 'success');
       qc.invalidateQueries({ queryKey: ['devices'] });
