@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { NavIcon } from './navIcons';
 import { Link ,useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 import { fmtIstHeaderDate } from '../lib/format';
@@ -69,7 +70,7 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
   };
 
   return (
-    <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-2 sticky top-0 z-10">
+    <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-4 sticky top-0 z-10">
       <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
@@ -86,7 +87,7 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-9 md:gap-10 shrink-0">
         <ThemeToggle compact />
         <div className="text-right">
           <div className="font-mono text-sm font-semibold tracking-wide text-text">
@@ -99,23 +100,31 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
           <div className="text-[11px] text-text-subtle mt-0.5">{fmtIstHeaderDate(now)}</div>
         </div>
 
-        <div className="flex items-center gap-2.5 border-1 border-border pl-3">
-          <Link to="/settings" className="hidden md:inline text-[12px] font-semibold truncate max-w-[120px] hover:underline">
+        <div className="flex items-center gap-3 border-l border-border pl-6">
+          <div className='hidden md:flex flex-col items-end leading-tight'>
+            <Link to="/settings" className="text-[12px] font-semibold truncate max-w-[120px] hover:underline">
             {user?.name}
-          </Link>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="text-[11px] text-text-muted hover:text-red transition-colors shrink-0"
-          >
-            Sign out
-          </button>
+            </Link>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-[11px] text-text-muted hover:text-red transition-colors"
+            > Sign out
+            </button>
+          </div>
           <Link
             to="/settings"
             className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0"
           >
             {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
           </Link>
+          <button
+            type="button"
+            onClick={onLogout}
+            aria-label="Sign Out"
+            className='md:hidden text-text-muted hover:text-red transition-colors shrink-0'>
+              <NavIcon name="signOut"/>
+            </button>
         </div>
       </div>
     </header>

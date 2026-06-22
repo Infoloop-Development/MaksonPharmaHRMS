@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth";
+import { Badge } from "../components/ui/Badge";
+import { SectionCard } from "./Settings";
 
 export function ComplianceSettings(){
     const user = useAuth((s) => s.user);
@@ -8,46 +10,33 @@ export function ComplianceSettings(){
     if (!user) return null;
 
     return (
-        <div className="max-w-lg space-y-6">
+        <div className="max-w-3xl space-y-6">
             <div>
-                <h1 className="text-2x1 font-bold">Settings</h1>
+                <h1 className="text-xl sm:text-2xl font-bold">My Profile</h1>
                 <p className="text-sm text-text-muted mt-1">Your account profile and security</p>
             </div>
 
-            <div className="card p-5 space-y-4">
-                <h2 className="text-base font-semibold">Profile</h2>
-                <div className="grid gap-3">
-                    <div>
-                        <div className="text-xsx text-text-muted mb-1">Full name</div>
-                        <div className="text-sm font-medium">{user.name}</div>
-                    </div>
-
-                    <div>
-                        <div className="text-xs text-text-muted mb-1">Email</div>
-                        <div className="text-sm font-medium">{user.email}</div>
-                    </div>
-
-                    <div>
-                        <div className="text-xs text-text-muted mb-1">Role</div>
-                        <div className="text-sm font-medium capitalize">{user.role.replace(/_/g,' ')}</div>
-                    </div>
-
+            <div className="card p-5 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center font-bold text-base text-primary shrink-0">
+                    {user.name.split(' ').map((s) => s[0]).slice(0, 2).join('')}
                 </div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-base font-bold truncate">{user.name}</div>
+                    <div className="text-sm text-text-muted truncate">{user.email}</div>
+                </div>
+                <Badge tone="blue">{user.role.replace(/_/g, ' ')}</Badge>
             </div>
 
-            <div className="card p-5 space-y-3">
-                <h2 className="text-base font-semibold">Security</h2>
-                <p className="text-sm text-text-muted">Update your acoount password.</p>
+            <SectionCard title="Security">
+                <p className="text-sm text-text-muted">Update your account password.</p>
                 <button
                     type="button"
                     className="btn-outline btn-sm"
                     onClick={() => navigate('/change-password')}
-                > Change Password
+                >
+                    Change Password
                 </button>
-
-            </div>
-
+            </SectionCard>
         </div>
     );
-
 }

@@ -13,6 +13,8 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebarCollapsed = useCallback(() => setSidebarCollapsed((v) => !v),[]);
   const accessToken = useAuth((s) => s.accessToken);
   const refreshToken = useAuth((s) => s.refreshToken);
   const setUser = useAuth((s) => s.setUser);
@@ -65,7 +67,12 @@ export function Layout() {
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
       <div className="flex min-h-screen overflow-x-hidden bg-bg">
-        <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+        <Sidebar
+          open={sidebarOpen}
+          onClose={closeSidebar}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebarCollapsed}
+        />
         {sidebarOpen && (
           <button
             type="button"
@@ -74,7 +81,11 @@ export function Layout() {
             onClick={closeSidebar}
           />
         )}
-        <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[250px]">
+        <div
+          className={`flex-1 flex flex-col min-w-0 ml-0 transition-[margin] duration-200 ${
+            sidebarCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[250px]'
+          }`}
+        >
           <TopBar onOpenMenu={openSidebar} />
           <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
             <Outlet />
