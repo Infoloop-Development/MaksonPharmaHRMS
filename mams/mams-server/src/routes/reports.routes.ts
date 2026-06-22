@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from '../services/exportFileName.service.js';
 import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
+import { utcToIstTimeString } from '../utils/time.js';
 import {
   brandingFromSettingsDoc,
   buildCsvFooter,
@@ -52,7 +53,7 @@ async function buildEmployeeFilter(q: z.infer<typeof FilterSchema>) {
 
 function formatExportDateTime(value: Date | string | null | undefined): string {
   if (!value) return '';
-  return new Date(value).toISOString();
+  return utcToIstTimeString(new Date(value));
 }
 
 function sendPlainXlsx(
