@@ -5,6 +5,7 @@ interface StatCardProps {
   accent?: 'primary' | 'green' | 'red' | 'amber';
   selected?: boolean;
   onClick?: () => void;
+  title?: string;
 }
 
 const ACCENT_BORDER = {
@@ -21,11 +22,12 @@ const ACCENT_SELECTED_BG = {
   amber: 'bg-amber-bg',
 };
 
-export function StatCard({ label, value, sub, accent = 'primary', selected, onClick }: StatCardProps) {
+export function StatCard({ label, value, sub, accent = 'primary', selected, onClick, title }: StatCardProps) {
   const clickable = onClick !== undefined;
   return (
     <button
       type="button"
+      title={title}
       onClick={onClick}
       disabled={!clickable}
       className={`card p-3 md:p-5 border-l-4 ${ACCENT_BORDER[accent]} text-left w-full transition ${

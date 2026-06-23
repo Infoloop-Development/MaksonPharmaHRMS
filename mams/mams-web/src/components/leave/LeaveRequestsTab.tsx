@@ -12,6 +12,7 @@ import { fmtDate } from '../../lib/format';
 import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 import { LeaveApplicationCardList } from './LeaveApplicationCardList';
 import { useToast } from '../ui/Toast';
+import { format, startOfMonth, endOfMonth, addDays } from 'date-fns';
 
 export function LeaveRequestsTab({
   canApply,
@@ -41,10 +42,17 @@ export function LeaveRequestsTab({
   const [typeFilter, setTypeFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [startsFrom, setStartsFrom] = useState('');
+  const [startsTo,setStartsTo] = useState('');
   const [page, setPage] = useState(1);
   const [expandedReason, setExpandedReason] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const toast = useToast((s) => s.push);
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
+  const weekEndStr = format(addDays(today, 7), 'yyyy-MM-dd');
+  const monthStartStr = format(startOfMonth(today), 'yyyy-MM-dd');
+  const monthEndStr = format(endOfMonth(today), 'yyyy-MM-dd');
 
   const exportParams = () => ({
     status: statusFilter === 'All' ? undefined : statusFilter,
@@ -52,6 +60,8 @@ export function LeaveRequestsTab({
     leaveTypeId: typeFilter || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
+    startsFrom: startsFrom || undefined,
+    startsTo: startsTo || undefined,
   });
 
   const onExportExcel = async () => {
@@ -72,9 +82,9 @@ export function LeaveRequestsTab({
     </button>
   );
 
-  const filterDefaults = { statusFilter: 'All' as const, typeFilter: '', startDate: '', endDate: '' };
+  const filterDefaults = { statusFilter: 'All' as const, typeFilter: '', startDate: '', endDate: '' ,startsFrom: '', startsTo: ''};
   const activeCount = countActiveFilters(
-    { statusFilter, typeFilter, startDate, endDate },
+    { statusFilter, typeFilter, startDate, endDate, startsFrom, startsTo },
     filterDefaults
   );
 
@@ -83,11 +93,13 @@ export function LeaveRequestsTab({
     setTypeFilter('');
     setStartDate('');
     setEndDate('');
+    setStartsFrom('');
+    setStartsTo('');
     setPage(1);
   };
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate, page }],
+    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate,startsFrom, startsTo, page }],
     queryFn: () =>
       leaveApi.listApplications({
         status: statusFilter === 'All' ? undefined : statusFilter,
@@ -95,6 +107,8 @@ export function LeaveRequestsTab({
         leaveTypeId: typeFilter || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        startsFrom: startsFrom || undefined,
+        startsTo: startsTo || undefined,
         page,
         pageSize: 50,
       }),
@@ -139,7 +153,7 @@ export function LeaveRequestsTab({
         type="date"
         className="md:max-w-[160px]"
         value={startDate}
-        onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+        onChange={(e) => { setStartDate(e.target.value); setStartsFrom(''); setStartsTo(''); setPage(1); }}
         title="From date"
       />
       <Input
@@ -147,9 +161,12 @@ export function LeaveRequestsTab({
         className="md:max-w-[160px]"
         value={endDate}
         min={startDate || undefined}
-        onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+        onChange={(e) => { setEndDate(e.target.value); setStartsFrom(''); setStartsTo(''); setPage(1); }}
         title="To date"
       />
+      <button type="button" className="hidden md:inline-flex btn-outline btn-sm shrink-0" onClick={clearFilters}>
+        Clear filters
+      </button>
     </>
   );
 
@@ -169,14 +186,15 @@ export function LeaveRequestsTab({
       )}
 
       <div className="dash-stat-grid mb-6">
-        <div title={summary?.leavesTodayNames?.join(', ') || 'No one on leave today'}>
-          <StatCard
-            label="Leaves Today"
-            value={String(summary?.leavesToday ?? 0)}
-            accent="primary"
-            sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : undefined}
-          />
-        </div>
+        <StatCard
+          label="Leaves Today"
+          value={String(summary?.leavesToday ?? 0)}
+          accent="primary"
+          sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : undefined}
+          title={summary?.leavesTodayNames?.join(', ') || 'No one on leave today'}
+          selected={statusFilter === 'Approved' && startDate === todayStr && endDate === todayStr}
+          onClick={() => { setStatusFilter('Approved'); setStartDate(todayStr); setEndDate(todayStr); setStartsFrom(''); setStartsTo(''); setPage(1); }}
+        />
         <StatCard
           label="Pending Approvals"
           value={String(summary?.pendingApprovals ?? 0)}
@@ -188,12 +206,15 @@ export function LeaveRequestsTab({
           label="Upcoming (7 days)"
           value={String(summary?.upcomingLeaves7Days ?? 0)}
           accent="green"
+          selected = {statusFilter === 'Approved' && startsFrom === todayStr && startsTo === weekEndStr}
+          onClick={() => {setStatusFilter('Approved'); setStartDate(''); setEndDate(''); setStartsFrom(todayStr); setStartsTo(weekEndStr); setPage(1); }}
         />
         <StatCard
           label="Leaves This Month"
           value={String(summary?.leavesThisMonth ?? 0)}
           accent="primary"
-          sub="Total days consumed"
+          selected={statusFilter === 'Approved' && startDate === monthStartStr && endDate === monthEndStr}
+          onClick={() => {setStatusFilter('Approved'); setStartDate(monthStartStr); setEndDate(monthEndStr); setStartsFrom(''); setStartsTo(''); setPage(1)}}
         />
       </div>
 

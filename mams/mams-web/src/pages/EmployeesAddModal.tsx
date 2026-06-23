@@ -87,6 +87,9 @@ const SENSITIVE_KEYS = [
 ] as const;
 
 function draftFromEmployee(employee: EmployeeMasked): Draft {
+  if (!employee.timeShift){
+    throw new Error('EmployeesAddModal: edit requires real view (timeshift is masked)')
+  }
   return {
     biometricId: employee.biometricId,
     name: employee.name,

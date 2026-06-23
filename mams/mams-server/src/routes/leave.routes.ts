@@ -297,6 +297,14 @@ async function buildApplicationListFilter(q: z.infer<typeof LeaveListQuerySchema
     if (q.startDate) filter.toDate = { ...(filter.toDate as object), $gte: q.startDate };
     if (q.endDate) filter.fromDate = { ...(filter.fromDate as object), $lte: q.endDate };
   }
+  if (q.startDate || q.endDate){
+    if (q.startDate) filter.toDate = {...(filter.toDate as object), $gte:q.startDate};
+    if (q.endDate) filter.fromDate = {...(filter.fromDate as object), $lte: q.endDate};
+  }
+  if (q.startsFrom || q.startsTo){
+    if (q.startsFrom) filter.fromDate = {...(filter.fromDate as object), $gt: q.startsFrom};
+    if (q.startsTo) filter.fromDate = {...(filter.fromDate as object), $lte: q.startsTo};
+  }
   if (q.search?.trim()) {
     const employees = await EmployeeModel.find({
       $or: [
