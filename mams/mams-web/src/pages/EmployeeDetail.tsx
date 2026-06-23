@@ -133,7 +133,7 @@ export function EmployeeDetail() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className={isCompliant ? 'max-w-xl' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'}>
         <Section title="Profile">
           <Row label="Department" value={data.department} />
           <Row label="Designation" value={data.designation} />
@@ -172,12 +172,7 @@ export function EmployeeDetail() {
 
       <div className="mt-4 card p-5">
         <div className = "flex items-center justify-between flex-wrap gap-3 mb-4">
-          <h2 className = "text-base font-bold">
-            Attendance History{' '}
-            <span className="font-normal text-xs text-text-muted">
-              {isCompliant ? 'Compliant (8-hour) view' : 'Real (12-hour) view'}
-            </span>
-          </h2>
+          <h2 className = "text-base font-bold">Attendance History</h2>
           <div className="flex gap-1 p-1 bg-surface2 rounded-lg">
             {([7,14,30] as const).map((d) => (
               <button

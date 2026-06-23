@@ -79,6 +79,8 @@ export const leaveApi = {
     status?: LeaveStatus;
     startDate?: string;
     endDate?: string;
+    startsFrom?: string;
+    startsTo?: string;
     page?: number;
     pageSize?: number;
   }) => {
@@ -89,6 +91,8 @@ export const leaveApi = {
     if (params.status) q.set('status', params.status);
     if (params.startDate) q.set('startDate', params.startDate);
     if (params.endDate) q.set('endDate', params.endDate);
+    if (params.startsFrom) q.set('startsFrom', params.startsFrom);
+    if (params.startsTo) q.set('startsTo', params.startsTo);
     if (params.page) q.set('page', String(params.page));
     if (params.pageSize) q.set('pageSize', String(params.pageSize));
     const qs = q.toString();
