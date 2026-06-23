@@ -104,7 +104,7 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
   const [filters, setFilters] = useState<GenericTableFilterDefaults>({ ...GENERIC_TABLE_FILTER_DEFAULTS });
 
   useEffect(() => {
@@ -244,8 +244,29 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
     search: debouncedSearch.trim() || undefined,
   });
 
-  const onExport = async () => {
-    setExporting(true);
+  const xlsxQueryParams = (): Record<string, string | undefined> => {
+    const q: Record<string, string | undefined> = {
+      columns: columnIds.join(','),
+      search: debouncedSearch.trim() || undefined,
+    };
+    if (config.kind === 'users') {
+      q.role = filters.role || undefined;
+      if (filters.active !== 'All') q.active = filters.active === 'yes' ? 'true' : 'false';
+    } else if (config.kind === 'audit') {
+      q.role = filters.role || undefined;
+      q.eventType = filters.eventType || undefined;
+    } else if (config.kind === 'devices') {
+      q.location = filters.location || undefined;
+      if (filters.online !== 'All') q.online = filters.online === 'yes' ? 'true' : 'false';
+    } else if (config.kind === 'employees') {
+      q.status = filters.status || undefined;
+      q.department = filters.department || undefined;
+    }
+    return q;
+  };
+
+  const onExportPdf = async () => {
+    setExporting('pdf');
     try {
       const settings = await settingsApi.get();
       const branding = brandingFromSettings(settings);
@@ -272,15 +293,43 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
-  const exportButton = (
-    <button type="button" className="btn-green shrink-0" onClick={onExport} disabled={exporting || isInitialLoad}>
-      <DownloadIcon />
-      {exporting ? 'Exporting…' : 'Export PDF'}
-    </button>
+  const onExportExcel = async () => {
+    setExporting('excel');
+    try {
+      await adminOverviewApi.downloadTableXlsx(config.kind, xlsxQueryParams());
+      toast('Excel download started', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const exportButtons = (
+    <>
+      <button
+        type="button"
+        className="btn-outline shrink-0"
+        onClick={() => void onExportExcel()}
+        disabled={exporting !== null || isInitialLoad}
+      >
+        <DownloadIcon />
+        {exporting === 'excel' ? 'Exporting…' : 'Export Excel'}
+      </button>
+      <button
+        type="button"
+        className="btn-green shrink-0"
+        onClick={() => void onExportPdf()}
+        disabled={exporting !== null || isInitialLoad}
+      >
+        <DownloadIcon />
+        {exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
+      </button>
+    </>
   );
 
   const searchField = (
@@ -375,7 +424,7 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
           search={searchField}
           activeCount={activeCount}
           onClear={clearFilters}
-          actions={exportButton}
+          actions={exportButtons}
           desktopClassName="hidden"
           className="w-full md:hidden"
         >
@@ -390,7 +439,7 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
             aria-label="Search table"
           />
           {filterFields}
-          {exportButton}
+          {exportButtons}
         </div>
       </div>
 

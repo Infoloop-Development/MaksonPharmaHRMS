@@ -27,6 +27,7 @@ import { LeaveQuotaLedgerModel } from '../models/LeaveQuotaLedger.js';
 import { EmployeeModel } from '../models/Employee.js';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from '../services/exportFileName.service.js';
+import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
 import {
   brandingFromSettingsDoc,
   buildCsvFooter,
@@ -329,6 +330,59 @@ router.get('/applications', async (req, res, next) => {
         .lean(),
     ]);
     res.json({ items, total, page: q.page, pageSize: q.pageSize });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/applications/export.xlsx', async (req, res, next) => {
+  try {
+    const q = LeaveListQuerySchema.parse({ ...req.query, pageSize: 5000 });
+    const filter = await buildApplicationListFilter(q);
+    const items = await LeaveApplicationModel.find(filter)
+      .populate('employeeId', 'name empCode')
+      .populate('leaveTypeId', 'name')
+      .sort({ appliedAt: -1 })
+      .limit(5000)
+      .lean();
+
+    const headers = [
+      'Employee',
+      'Emp Code',
+      'Leave Type',
+      'From',
+      'To',
+      'Total Days',
+      'Status',
+      'Reason',
+    ];
+    const dataRows = items.map((row) => {
+      const emp = row.employeeId as { name?: string; empCode?: string } | null;
+      const lt = row.leaveTypeId as { name?: string } | null;
+      return [
+        emp?.name ?? '',
+        emp?.empCode ?? '',
+        lt?.name ?? '',
+        row.fromDate,
+        row.toDate,
+        row.totalDays,
+        row.status,
+        row.reason ?? '',
+      ];
+    });
+
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'leaveApplicationsCsv',
+      { companyName: settingsDoc?.companyName },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+
+    const buffer = buildPlainXlsxBuffer(headers, dataRows, 'Leave');
+    res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

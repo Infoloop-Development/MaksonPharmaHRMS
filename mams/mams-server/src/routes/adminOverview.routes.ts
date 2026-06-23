@@ -75,6 +75,8 @@ const ExportQuerySchema = z.object({
   online: z.string().optional(),
   location: z.string().optional(),
   eventType: z.string().optional(),
+  category: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 function sendTableXlsx(

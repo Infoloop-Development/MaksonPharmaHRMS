@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { activityApi, ORG_ACTIVITY_QUERY_PREFIX } from '../../api/activity';
+import { adminApi } from '../../api/admin';
 import { usersApi } from '../../api/users';
 import { AuditLogActiveFilters, AuditLogResults } from '../../components/activity/AuditLogResults';
 import { AuditLogTabBar } from '../../components/activity/AuditLogTabBar';
 import { SearchableUserSelect } from '../../components/ui/SearchableUserSelect';
+import { useToast } from '../../components/ui/Toast';
 import type { AuditLogCategory, Role } from '@mams/types';
 import { ROLE_LABELS } from '@mams/types';
 
@@ -17,6 +19,8 @@ export function AdminAudit() {
   const [category, setCategory] = useState<AuditLogCategory>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const toast = useToast((s) => s.push);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -44,28 +48,21 @@ export function AdminAudit() {
 
   const resetPage = () => setPage(1);
 
-  const exportCsv = () => {
-    if (!data?.items.length) return;
-    const header = ['occurredAt', 'eventType', 'userName', 'userEmail', 'userRole', 'entityType', 'entityId'];
-    const rows = data.items.map((r) =>
-      [
-        r.occurredAt,
-        r.eventType,
-        r.userName ?? '',
-        r.userEmail ?? '',
-        r.userRole ?? '',
-        r.entityType ?? '',
-        r.entityId ?? '',
-      ].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')
-    );
-    const csv = [header.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `org-audit-page-${page}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      await adminApi.downloadTableXlsx('audit', {
+        search: debouncedSearch.trim() || undefined,
+        role: role || undefined,
+        category: category !== 'all' ? category : undefined,
+        userId: userId || undefined,
+      });
+      toast('Excel download started', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -75,8 +72,8 @@ export function AdminAudit() {
           <h1 className="text-xl sm:text-2xl font-bold">Audit log</h1>
           <p className="text-sm text-text-muted mt-1">Organization-wide activity across all users.</p>
         </div>
-        <button type="button" className="btn-outline btn-sm" onClick={exportCsv} disabled={!data?.items.length}>
-          Export page CSV
+        <button type="button" className="btn-outline btn-sm" onClick={() => void onExportExcel()} disabled={exporting}>
+          {exporting ? 'Exporting…' : 'Export Excel'}
         </button>
       </div>
 

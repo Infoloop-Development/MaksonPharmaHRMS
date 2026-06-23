@@ -1,4 +1,5 @@
 import { api } from './client';
+import { downloadAuthenticatedExport } from '../lib/downloadExport';
 
 export interface DailyReport {
   viewMode: 'real' | 'compliant';
@@ -70,12 +71,12 @@ export const reportsApi = {
     api.get<DepartmentReport>(`/reports/department?${buildParams(q)}`),
   location: (q: { yearMonth?: string; startDate?: string; endDate?: string; department?: string } = {}) =>
     api.get<LocationReport>(`/reports/location?${buildParams(q)}`),
-  dailyCsvUrl: (q: { date?: string; startDate?: string; endDate?: string; department?: string; location?: string } = {}) =>
-    `/api/reports/daily.csv?${buildParams(q)}`,
-  monthlyCsvUrl: (q: { yearMonth: string; department?: string; location?: string }) =>
-    `/api/reports/monthly.csv?${buildParams(q)}`,
-  departmentCsvUrl: (q: { yearMonth?: string } = {}) =>
-    `/api/reports/department.csv?${buildParams(q)}`,
-  locationCsvUrl: (q: { yearMonth?: string } = {}) =>
-    `/api/reports/location.csv?${buildParams(q)}`,
+  downloadDailyXlsx: (q: { date?: string; startDate?: string; endDate?: string; department?: string; location?: string } = {}) =>
+    downloadAuthenticatedExport(`/reports/daily.xlsx?${buildParams(q)}`, 'daily-report.xlsx'),
+  downloadMonthlyXlsx: (q: { yearMonth: string; department?: string; location?: string }) =>
+    downloadAuthenticatedExport(`/reports/monthly.xlsx?${buildParams(q)}`, 'monthly-report.xlsx'),
+  downloadDepartmentXlsx: (q: { yearMonth?: string } = {}) =>
+    downloadAuthenticatedExport(`/reports/department.xlsx?${buildParams(q)}`, 'department-report.xlsx'),
+  downloadLocationXlsx: (q: { yearMonth?: string } = {}) =>
+    downloadAuthenticatedExport(`/reports/location.xlsx?${buildParams(q)}`, 'location-report.xlsx'),
 };

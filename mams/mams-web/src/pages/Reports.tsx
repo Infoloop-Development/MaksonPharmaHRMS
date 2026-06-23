@@ -156,19 +156,20 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
     if (!opened) toast('Could not start print. Please try again.', 'error');
   };
 
-  const onDownloadCsv = () => {
-    logReportsAction('ui.reports.export_csv', {
+  const onDownloadExcel = async () => {
+    logReportsAction('ui.reports.export_xlsx', {
       tab: 'daily',
       startDate,
       endDate,
       department: department || undefined,
       location: location || undefined,
     });
-    const url = reportsApi.dailyCsvUrl({ startDate, endDate, department: department || undefined, location: location || undefined });
-    const a = document.createElement('a');
-    a.href = url;
-    a.click();
-    toast('CSV download started', 'success');
+    try {
+      await reportsApi.downloadDailyXlsx({ startDate, endDate, department: department || undefined, location: location || undefined });
+      toast('Excel download started', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    }
   };
 
   const dailyFilterDefaults = { startDate: sevenDaysAgo, endDate: today, department: '', location: '' };
@@ -216,7 +217,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
         </div>
         <div className="flex gap-2 w-full sm:w-auto no-print" data-tour-id="reports-export">
           <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
-          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadCsv}>Download CSV</button>
+          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadExcel}>Download Excel</button>
         </div>
       </div>
 
@@ -224,7 +225,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
 
       {data && data.rows.length > 500 && (
         <div className="mb-2 p-3 text-center text-xs text-text-muted bg-surface2 rounded-md md:hidden print:hidden">
-          Showing first 500 rows. Download CSV for full export.
+          Showing first 500 rows. Download Excel for full export.
         </div>
       )}
 
@@ -279,7 +280,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
         </div>
         {data && data.rows.length > 500 && (
           <div className="p-3 text-center text-xs text-text-muted bg-surface2">
-            Showing first 500 rows. Download CSV for full export.
+            Showing first 500 rows. Download Excel for full export.
           </div>
         )}
       </div>
@@ -380,12 +381,14 @@ function MonthlyReport() {
           });
           if (!opened) toast('Could not start print. Please try again.', 'error');
         }}
-        onDownloadCsv={() => {
-          logReportsAction('ui.reports.export_csv', { tab: 'monthly', yearMonth, department: department || undefined, location: location || undefined });
-          const a = document.createElement('a');
-          a.href = reportsApi.monthlyCsvUrl({ yearMonth, department: department || undefined, location: location || undefined });
-          a.click();
-          toast('CSV download started', 'success');
+        onDownloadExcel={async () => {
+          logReportsAction('ui.reports.export_xlsx', { tab: 'monthly', yearMonth, department: department || undefined, location: location || undefined });
+          try {
+            await reportsApi.downloadMonthlyXlsx({ yearMonth, department: department || undefined, location: location || undefined });
+            toast('Excel download started', 'success');
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Export failed', 'error');
+          }
         }}
       />
 
@@ -498,12 +501,14 @@ function DepartmentReport() {
           });
           if (!opened) toast('Could not start print. Please try again.', 'error');
         }}
-        onDownloadCsv={() => {
-          logReportsAction('ui.reports.export_csv', { tab: 'department', yearMonth });
-          const a = document.createElement('a');
-          a.href = reportsApi.departmentCsvUrl({ yearMonth });
-          a.click();
-          toast('CSV download started', 'success');
+        onDownloadExcel={async () => {
+          logReportsAction('ui.reports.export_xlsx', { tab: 'department', yearMonth });
+          try {
+            await reportsApi.downloadDepartmentXlsx({ yearMonth });
+            toast('Excel download started', 'success');
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Export failed', 'error');
+          }
         }}
       />
 
@@ -615,12 +620,14 @@ function LocationReport() {
           });
           if (!opened) toast('Could not start print. Please try again.', 'error');
         }}
-        onDownloadCsv={() => {
-          logReportsAction('ui.reports.export_csv', { tab: 'location', yearMonth });
-          const a = document.createElement('a');
-          a.href = reportsApi.locationCsvUrl({ yearMonth });
-          a.click();
-          toast('CSV download started', 'success');
+        onDownloadExcel={async () => {
+          logReportsAction('ui.reports.export_xlsx', { tab: 'location', yearMonth });
+          try {
+            await reportsApi.downloadLocationXlsx({ yearMonth });
+            toast('Excel download started', 'success');
+          } catch (e) {
+            toast(e instanceof Error ? e.message : 'Export failed', 'error');
+          }
         }}
       />
 
@@ -695,12 +702,12 @@ function ReportExportBar({
   recordCount,
   isLoading,
   onPrint,
-  onDownloadCsv,
+  onDownloadExcel,
 }: {
   recordCount?: number;
   isLoading: boolean;
   onPrint: () => void;
-  onDownloadCsv: () => void;
+  onDownloadExcel: () => void | Promise<void>;
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -711,8 +718,8 @@ function ReportExportBar({
         <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>
           Print to PDF
         </button>
-        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadCsv}>
-          Download CSV
+        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={() => void onDownloadExcel()}>
+          Download Excel
         </button>
       </div>
     </div>
