@@ -11,6 +11,7 @@ import { countActiveFilters } from '../../lib/countActiveFilters';
 import { fmtDate } from '../../lib/format';
 import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 import { LeaveApplicationCardList } from './LeaveApplicationCardList';
+import { useToast } from '../ui/Toast';
 
 export function LeaveRequestsTab({
   canApply,
@@ -42,6 +43,34 @@ export function LeaveRequestsTab({
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(1);
   const [expandedReason, setExpandedReason] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const toast = useToast((s) => s.push);
+
+  const exportParams = () => ({
+    status: statusFilter === 'All' ? undefined : statusFilter,
+    search: search || undefined,
+    leaveTypeId: typeFilter || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  });
+
+  const onExportExcel = async () => {
+    setExporting(true);
+    try {
+      await leaveApi.downloadApplicationsXlsx(exportParams());
+      toast('Excel download started', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportButton = (
+    <button type="button" className="btn-outline btn-sm" onClick={() => void onExportExcel()} disabled={exporting}>
+      {exporting ? 'Exporting…' : 'Export Excel'}
+    </button>
+  );
 
   const filterDefaults = { statusFilter: 'All' as const, typeFilter: '', startDate: '', endDate: '' };
   const activeCount = countActiveFilters(
@@ -131,7 +160,7 @@ export function LeaveRequestsTab({
           <p className="font-medium mb-1">No leave types configured yet</p>
           <p className="text-text-muted">
             Open{' '}
-            <button type="button" className="text-primary underline" onClick={onGoToSettings}>
+            <button type="button" className="text-link underline" onClick={onGoToSettings}>
               Leave Settings
             </button>
             {canConfigure ? ' and click Seed defaults to create Paid Leave, Casual Leave, Sick Leave, and more.' : ' (leave admin required to seed defaults).'}
@@ -175,19 +204,7 @@ export function LeaveRequestsTab({
         desktopClassName="hidden md:flex flex-wrap gap-3 items-center"
         actions={
           <>
-            <a
-              className="btn-outline btn-sm"
-              href={leaveApi.exportCsvUrl({
-                status: statusFilter === 'All' ? undefined : statusFilter,
-                search: search || undefined,
-                leaveTypeId: typeFilter || undefined,
-                startDate: startDate || undefined,
-                endDate: endDate || undefined,
-              })}
-              download
-            >
-              Export CSV
-            </a>
+            {exportButton}
             {canApply && (
               <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
                 + Add Leave
@@ -198,19 +215,7 @@ export function LeaveRequestsTab({
       >
         {filterFields}
         <div className="hidden md:flex gap-2 lg:ml-auto">
-          <a
-            className="btn-outline btn-sm"
-            href={leaveApi.exportCsvUrl({
-              status: statusFilter === 'All' ? undefined : statusFilter,
-              search: search || undefined,
-              leaveTypeId: typeFilter || undefined,
-              startDate: startDate || undefined,
-              endDate: endDate || undefined,
-            })}
-            download
-          >
-            Export CSV
-          </a>
+          {exportButton}
           {canApply && (
             <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
               + Add Leave
@@ -254,7 +259,7 @@ export function LeaveRequestsTab({
                   {canApply && (
                     <>
                       {' '}
-                      <button type="button" className="text-primary underline" onClick={onAddLeave}>Add leave</button>
+                      <button type="button" className="text-link underline" onClick={onAddLeave}>Add leave</button>
                     </>
                   )}
                 </td>
@@ -287,7 +292,7 @@ export function LeaveRequestsTab({
                     {row.reason.length > 80 && (
                       <button
                         type="button"
-                        className="text-xs text-primary ml-1"
+                        className="text-xs text-link ml-1"
                         onClick={() => setExpandedReason(reasonExpanded ? null : row._id)}
                       >
                         {reasonExpanded ? 'Less' : 'More'}

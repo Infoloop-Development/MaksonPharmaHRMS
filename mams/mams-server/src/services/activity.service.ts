@@ -41,7 +41,7 @@ export function buildCategoryFilter(category: AuditLogCategory): Record<string, 
     case 'users':
       return { eventType: { $in: ['user_created', 'user_updated', 'sessions_revoked'] } };
     case 'employees':
-      return { eventType: { $in: ['employee_created', 'employee_updated', 'csv_import'] } };
+      return { eventType: { $in: ['employee_created', 'employee_updated', 'employee_deleted', 'csv_import'] } };
     case 'settings':
       return {
         $or: [

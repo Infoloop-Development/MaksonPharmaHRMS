@@ -1,10 +1,12 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { z } from 'zod';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel } from '../models/Employee.js';
 import { requireAuth } from '../middleware/auth.js';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from '../services/exportFileName.service.js';
+import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
+import { utcToIstTimeString } from '../utils/time.js';
 import {
   brandingFromSettingsDoc,
   buildCsvFooter,
@@ -47,6 +49,24 @@ async function buildEmployeeFilter(q: z.infer<typeof FilterSchema>) {
     return empIds.map((e) => e._id);
   }
   return null;
+}
+
+function formatExportDateTime(value: Date | string | null | undefined): string {
+  if (!value) return '';
+  return utcToIstTimeString(new Date(value));
+}
+
+function sendPlainXlsx(
+  res: Response,
+  headers: string[],
+  rows: (string | number)[][],
+  filename: string,
+  sheetName = 'Data'
+): void {
+  const buffer = buildPlainXlsxBuffer(headers, rows, sheetName);
+  res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(buffer);
 }
 
 // Project fields based on viewMode.
@@ -326,6 +346,160 @@ router.get('/daily.csv', async (req, res, next) => {
   }
 });
 
+router.get('/daily.xlsx', async (req, res, next) => {
+  try {
+    const q = FilterSchema.parse(req.query);
+    const attFilter = buildAttendanceFilter(q);
+    const empIds = await buildEmployeeFilter(q);
+    if (empIds) attFilter.employeeId = { $in: empIds };
+
+    const rows = await AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
+      .populate('employeeId', 'name empCode department location')
+      .sort({ date: -1 })
+      .limit(10000)
+      .lean();
+
+    const isCompliant = req.auth!.viewMode === 'compliant';
+    const headers = isCompliant
+      ? ['Date', 'Code', 'Name', 'Department', 'Location', 'Entry', 'Exit', 'Hours', 'Status']
+      : ['Date', 'Code', 'Name', 'Department', 'Location', 'Entry', 'Exit', 'Net Hrs', 'OT', 'Status'];
+
+    const dataRows = rows.map((r) => {
+      const emp = r.employeeId as { name?: string; empCode?: string; department?: string; location?: string } | null;
+      const entry = isCompliant ? (r as { compliantEntryAt?: Date }).compliantEntryAt : (r as { realEntryAt?: Date }).realEntryAt;
+      const exit = isCompliant ? (r as { compliantExitAt?: Date }).compliantExitAt : (r as { realExitAt?: Date }).realExitAt;
+      const base = [
+        r.date,
+        emp?.empCode ?? '',
+        emp?.name ?? '',
+        emp?.department ?? '',
+        emp?.location ?? '',
+        formatExportDateTime(entry),
+        formatExportDateTime(exit),
+      ];
+      if (isCompliant) {
+        return [...base, (r as { compliantHours?: number }).compliantHours ?? '', r.status ?? ''];
+      }
+      return [
+        ...base,
+        (r as { realNetHours?: number }).realNetHours ?? '',
+        (r as { otHours?: number }).otHours ?? '',
+        r.status ?? '',
+      ];
+    });
+
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'dailyReportCsv',
+      {
+        department: q.department,
+        location: q.location,
+        startDate: q.startDate,
+        endDate: q.endDate,
+        companyName: settingsDoc?.companyName,
+      },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+    sendPlainXlsx(res, headers, dataRows, filename, 'Daily');
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/monthly.xlsx', async (req, res, next) => {
+  try {
+    const q = FilterSchema.parse(req.query);
+    if (!q.yearMonth) {
+      return res.status(400).json({ error: 'yearMonth required (YYYY-MM)' });
+    }
+    const attFilter = buildAttendanceFilter(q);
+    const empIds = await buildEmployeeFilter(q);
+    if (empIds) attFilter.employeeId = { $in: empIds };
+
+    const rows = await AttendanceDerivedModel.aggregate([
+      { $match: attFilter },
+      {
+        $group: {
+          _id: '$employeeId',
+          presentDays: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } },
+          absentDays: { $sum: { $cond: [{ $eq: ['$status', 'Absent'] }, 1, 0] } },
+          weeklyOffDays: { $sum: { $cond: [{ $eq: ['$status', 'Weekly Off'] }, 1, 0] } },
+          totalCompliantHours: { $sum: '$compliantHours' },
+          totalRealNetHours: { $sum: '$realNetHours' },
+          totalOtHours: { $sum: '$otHours' },
+        },
+      },
+      { $lookup: { from: 'employees', localField: '_id', foreignField: '_id', as: 'employee' } },
+      { $unwind: '$employee' },
+      {
+        $project: {
+          empCode: '$employee.empCode',
+          name: '$employee.name',
+          department: '$employee.department',
+          location: '$employee.location',
+          presentDays: 1,
+          absentDays: 1,
+          weeklyOffDays: 1,
+          totalCompliantHours: 1,
+          totalRealNetHours: 1,
+          totalOtHours: 1,
+          equivalentDays: {
+            $divide: [
+              req.auth!.viewMode === 'compliant' ? '$totalCompliantHours' : '$totalRealNetHours',
+              9.5,
+            ],
+          },
+        },
+      },
+      { $sort: { empCode: 1 } },
+      { $limit: 5000 },
+    ]);
+
+    const isCompliant = req.auth!.viewMode === 'compliant';
+    const headers = [
+      'Code',
+      'Name',
+      'Department',
+      'Location',
+      'Present',
+      'Absent',
+      'Weekly Off',
+      'Total Hrs',
+      'OT Hrs',
+      'Equiv. Days',
+    ];
+    const dataRows = rows.map((r) => [
+      r.empCode ?? '',
+      r.name ?? '',
+      r.department ?? '',
+      r.location ?? '',
+      r.presentDays ?? 0,
+      r.absentDays ?? 0,
+      r.weeklyOffDays ?? 0,
+      isCompliant ? r.totalCompliantHours ?? '' : r.totalRealNetHours ?? '',
+      r.totalOtHours ?? '',
+      typeof r.equivalentDays === 'number' ? Number(r.equivalentDays.toFixed(1)) : '',
+    ]);
+
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'monthlyReportCsv',
+      {
+        department: q.department,
+        location: q.location,
+        asOfDate: `${q.yearMonth}-01`,
+        companyName: settingsDoc?.companyName,
+      },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+    sendPlainXlsx(res, headers, dataRows, filename, 'Monthly');
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/monthly.csv', async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
@@ -438,6 +612,87 @@ router.get('/monthly.csv', async (req, res, next) => {
   }
 });
 
+router.get('/department.xlsx', async (req, res, next) => {
+  try {
+    const q = FilterSchema.parse(req.query);
+    const attFilter = buildAttendanceFilter(q);
+
+    const rows = await AttendanceDerivedModel.aggregate([
+      { $match: attFilter },
+      { $lookup: { from: 'employees', localField: 'employeeId', foreignField: '_id', as: 'emp' } },
+      { $unwind: '$emp' },
+      ...(q.location ? [{ $match: { 'emp.location': q.location } }] : []),
+      {
+        $group: {
+          _id: '$emp.department',
+          totalRecords: { $sum: 1 },
+          presentDays: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } },
+          absentDays: { $sum: { $cond: [{ $eq: ['$status', 'Absent'] }, 1, 0] } },
+          weeklyOffDays: { $sum: { $cond: [{ $eq: ['$status', 'Weekly Off'] }, 1, 0] } },
+          totalCompliantHours: { $sum: '$compliantHours' },
+          totalRealNetHours: { $sum: '$realNetHours' },
+          totalOtHours: { $sum: '$otHours' },
+          uniqueEmployees: { $addToSet: '$employeeId' },
+        },
+      },
+      {
+        $project: {
+          department: '$_id',
+          presentDays: 1,
+          absentDays: 1,
+          weeklyOffDays: 1,
+          totalCompliantHours: 1,
+          totalOtHours: 1,
+          employeeCount: { $size: '$uniqueEmployees' },
+          totalRecords: 1,
+          attendanceRate: {
+            $multiply: [
+              { $cond: [{ $gt: ['$totalRecords', 0] }, { $divide: ['$presentDays', '$totalRecords'] }, 0] },
+              100,
+            ],
+          },
+        },
+      },
+      { $sort: { department: 1 } },
+    ]);
+
+    const headers = [
+      'Department',
+      'Employees',
+      'Present',
+      'Absent',
+      'Weekly Off',
+      'Compliant Hrs',
+      'OT Hrs',
+      'Attendance Rate %',
+    ];
+    const dataRows = rows.map((r) => [
+      r.department ?? '',
+      r.employeeCount ?? 0,
+      r.presentDays ?? 0,
+      r.absentDays ?? 0,
+      r.weeklyOffDays ?? 0,
+      r.totalCompliantHours ?? '',
+      r.totalOtHours ?? '',
+      typeof r.attendanceRate === 'number' ? Number(r.attendanceRate.toFixed(0)) : '',
+    ]);
+
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'departmentReportCsv',
+      {
+        asOfDate: q.yearMonth ? `${q.yearMonth}-01` : undefined,
+        companyName: settingsDoc?.companyName,
+      },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+    sendPlainXlsx(res, headers, dataRows, filename, 'Department');
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/department.csv', async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
@@ -534,6 +789,81 @@ router.get('/department.csv', async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(joinCsvDocument(csv));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/location.xlsx', async (req, res, next) => {
+  try {
+    const q = FilterSchema.parse(req.query);
+    const attFilter = buildAttendanceFilter(q);
+
+    const rows = await AttendanceDerivedModel.aggregate([
+      { $match: attFilter },
+      { $lookup: { from: 'employees', localField: 'employeeId', foreignField: '_id', as: 'emp' } },
+      { $unwind: '$emp' },
+      ...(q.department ? [{ $match: { 'emp.department': q.department } }] : []),
+      {
+        $group: {
+          _id: '$emp.location',
+          totalRecords: { $sum: 1 },
+          presentDays: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } },
+          absentDays: { $sum: { $cond: [{ $eq: ['$status', 'Absent'] }, 1, 0] } },
+          totalCompliantHours: { $sum: '$compliantHours' },
+          totalOtHours: { $sum: '$otHours' },
+          uniqueEmployees: { $addToSet: '$employeeId' },
+        },
+      },
+      {
+        $project: {
+          location: '$_id',
+          presentDays: 1,
+          absentDays: 1,
+          totalCompliantHours: 1,
+          totalOtHours: 1,
+          employeeCount: { $size: '$uniqueEmployees' },
+          attendanceRate: {
+            $multiply: [
+              { $cond: [{ $gt: ['$totalRecords', 0] }, { $divide: ['$presentDays', '$totalRecords'] }, 0] },
+              100,
+            ],
+          },
+        },
+      },
+      { $sort: { location: 1 } },
+    ]);
+
+    const headers = [
+      'Location',
+      'Employees',
+      'Present',
+      'Absent',
+      'Compliant Hrs',
+      'OT Hrs',
+      'Attendance Rate %',
+    ];
+    const dataRows = rows.map((r) => [
+      r.location ?? '',
+      r.employeeCount ?? 0,
+      r.presentDays ?? 0,
+      r.absentDays ?? 0,
+      r.totalCompliantHours ?? '',
+      r.totalOtHours ?? '',
+      typeof r.attendanceRate === 'number' ? Number(r.attendanceRate.toFixed(0)) : '',
+    ]);
+
+    const settingsDoc = await SettingsModel.findOne().lean();
+    const filename = buildExportFileName(
+      'locationReportCsv',
+      {
+        asOfDate: q.yearMonth ? `${q.yearMonth}-01` : undefined,
+        companyName: settingsDoc?.companyName,
+      },
+      settingsDoc?.exportNaming,
+      settingsDoc?.companyName
+    );
+    sendPlainXlsx(res, headers, dataRows, filename, 'Location');
   } catch (err) {
     next(err);
   }

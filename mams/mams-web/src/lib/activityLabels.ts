@@ -170,6 +170,8 @@ export function activityPageBadge(eventType: string, payload: Record<string, unk
   if (
     eventType.startsWith('ui.employees') ||
     eventType === 'employee_created' ||
+    eventType === 'employee_updated' ||
+    eventType === 'employee_deleted' ||
     eventType === 'csv_import' ||
     eventType === 'unmask_succeeded' ||
     eventType === 'unmask_failed'
@@ -215,6 +217,13 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return 'Changed password';
     case 'employee_created':
       return `Added employee${p.empCode ? ` (${p.empCode})` : ''}`;
+    case 'employee_updated': {
+      const fields = Array.isArray(p.changedFields) ? (p.changedFields as string[]).join(', ') : '';
+      const who = p.empCode ? ` (${p.empCode})` : '';
+      return fields ? `Updated employee${who}: ${fields}` : `Updated employee${who}`;
+    }
+    case 'employee_deleted':
+      return `Deleted employee ${p.name ?? 'employee'}${p.empCode ? ` (${p.empCode})` : ''}`.trim();
     case 'csv_import':
       return `Imported CSV: ${p.successCount ?? 0} employee(s) added`;
     case 'ui.employees.search':
@@ -232,6 +241,11 @@ export function formatActivityDescription(item: ActivityListItem): string {
       const tab = p.tab ?? 'daily';
       const parts = filterParts(p, ['startDate', 'endDate', 'department', 'location']);
       return `Printed ${tab} report${parts ? ` (${parts})` : ''}`;
+    }
+    case 'ui.reports.export_xlsx': {
+      const tab = p.tab ?? 'daily';
+      const parts = filterParts(p, ['startDate', 'endDate', 'yearMonth', 'department', 'location']);
+      return `Exported ${tab} report Excel${parts ? ` (${parts})` : ''}`;
     }
     case 'ui.reports.export_csv': {
       const parts = filterParts(p, ['startDate', 'endDate', 'department', 'location']);

@@ -52,7 +52,7 @@ describe('exportAdminOverviewTableXlsx', () => {
     });
   });
 
-  it('returns branded XLSX with company header rows and data', async () => {
+  it('returns plain XLSX with column headers in row 1 and data rows only', async () => {
     const { buffer, filename } = await exportAdminOverviewTableXlsx(
       'users',
       { columns: 'name,email,role' },
@@ -65,11 +65,9 @@ describe('exportAdminOverviewTableXlsx', () => {
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const sheet = wb.Sheets.Data;
     const rows = XLSX.utils.sheet_to_json<(string | number)[]>(sheet, { header: 1 });
-    expect(rows[0]).toEqual(['Company', 'Makson Pharmaceuticals']);
-    expect(rows.some((r) => r[0] === 'Report Type' && r[1] === 'Admin Overview Users')).toBe(true);
-    const headerRow = rows.find((r) => r[0] === 'Name');
-    expect(headerRow).toEqual(['Name', 'Email', 'Role']);
-    expect(rows.some((r) => r[0] === 'Jane Doe')).toBe(true);
-    expect(rows.some((r) => r[0] === 'Confidential employee data')).toBe(true);
+    expect(rows[0]).toEqual(['Name', 'Email', 'Role']);
+    expect(rows[1]).toEqual(['Jane Doe', 'jane@example.com', 'org.admin']);
+    expect(rows.some((r) => r[0] === 'Company')).toBe(false);
+    expect(rows.some((r) => r[0] === 'Confidential employee data')).toBe(false);
   });
 });

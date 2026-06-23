@@ -7,10 +7,16 @@ export function EmployeeCardList({
   items,
   isLoading,
   error,
+  canManage = false,
+  onEdit,
+  onDelete,
 }: {
   items: EmployeeMasked[] | undefined;
   isLoading: boolean;
   error: boolean;
+  canManage?: boolean;
+  onEdit?: (employee: EmployeeMasked) => void;
+  onDelete?: (employee: EmployeeMasked) => void;
 }) {
   const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
 
@@ -27,15 +33,15 @@ export function EmployeeCardList({
   return (
     <div className="space-y-3 md:hidden">
       {items.map((e) => (
-        <Link key={e.id} to={`/employees/${e.id}`} className="card p-4 block hover:bg-surface2/50 transition">
+        <div key={e.id} className="card p-4">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <div>
+            <Link to={`/employees/${e.id}`} className="block hover:opacity-90 transition">
               <div className="font-semibold text-text">{e.name}</div>
               <div className="font-mono text-xs text-text-muted">{e.empCode}</div>
-            </div>
+            </Link>
             <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
           </div>
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs mb-3">
             <div className="col-span-2">
               <dt className="text-text-subtle uppercase tracking-wider">Biometric ID</dt>
               <dd className="font-mono">{e.biometricId}</dd>
@@ -53,7 +59,17 @@ export function EmployeeCardList({
               <dd className="text-text-muted">{e.location}</dd>
             </div>
           </dl>
-        </Link>
+          {canManage && onEdit && onDelete && (
+            <div className="flex gap-2">
+              <button type="button" className="btn-outline btn-sm flex-1" onClick={() => onEdit(e)}>
+                Edit
+              </button>
+              <button type="button" className="btn-outline btn-sm flex-1 text-red" onClick={() => onDelete(e)}>
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );

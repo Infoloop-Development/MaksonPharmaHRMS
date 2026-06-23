@@ -36,7 +36,7 @@ export const reportsTourScript: TourScript = {
           id: 'reports-export',
           title: 'Export and print',
           description:
-            'Print to PDF opens a formatted print layout. Download CSV exports the full result set (not just visible rows).',
+            'Print to PDF opens a formatted print layout. Download Excel exports the full result set (not just visible rows).',
           side: 'left',
         },
       ],

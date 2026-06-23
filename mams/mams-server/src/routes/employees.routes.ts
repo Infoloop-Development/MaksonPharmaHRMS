@@ -174,16 +174,28 @@ router.post('/', manageEmployeesGate, async (req, res, next) => {
 // UPDATE
 router.patch('/:id', manageEmployeesGate, async (req, res, next) => {
   try {
-    if (!Types.ObjectId.isValid(req.params.id ?? '')) {
+    const id = req.params.id ?? '';
+    if (!Types.ObjectId.isValid(id)) {
       throw new ApiError(404, 'not_found', 'Employee not found');
     }
+    const existing = await EmployeeModel.findById(id);
+    if (!existing || existing.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
+
     const partial = EmployeePatchBodySchema.parse(req.body);
-    const doc = await EmployeeModel.findByIdAndUpdate(
-      req.params.id,
-      { $set: partial },
-      { new: true }
-    );
-    if (!doc) throw new ApiError(404, 'not_found', 'Employee not found');
+    const update: Record<string, unknown> = { ...partial };
+    if (partial.joinDate) {
+      update.joinDate = new Date(partial.joinDate);
+    }
+
+    let doc;
+    try {
+      doc = await EmployeeModel.findByIdAndUpdate(id, { $set: update }, { new: true });
+    } catch (updateErr: unknown) {
+      const mapped = mapEmployeeCreateDuplicateError(updateErr);
+      if (mapped) throw mapped;
+      throw updateErr;
+    }
+    if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
     await audit(
       'employee_updated',
       {
@@ -191,9 +203,50 @@ router.patch('/:id', manageEmployeesGate, async (req, res, next) => {
         ipAddress: req.clientIp ?? null,
         userAgent: req.header('user-agent') ?? null,
       },
-      { entityType: 'employee', entityId: doc._id, payload: { changedFields: Object.keys(partial) } }
+      {
+        entityType: 'employee',
+        entityId: doc._id,
+        payload: {
+          empCode: doc.empCode,
+          name: doc.name,
+          changedFields: Object.keys(partial),
+        },
+      }
     );
     res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE (soft)
+router.delete('/:id', manageEmployeesGate, async (req, res, next) => {
+  try {
+    const id = req.params.id ?? '';
+    if (!Types.ObjectId.isValid(id)) {
+      throw new ApiError(404, 'not_found', 'Employee not found');
+    }
+    const doc = await EmployeeModel.findById(id);
+    if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
+
+    doc.isDeleted = true;
+    doc.status = 'Inactive';
+    await doc.save();
+
+    await audit(
+      'employee_deleted',
+      {
+        userId: req.auth!.sub,
+        ipAddress: req.clientIp ?? null,
+        userAgent: req.header('user-agent') ?? null,
+      },
+      {
+        entityType: 'employee',
+        entityId: doc._id,
+        payload: { empCode: doc.empCode, name: doc.name },
+      }
+    );
+    res.status(204).send();
   } catch (err) {
     next(err);
   }
