@@ -14,17 +14,30 @@ const EXACT_8H_MS = 8 * 60 * 60 * 1000;
 
 export type DayStatus = 'present' | 'leave' | 'weeklyOff' | 'empty' | 'unassigned';
 
+/** Canonical punch time display (HH:mm:ss). */
+export type PunchTimeString = string;
+
 export interface MonthlyPlanDay {
   date: string;
   weekday: string;
   dayOfMonth: number;
   inMonth: boolean;
   status: DayStatus;
-  clockIn: string | null;
-  clockOut: string | null;
-  clockOutNextDay: boolean;
+  /** Person assigned / involved on this day (present days only). */
+  involvedPerson: string | null;
+  checkIn: PunchTimeString | null;
+  checkOut: PunchTimeString | null;
+  checkOutNextDay: boolean;
+  /** Worked hours as decimal number. */
   hoursWorked: number | null;
+  /** Worked hours formatted for display (e.g. "7.92 h"). */
   hoursWorkedFormatted: string | null;
+  /** @deprecated Use checkIn */
+  clockIn: PunchTimeString | null;
+  /** @deprecated Use checkOut */
+  clockOut: PunchTimeString | null;
+  /** @deprecated Use checkOutNextDay */
+  clockOutNextDay: boolean;
 }
 
 export interface MonthlyPlanSummary {
@@ -54,6 +67,8 @@ export interface MonthlyPlanInput {
   bufferStart: string;
   bufferEnd: string;
   realHours: number;
+  /** Comma-separated names rotated across present days (e.g. "Ravi, Priya"). */
+  involvedPersonnel?: string;
 }
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -106,6 +121,41 @@ function listEligibleWeekdays(year: number, month: number): string[] {
   return out;
 }
 
+function parseInvolvedPersonnel(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(',')
+    .map((n) => n.trim())
+    .filter(Boolean);
+}
+
+function assignInvolvedPerson(date: string, yearMonth: string, personnel: string[]): string | null {
+  if (personnel.length === 0) return null;
+  const idx = hashString(`${yearMonth}:${date}:person`) % personnel.length;
+  return personnel[idx] ?? null;
+}
+
+function dayPunchFields(
+  punches: Pick<MonthlyPlanDay, 'checkIn' | 'checkOut' | 'checkOutNextDay' | 'hoursWorked' | 'hoursWorkedFormatted'>
+): Pick<
+  MonthlyPlanDay,
+  | 'checkIn'
+  | 'checkOut'
+  | 'checkOutNextDay'
+  | 'hoursWorked'
+  | 'hoursWorkedFormatted'
+  | 'clockIn'
+  | 'clockOut'
+  | 'clockOutNextDay'
+> {
+  return {
+    ...punches,
+    clockIn: punches.checkIn,
+    clockOut: punches.checkOut,
+    clockOutNextDay: punches.checkOutNextDay,
+  };
+}
+
 function shuffleSeeded<T>(items: T[], seedKey: string): T[] {
   const rand = seededRandom(hashString(seedKey));
   const copy = [...items];
@@ -141,17 +191,54 @@ function generatePunches(
   yearMonth: string,
   bufferStartMs: number,
   bufferEndMs: number
-): Pick<MonthlyPlanDay, 'clockIn' | 'clockOut' | 'clockOutNextDay' | 'hoursWorked' | 'hoursWorkedFormatted'> {
+): Pick<MonthlyPlanDay, 'checkIn' | 'checkOut' | 'checkOutNextDay' | 'hoursWorked' | 'hoursWorkedFormatted'> {
   const inMs = randomClockInMs(date, yearMonth, bufferStartMs, bufferEndMs);
   const durationMs = randomWorkDurationMs(date, yearMonth);
   const out = addMsFromAnchor(inMs, durationMs);
   return {
-    clockIn: formatTimeHms(inMs),
-    clockOut: formatTimeHms(out.ms),
-    clockOutNextDay: out.nextDay,
+    checkIn: formatTimeHms(inMs),
+    checkOut: formatTimeHms(out.ms),
+    checkOutNextDay: out.nextDay,
     hoursWorked: durationMs / (60 * 60 * 1000),
     hoursWorkedFormatted: formatHoursDecimal(durationMs),
   };
+}
+
+function blankDay(
+  partial: Pick<MonthlyPlanDay, 'date' | 'weekday' | 'dayOfMonth' | 'inMonth' | 'status'> &
+    Partial<Pick<MonthlyPlanDay, 'involvedPerson'>> &
+    Partial<Pick<MonthlyPlanDay, 'checkIn' | 'checkOut' | 'checkOutNextDay' | 'hoursWorked' | 'hoursWorkedFormatted'>>
+): MonthlyPlanDay {
+  const punches =
+    partial.checkIn != null
+      ? {
+          checkIn: partial.checkIn,
+          checkOut: partial.checkOut ?? null,
+          checkOutNextDay: partial.checkOutNextDay ?? false,
+          hoursWorked: partial.hoursWorked ?? null,
+          hoursWorkedFormatted: partial.hoursWorkedFormatted ?? null,
+        }
+      : {
+          checkIn: null,
+          checkOut: null,
+          checkOutNextDay: false,
+          hoursWorked: null,
+          hoursWorkedFormatted: null,
+        };
+  return {
+    date: partial.date,
+    weekday: partial.weekday,
+    dayOfMonth: partial.dayOfMonth,
+    inMonth: partial.inMonth,
+    status: partial.status,
+    involvedPerson: partial.involvedPerson ?? null,
+    ...dayPunchFields(punches),
+  };
+}
+
+/** Display label for check-out time including next-day marker. */
+export function formatCheckOutLabel(checkOut: string, nextDay: boolean): string {
+  return `${checkOut}${nextDay ? ' (+1 day)' : ''}`;
 }
 
 function buildCalendarWeeks(year: number, month: number, dayByDate: Map<string, MonthlyPlanDay>): MonthlyPlanDay[][] {
@@ -161,36 +248,29 @@ function buildCalendarWeeks(year: number, month: number, dayByDate: Map<string, 
   let week: MonthlyPlanDay[] = [];
 
   for (let i = 0; i < firstDow; i++) {
-    week.push({
-      date: '',
-      weekday: WEEKDAY_LABELS[i] ?? '',
-      dayOfMonth: 0,
-      inMonth: false,
-      status: 'empty',
-      clockIn: null,
-      clockOut: null,
-      clockOutNextDay: false,
-      hoursWorked: null,
-      hoursWorkedFormatted: null,
-    });
+    week.push(
+      blankDay({
+        date: '',
+        weekday: WEEKDAY_LABELS[i] ?? '',
+        dayOfMonth: 0,
+        inMonth: false,
+        status: 'empty',
+      })
+    );
   }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = dateString(year, month, d);
     const dow = new Date(year, month - 1, d).getDay();
     week.push(
-      dayByDate.get(ds) ?? {
-        date: ds,
-        weekday: WEEKDAY_LABELS[dow] ?? '',
-        dayOfMonth: d,
-        inMonth: true,
-        status: 'unassigned',
-        clockIn: null,
-        clockOut: null,
-        clockOutNextDay: false,
-        hoursWorked: null,
-        hoursWorkedFormatted: null,
-      }
+      dayByDate.get(ds) ??
+        blankDay({
+          date: ds,
+          weekday: WEEKDAY_LABELS[dow] ?? '',
+          dayOfMonth: d,
+          inMonth: true,
+          status: 'unassigned',
+        })
     );
     if (week.length === 7) {
       weeks.push(week);
@@ -200,18 +280,15 @@ function buildCalendarWeeks(year: number, month: number, dayByDate: Map<string, 
 
   if (week.length > 0) {
     while (week.length < 7) {
-      week.push({
-        date: '',
-        weekday: WEEKDAY_LABELS[week.length] ?? '',
-        dayOfMonth: 0,
-        inMonth: false,
-        status: 'empty',
-        clockIn: null,
-        clockOut: null,
-        clockOutNextDay: false,
-        hoursWorked: null,
-        hoursWorkedFormatted: null,
-      });
+      week.push(
+        blankDay({
+          date: '',
+          weekday: WEEKDAY_LABELS[week.length] ?? '',
+          dayOfMonth: 0,
+          inMonth: false,
+          status: 'empty',
+        })
+      );
     }
     weeks.push(week);
   }
@@ -270,6 +347,8 @@ export function computeMonthlyPlan(input: MonthlyPlanInput): MonthlyPlanResult |
     shuffled.filter((d) => !leaveSet.has(d)).slice(0, calendarPresentDays)
   );
 
+  const personnel = parseInvolvedPersonnel(input.involvedPersonnel);
+
   const dayByDate = new Map<string, MonthlyPlanDay>();
 
   for (let d = 1; d <= daysInMonth; d++) {
@@ -278,62 +357,60 @@ export function computeMonthlyPlan(input: MonthlyPlanInput): MonthlyPlanResult |
     const weekday = WEEKDAY_LABELS[dow] ?? '';
 
     if (dow === 0) {
-      dayByDate.set(ds, {
-        date: ds,
-        weekday,
-        dayOfMonth: d,
-        inMonth: true,
-        status: 'weeklyOff',
-        clockIn: null,
-        clockOut: null,
-        clockOutNextDay: false,
-        hoursWorked: null,
-        hoursWorkedFormatted: null,
-      });
+      dayByDate.set(
+        ds,
+        blankDay({
+          date: ds,
+          weekday,
+          dayOfMonth: d,
+          inMonth: true,
+          status: 'weeklyOff',
+        })
+      );
       continue;
     }
 
     if (leaveSet.has(ds)) {
-      dayByDate.set(ds, {
-        date: ds,
-        weekday,
-        dayOfMonth: d,
-        inMonth: true,
-        status: 'leave',
-        clockIn: null,
-        clockOut: null,
-        clockOutNextDay: false,
-        hoursWorked: null,
-        hoursWorkedFormatted: null,
-      });
+      dayByDate.set(
+        ds,
+        blankDay({
+          date: ds,
+          weekday,
+          dayOfMonth: d,
+          inMonth: true,
+          status: 'leave',
+        })
+      );
       continue;
     }
 
     if (presentSet.has(ds)) {
       const punches = generatePunches(ds, input.yearMonth, bufferStartMs, bufferEndMs);
-      dayByDate.set(ds, {
+      dayByDate.set(
+        ds,
+        blankDay({
+          date: ds,
+          weekday,
+          dayOfMonth: d,
+          inMonth: true,
+          status: 'present',
+          involvedPerson: assignInvolvedPerson(ds, input.yearMonth, personnel),
+          ...punches,
+        })
+      );
+      continue;
+    }
+
+    dayByDate.set(
+      ds,
+      blankDay({
         date: ds,
         weekday,
         dayOfMonth: d,
         inMonth: true,
-        status: 'present',
-        ...punches,
-      });
-      continue;
-    }
-
-    dayByDate.set(ds, {
-      date: ds,
-      weekday,
-      dayOfMonth: d,
-      inMonth: true,
-      status: 'unassigned',
-      clockIn: null,
-      clockOut: null,
-      clockOutNextDay: false,
-      hoursWorked: null,
-      hoursWorkedFormatted: null,
-    });
+        status: 'unassigned',
+      })
+    );
   }
 
   const days = [...dayByDate.values()].sort((a, b) => a.date.localeCompare(b.date));

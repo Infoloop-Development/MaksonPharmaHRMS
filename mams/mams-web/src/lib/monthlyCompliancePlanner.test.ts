@@ -82,8 +82,39 @@ describe('computeMonthlyPlan', () => {
     const presentA = a.days.filter((d) => d.status === 'present');
     const presentB = b.days.filter((d) => d.status === 'present');
     expect(presentA.map((d) => d.date)).toEqual(presentB.map((d) => d.date));
-    expect(presentA.map((d) => d.clockIn)).toEqual(presentB.map((d) => d.clockIn));
-    expect(presentA.map((d) => d.clockOut)).toEqual(presentB.map((d) => d.clockOut));
+    expect(presentA.map((d) => d.checkIn)).toEqual(presentB.map((d) => d.checkIn));
+    expect(presentA.map((d) => d.checkOut)).toEqual(presentB.map((d) => d.checkOut));
+  });
+
+  it('assigns involved personnel to present days', () => {
+    const { days } = plan(208);
+    const present = days.filter((d) => d.status === 'present');
+    expect(present.length).toBeGreaterThan(0);
+    expect(present.every((d) => d.involvedPerson === null)).toBe(true);
+
+    const withPeople = computeMonthlyPlan({
+      yearMonth: JUNE_2026,
+      shift: 'A',
+      bufferStart: PRESET_A.bufferStart,
+      bufferEnd: PRESET_A.bufferEnd,
+      realHours: 208,
+      involvedPersonnel: 'Alice, Bob',
+    });
+    if ('error' in withPeople) throw new Error(withPeople.error);
+    const named = withPeople.days.filter((d) => d.status === 'present');
+    expect(named.every((d) => d.involvedPerson === 'Alice' || d.involvedPerson === 'Bob')).toBe(true);
+    expect(named.some((d) => d.involvedPerson === 'Alice')).toBe(true);
+    expect(named.some((d) => d.involvedPerson === 'Bob')).toBe(true);
+  });
+
+  it('present days always have check-in and check-out', () => {
+    const { days } = plan(208);
+    for (const d of days.filter((x) => x.status === 'present')) {
+      expect(d.checkIn).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+      expect(d.checkOut).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+      expect(d.hoursWorked).toBeGreaterThan(0);
+      expect(d.hoursWorkedFormatted).toMatch(/^\d+\.\d{2} h$/);
+    }
   });
 
   it('shift C overnight can produce next-day clock-out', () => {
