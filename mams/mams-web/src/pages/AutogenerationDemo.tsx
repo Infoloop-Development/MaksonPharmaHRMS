@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Field, Input, Select } from '../components/ui/Field';
+import { Badge } from '../components/ui/Badge';
 import { ComplianceMonthCalendar } from '../components/autogen/ComplianceMonthCalendar';
-import { computeMonthlyPlan } from '../lib/monthlyCompliancePlanner';
+import { computeMonthlyPlan, formatCheckOutLabel, type MonthlyPlanDay } from '../lib/monthlyCompliancePlanner';
 import {
   ALTERNATE_SHIFT_OPTIONS,
   ALTERNATE_SHIFT_STARTS,
@@ -105,7 +106,7 @@ function LateLabel({ label }: { label: string | null }) {
 
 function OnTimeLabel({ label }: { label: string | null }) {
   if (!label) return null;
-  return <div className="text-[11px] text-primary font-semibold mt-1">{label}</div>;
+  return <div className="text-[11px] text-primary-on-bg font-semibold mt-1">{label}</div>;
 }
 
 function AlternateStatus({ late, onTime }: { late: string | null; onTime: string | null }) {
@@ -118,7 +119,71 @@ function AlternateStatus({ late, onTime }: { late: string | null; onTime: string
 }
 
 function formatOutDisplay(time: string, nextDay: boolean) {
-  return `${time}${nextDay ? ' (+1 day)' : ''}`;
+  return formatCheckOutLabel(time, nextDay);
+}
+
+function ComplianceDayRow({ day }: { day: MonthlyPlanDay }) {
+  return (
+    <tr className="border-b border-border/60 hover:bg-surface2/50 transition-colors">
+      <td className="py-2.5 pr-4 font-mono text-xs text-text">{day.date}</td>
+      <td className="py-2.5 pr-4 text-text">{day.weekday}</td>
+      <td className="py-2.5 pr-4">
+        <DayStatusBadge status={day.status} />
+      </td>
+      <td className="py-2.5 pr-4 text-sm text-text max-w-[120px] truncate" title={day.involvedPerson ?? undefined}>
+        {day.involvedPerson ?? '—'}
+      </td>
+      <td className="py-2.5 pr-4 font-mono text-xs text-text">{day.checkIn ?? '—'}</td>
+      <td className="py-2.5 pr-4 font-mono text-xs text-text">
+        {day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : '—'}
+      </td>
+      <td className="py-2.5 pr-4 font-mono text-xs text-primary-on-bg">{day.hoursWorkedFormatted ?? '—'}</td>
+    </tr>
+  );
+}
+
+function ComplianceDayCard({ day }: { day: MonthlyPlanDay }) {
+  return (
+    <article className="rounded-lg border border-border bg-surface p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="font-mono text-xs text-text">{day.date}</div>
+          <div className="text-sm text-text-muted">{day.weekday}</div>
+        </div>
+        <DayStatusBadge status={day.status} />
+      </div>
+      {day.involvedPerson && (
+        <div className="text-sm">
+          <span className="text-text-subtle text-xs uppercase tracking-wide">Involved · </span>
+          <span className="text-text font-medium">{day.involvedPerson}</span>
+        </div>
+      )}
+      {day.status === 'present' && (
+        <dl className="grid grid-cols-2 gap-2 text-xs font-mono">
+          <div className="rounded bg-surface2 px-2 py-1.5">
+            <dt className="text-text-subtle text-[10px] uppercase">Check in</dt>
+            <dd className="text-text mt-0.5">{day.checkIn ?? '—'}</dd>
+          </div>
+          <div className="rounded bg-surface2 px-2 py-1.5">
+            <dt className="text-text-subtle text-[10px] uppercase">Check out</dt>
+            <dd className="text-text mt-0.5">
+              {day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : '—'}
+            </dd>
+          </div>
+          <div className="col-span-2 rounded bg-primary-bg/50 px-2 py-1.5">
+            <dt className="text-text-subtle text-[10px] uppercase">Hours worked</dt>
+            <dd className="text-primary-on-bg font-semibold mt-0.5">{day.hoursWorkedFormatted ?? '—'}</dd>
+          </div>
+        </dl>
+      )}
+    </article>
+  );
+}
+
+function DayStatusBadge({ status }: { status: MonthlyPlanDay['status'] }) {
+  const tone =
+    status === 'present' ? 'green' : status === 'leave' ? 'amber' : status === 'weeklyOff' ? 'gray' : 'blue';
+  return <Badge tone={tone}>{statusLabel(status)}</Badge>;
 }
 
 export function AutogenerationDemo() {
@@ -128,6 +193,7 @@ export function AutogenerationDemo() {
   const [monthlyBufferStart, setMonthlyBufferStart] = useState(presetA.bufferStart);
   const [monthlyBufferEnd, setMonthlyBufferEnd] = useState(presetA.bufferEnd);
   const [realHours, setRealHours] = useState('320');
+  const [involvedPersonnel, setInvolvedPersonnel] = useState('Ravi Kumar, Priya Sharma');
 
   const [mainShift, setMainShift] = useState<MainShiftLabel>('Night Shift');
   const [alternateShift, setAlternateShift] = useState<AlternateShift>('A');
@@ -150,8 +216,9 @@ export function AutogenerationDemo() {
         bufferStart: monthlyBufferStart,
         bufferEnd: monthlyBufferEnd,
         realHours: parseFloat(realHours) || 0,
+        involvedPersonnel,
       }),
-    [yearMonth, monthlyShift, monthlyBufferStart, monthlyBufferEnd, realHours]
+    [yearMonth, monthlyShift, monthlyBufferStart, monthlyBufferEnd, realHours, involvedPersonnel]
   );
 
   const onMonthlyShiftChange = (shift: AlternateShift) => {
@@ -224,7 +291,7 @@ export function AutogenerationDemo() {
               ))}
             </Select>
           </Field>
-          <Field label="Real hours worked (month)">
+          <Field label="Real hours worked (month)" hint="Number · decimal hours">
             <Input
               type="number"
               min={0}
@@ -232,6 +299,16 @@ export function AutogenerationDemo() {
               value={realHours}
               onChange={(e) => setRealHours(e.target.value)}
               placeholder="e.g. 320"
+            />
+          </Field>
+          <Field
+            label="Personnel involved"
+            hint="Comma-separated names — rotated across present days"
+          >
+            <Input
+              value={involvedPersonnel}
+              onChange={(e) => setInvolvedPersonnel(e.target.value)}
+              placeholder="e.g. Ravi Kumar, Priya Sharma"
             />
           </Field>
           <BufferTimeField
@@ -250,20 +327,20 @@ export function AutogenerationDemo() {
           <p className="text-sm text-red">{monthlyPlan.error}</p>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 p-4 rounded-lg bg-surface2 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 p-4 rounded-lg bg-surface2 border border-border text-sm">
               <div>
                 <div className="text-text-muted text-xs uppercase tracking-wide">Baseline</div>
-                <div className="font-semibold mt-1">
+                <div className="font-semibold mt-1 text-text">
                   {monthlyPlan.summary.baselineDays} days · {monthlyPlan.summary.baselineHours} h
                 </div>
               </div>
               <div>
                 <div className="text-text-muted text-xs uppercase tracking-wide">Real hours entered</div>
-                <div className="font-semibold mt-1">{monthlyPlan.summary.realHours} h</div>
+                <div className="font-semibold mt-1 text-text">{monthlyPlan.summary.realHours} h</div>
               </div>
               <div>
                 <div className="text-text-muted text-xs uppercase tracking-wide">Present / Leave days</div>
-                <div className="font-semibold mt-1">
+                <div className="font-semibold mt-1 text-text">
                   {monthlyPlan.summary.presentDays} present · {monthlyPlan.summary.leaveDays} leave
                 </div>
               </div>
@@ -271,7 +348,7 @@ export function AutogenerationDemo() {
                 <div className="text-text-muted text-xs uppercase tracking-wide">
                   {monthlyPlan.summary.extraCashHours > 0 ? 'Extra cash hours' : 'Deducted hours'}
                 </div>
-                <div className="font-semibold mt-1 text-primary">
+                <div className="font-semibold mt-1 text-primary-on-bg">
                   {monthlyPlan.summary.extraCashHours > 0
                     ? `+${monthlyPlan.summary.extraCashHours} h (cash payment)`
                     : monthlyPlan.summary.deductedHours > 0
@@ -282,7 +359,7 @@ export function AutogenerationDemo() {
             </div>
 
             {monthlyPlan.summary.calendarCapped && (
-              <p className="text-xs text-amber mb-4">
+              <p className="text-xs text-amber bg-amber-bg/40 border border-amber/30 rounded-md px-3 py-2 mb-4">
                 This month has {monthlyPlan.summary.eligibleWeekdays} Mon–Sat days (fewer than 26). Calendar
                 shows {monthlyPlan.summary.calendarPresentDays} present and{' '}
                 {monthlyPlan.summary.calendarLeaveDays} leave; summary uses the 26-day baseline model.
@@ -292,33 +369,47 @@ export function AutogenerationDemo() {
             <h3 className="font-semibold mb-3">Calendar — {yearMonth}</h3>
             <ComplianceMonthCalendar weeks={monthlyPlan.calendarWeeks} />
 
-            <h3 className="font-semibold mt-6 mb-3">Daily attendance table</h3>
-            <div className="overflow-x-auto">
+            <h3 className="font-semibold mb-3 text-text">Daily attendance</h3>
+            <p className="text-xs text-text-subtle mb-3">
+              Present days show who was involved, check-in/check-out times (<span className="font-mono">HH:mm:ss</span>
+              ), and decimal hours.
+            </p>
+
+            <div className="md:hidden space-y-2 mb-2">
+              {monthlyPlan.days
+                .filter((d) => d.status !== 'unassigned')
+                .map((d) => (
+                  <ComplianceDayCard key={d.date} day={d} />
+                ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto tbl-scroll">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-text-muted uppercase border-b border-border">
                     <th className="py-2 pr-4">Date</th>
                     <th className="py-2 pr-4">Weekday</th>
                     <th className="py-2 pr-4">Status</th>
-                    <th className="py-2 pr-4">Clock In</th>
-                    <th className="py-2 pr-4">Clock Out</th>
-                    <th className="py-2 pr-4">Hours Worked</th>
+                    <th className="py-2 pr-4">Involved</th>
+                    <th className="py-2 pr-4">
+                      Check in
+                      <span className="block normal-case text-text-subtle font-normal">HH:mm:ss</span>
+                    </th>
+                    <th className="py-2 pr-4">
+                      Check out
+                      <span className="block normal-case text-text-subtle font-normal">HH:mm:ss</span>
+                    </th>
+                    <th className="py-2 pr-4">
+                      Hours
+                      <span className="block normal-case text-text-subtle font-normal">decimal</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {monthlyPlan.days
                     .filter((d) => d.status !== 'unassigned')
                     .map((d) => (
-                      <tr key={d.date} className="border-b border-border/60">
-                        <td className="py-2.5 pr-4 font-mono text-xs">{d.date}</td>
-                        <td className="py-2.5 pr-4">{d.weekday}</td>
-                        <td className="py-2.5 pr-4">{statusLabel(d.status)}</td>
-                        <td className="py-2.5 pr-4 font-mono text-xs">{d.clockIn ?? '—'}</td>
-                        <td className="py-2.5 pr-4 font-mono text-xs">
-                          {d.clockOut ? `${d.clockOut}${d.clockOutNextDay ? ' (+1)' : ''}` : '—'}
-                        </td>
-                        <td className="py-2.5 pr-4 font-mono text-xs">{d.hoursWorkedFormatted ?? '—'}</td>
-                      </tr>
+                      <ComplianceDayRow key={d.date} day={d} />
                     ))}
                 </tbody>
               </table>
@@ -611,7 +702,7 @@ export function AutogenerationDemo() {
         </div>
         {mainInDeltaMs !== null && altInDeltaMs !== null && (
           <div
-            className={`mt-4 text-sm font-mono ${batchResult.spacingOk ? 'text-primary' : 'text-red'}`}
+            className={`mt-4 text-sm font-mono ${batchResult.spacingOk ? 'text-primary-on-bg' : 'text-red'}`}
           >
             Main Δ: {mainInDeltaMs} ms · Alternate Δ: {altInDeltaMs} ms
             {batchResult.spacingOk ? ' (match)' : ' (mismatch)'}
