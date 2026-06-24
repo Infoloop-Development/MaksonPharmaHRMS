@@ -207,7 +207,7 @@ export function FormResponsesPanel({
                   <td className="px-3 py-2">
                     <button
                       type="button"
-                      className="text-primary text-xs font-medium hover:underline"
+                      className="text-link text-xs font-medium hover:underline"
                       onClick={() => onViewRequest(item._id)}
                     >
                       View

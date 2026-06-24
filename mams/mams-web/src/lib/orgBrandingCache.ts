@@ -1,6 +1,6 @@
 import type { OrgBranding } from '@mams/types';
 import { normalizeOrgBranding } from '@mams/types';
-import { brandingCssVars } from './orgBrandingTheme';
+import { brandingCssVars, applyBrandingToDocument, readResolvedTheme } from './orgBrandingTheme';
 
 export const ORG_BRANDING_STORAGE_KEY = 'mams-org-branding';
 
@@ -24,13 +24,17 @@ function readCachedPayload(): CachedOrgBranding | null {
   }
 }
 
+function currentResolvedTheme(): 'light' | 'dark' {
+  return readResolvedTheme();
+}
+
 export function cacheOrgBranding(branding: OrgBranding): void {
   if (typeof localStorage === 'undefined') return;
   const normalized = normalizeOrgBranding(branding);
   const payload: CachedOrgBranding = {
     v: 1,
     branding: normalized,
-    cssVars: brandingCssVars(normalized),
+    cssVars: brandingCssVars(normalized, currentResolvedTheme()),
   };
   localStorage.setItem(ORG_BRANDING_STORAGE_KEY, JSON.stringify(payload));
 }
@@ -52,7 +56,7 @@ export function applyCssVarsToDocument(cssVars: Record<string, string>): void {
 export function applyCachedBrandingToDocument(): boolean {
   const cached = readCachedPayload();
   if (!cached) return false;
-  applyCssVarsToDocument(cached.cssVars);
+  applyBrandingToDocument(cached.branding);
   return true;
 }
 

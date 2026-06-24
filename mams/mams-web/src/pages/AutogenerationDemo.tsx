@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Field, Input, Select } from '../components/ui/Field';
+import { ComplianceMonthCalendar } from '../components/autogen/ComplianceMonthCalendar';
+import { computeMonthlyPlan } from '../lib/monthlyCompliancePlanner';
 import {
   ALTERNATE_SHIFT_OPTIONS,
   ALTERNATE_SHIFT_STARTS,
+  COMPLIANCE_SHIFT_BUFFER_PRESETS,
   MAIN_SHIFT_OPTIONS,
   alternateShiftLabel,
   computeAutogeneration,
@@ -15,6 +18,49 @@ import {
 } from '../lib/shiftAutogeneration';
 
 const TIME_HINT = '24-hour format: HH:mm:ss.SSS (e.g. 09:00:00.000)';
+const BUFFER_HINT = '24-hour format: HH:mm (e.g. 06:50)';
+
+function defaultYearMonth() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function BufferTimeField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Field label={label} hint={BUFFER_HINT}>
+      <Input
+        className="font-mono"
+        placeholder="HH:mm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => {
+          const n = normalizeTimeInput(value);
+          if (n !== value) onChange(n.slice(0, 5));
+        }}
+      />
+    </Field>
+  );
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case 'present':
+      return 'Present';
+    case 'leave':
+      return 'Leave';
+    case 'weeklyOff':
+      return 'Weekly Off';
+    default:
+      return '—';
+  }
+}
 
 function TimeField({
   label,
@@ -76,6 +122,13 @@ function formatOutDisplay(time: string, nextDay: boolean) {
 }
 
 export function AutogenerationDemo() {
+  const presetA = COMPLIANCE_SHIFT_BUFFER_PRESETS.A;
+  const [yearMonth, setYearMonth] = useState(defaultYearMonth);
+  const [monthlyShift, setMonthlyShift] = useState<AlternateShift>('A');
+  const [monthlyBufferStart, setMonthlyBufferStart] = useState(presetA.bufferStart);
+  const [monthlyBufferEnd, setMonthlyBufferEnd] = useState(presetA.bufferEnd);
+  const [realHours, setRealHours] = useState('320');
+
   const [mainShift, setMainShift] = useState<MainShiftLabel>('Night Shift');
   const [alternateShift, setAlternateShift] = useState<AlternateShift>('A');
   const [clockIn, setClockIn] = useState('');
@@ -88,6 +141,25 @@ export function AutogenerationDemo() {
   const [empAClockOut, setEmpAClockOut] = useState('05:00:00.000');
   const [empBClockIn, setEmpBClockIn] = useState('21:00:00.050');
   const [empBClockOut, setEmpBClockOut] = useState('05:00:00.050');
+
+  const monthlyPlan = useMemo(
+    () =>
+      computeMonthlyPlan({
+        yearMonth,
+        shift: monthlyShift,
+        bufferStart: monthlyBufferStart,
+        bufferEnd: monthlyBufferEnd,
+        realHours: parseFloat(realHours) || 0,
+      }),
+    [yearMonth, monthlyShift, monthlyBufferStart, monthlyBufferEnd, realHours]
+  );
+
+  const onMonthlyShiftChange = (shift: AlternateShift) => {
+    setMonthlyShift(shift);
+    const preset = COMPLIANCE_SHIFT_BUFFER_PRESETS[shift];
+    setMonthlyBufferStart(preset.bufferStart);
+    setMonthlyBufferEnd(preset.bufferEnd);
+  };
 
   const result = useMemo(
     () =>
@@ -133,10 +205,134 @@ export function AutogenerationDemo() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Auto Genrated Shift Demo</h1>
         <p className="text-sm text-text-muted mt-1">
-          Use this page to check how real shift punches (main shift) are turned into matching alternate-shift
-          times for reports.
+          Monthly compliance planner for 26-day / 208-hour baselines, plus a single-day punch calculator below.
         </p>
       </div>
+
+      <div className="card p-4 md:p-6 mb-4 border-l-4 border-l-primary">
+        <h2 className="text-lg font-bold mb-4">Monthly compliance planner</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          <Field label="Month">
+            <Input type="month" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} />
+          </Field>
+          <Field label="Compliance shift">
+            <Select value={monthlyShift} onChange={(e) => onMonthlyShiftChange(e.target.value as AlternateShift)}>
+              {ALTERNATE_SHIFT_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {alternateShiftLabel(s)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Real hours worked (month)">
+            <Input
+              type="number"
+              min={0}
+              step={0.5}
+              value={realHours}
+              onChange={(e) => setRealHours(e.target.value)}
+              placeholder="e.g. 320"
+            />
+          </Field>
+          <BufferTimeField
+            label="Compliance clock-in buffer start"
+            value={monthlyBufferStart}
+            onChange={setMonthlyBufferStart}
+          />
+          <BufferTimeField
+            label="Compliance clock-in buffer end"
+            value={monthlyBufferEnd}
+            onChange={setMonthlyBufferEnd}
+          />
+        </div>
+
+        {'error' in monthlyPlan ? (
+          <p className="text-sm text-red">{monthlyPlan.error}</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 p-4 rounded-lg bg-surface2 text-sm">
+              <div>
+                <div className="text-text-muted text-xs uppercase tracking-wide">Baseline</div>
+                <div className="font-semibold mt-1">
+                  {monthlyPlan.summary.baselineDays} days · {monthlyPlan.summary.baselineHours} h
+                </div>
+              </div>
+              <div>
+                <div className="text-text-muted text-xs uppercase tracking-wide">Real hours entered</div>
+                <div className="font-semibold mt-1">{monthlyPlan.summary.realHours} h</div>
+              </div>
+              <div>
+                <div className="text-text-muted text-xs uppercase tracking-wide">Present / Leave days</div>
+                <div className="font-semibold mt-1">
+                  {monthlyPlan.summary.presentDays} present · {monthlyPlan.summary.leaveDays} leave
+                </div>
+              </div>
+              <div>
+                <div className="text-text-muted text-xs uppercase tracking-wide">
+                  {monthlyPlan.summary.extraCashHours > 0 ? 'Extra cash hours' : 'Deducted hours'}
+                </div>
+                <div className="font-semibold mt-1 text-primary">
+                  {monthlyPlan.summary.extraCashHours > 0
+                    ? `+${monthlyPlan.summary.extraCashHours} h (cash payment)`
+                    : monthlyPlan.summary.deductedHours > 0
+                      ? `${monthlyPlan.summary.deductedHours} h (${monthlyPlan.summary.leaveDays} leave days)`
+                      : 'None'}
+                </div>
+              </div>
+            </div>
+
+            {monthlyPlan.summary.calendarCapped && (
+              <p className="text-xs text-amber mb-4">
+                This month has {monthlyPlan.summary.eligibleWeekdays} Mon–Sat days (fewer than 26). Calendar
+                shows {monthlyPlan.summary.calendarPresentDays} present and{' '}
+                {monthlyPlan.summary.calendarLeaveDays} leave; summary uses the 26-day baseline model.
+              </p>
+            )}
+
+            <h3 className="font-semibold mb-3">Calendar — {yearMonth}</h3>
+            <ComplianceMonthCalendar weeks={monthlyPlan.calendarWeeks} />
+
+            <h3 className="font-semibold mt-6 mb-3">Daily attendance table</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-text-muted uppercase border-b border-border">
+                    <th className="py-2 pr-4">Date</th>
+                    <th className="py-2 pr-4">Weekday</th>
+                    <th className="py-2 pr-4">Status</th>
+                    <th className="py-2 pr-4">Clock In</th>
+                    <th className="py-2 pr-4">Clock Out</th>
+                    <th className="py-2 pr-4">Hours Worked</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyPlan.days
+                    .filter((d) => d.status !== 'unassigned')
+                    .map((d) => (
+                      <tr key={d.date} className="border-b border-border/60">
+                        <td className="py-2.5 pr-4 font-mono text-xs">{d.date}</td>
+                        <td className="py-2.5 pr-4">{d.weekday}</td>
+                        <td className="py-2.5 pr-4">{statusLabel(d.status)}</td>
+                        <td className="py-2.5 pr-4 font-mono text-xs">{d.clockIn ?? '—'}</td>
+                        <td className="py-2.5 pr-4 font-mono text-xs">
+                          {d.clockOut ? `${d.clockOut}${d.clockOutNextDay ? ' (+1)' : ''}` : '—'}
+                        </td>
+                        <td className="py-2.5 pr-4 font-mono text-xs">{d.hoursWorkedFormatted ?? '—'}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      <details className="card p-4 md:p-6 mb-4 group">
+        <summary className="text-lg font-bold cursor-pointer list-none flex items-center gap-2">
+          <span className="text-text-muted group-open:rotate-90 transition-transform">▸</span>
+          Single-day punch demo
+        </summary>
+        <div className="mt-6 space-y-4">
 
       <div className="card p-4 md:p-6 mb-4 border-l-4 border-l-amber bg-amber-bg/40">
         <h2 className="text-lg font-bold mb-3">How it works — leave, lateness, and the maths</h2>
@@ -425,6 +621,8 @@ export function AutogenerationDemo() {
           </div>
         )}
       </div>
+        </div>
+      </details>
     </div>
   );
 }

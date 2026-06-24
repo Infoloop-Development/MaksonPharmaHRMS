@@ -32,6 +32,16 @@ export function contrastTextOnBackground(bgHex: string): string {
   return relativeLuminance(bgHex) < 0.45 ? '#FFFFFF' : '#1A1F36';
 }
 
+/** Readable link / accent text on light page backgrounds (tables, cards). */
+export function linkColorOnSurface(primaryHex: string): string {
+  return relativeLuminance(primaryHex) < 0.45 ? primaryHex.toUpperCase() : '#1A1F36';
+}
+
+/** Readable link text on dark page backgrounds. */
+export function linkColorOnDarkSurface(primaryHex: string): string {
+  return relativeLuminance(primaryHex) > 0.45 ? primaryHex.toUpperCase() : lightenHex(primaryHex, 0.45);
+}
+
 export function lightenHex(hex: string, amount = 0.15): string {
   const { r, g, b } = parseHex(hex);
   return rgbToHex({
@@ -50,12 +60,17 @@ export function fontFamilyStack(font: string): string {
   return `"${font}", system-ui, sans-serif`;
 }
 
-export function brandingCssVars(branding: OrgBranding): Record<string, string> {
+export function brandingCssVars(
+  branding: OrgBranding,
+  resolvedTheme: 'light' | 'dark' = 'light'
+): Record<string, string> {
   const primary = branding.primaryColor.toUpperCase();
   const primaryLight = lightenHex(primary, 0.15);
   const secondary = branding.secondaryColor.toUpperCase();
   const primaryText = contrastTextOnBackground(primary);
   const isLightSidebar = primaryText !== '#FFFFFF';
+  const linkColor =
+    resolvedTheme === 'dark' ? linkColorOnDarkSurface(primary) : linkColorOnSurface(primary);
 
   return {
     '--color-brand-primary': primary,
@@ -65,6 +80,7 @@ export function brandingCssVars(branding: OrgBranding): Record<string, string> {
     '--color-brand-primary-text': primaryText,
     '--color-brand-secondary': secondary,
     '--color-brand-secondary-rgb': rgbChannels(secondary),
+    '--color-link': linkColor,
     '--sidebar-text': primaryText,
     '--sidebar-text-muted': isLightSidebar ? 'rgba(26, 31, 54, 0.72)' : 'rgba(255, 255, 255, 0.72)',
     '--sidebar-border': isLightSidebar ? 'rgba(26, 31, 54, 0.12)' : 'rgba(255, 255, 255, 0.12)',
@@ -74,9 +90,16 @@ export function brandingCssVars(branding: OrgBranding): Record<string, string> {
   };
 }
 
+export function readResolvedTheme(): 'light' | 'dark' {
+  if (typeof document === 'undefined') return 'light';
+  const list = document.documentElement?.classList;
+  if (!list) return 'light';
+  return list.contains('dark') ? 'dark' : 'light';
+}
+
 export function applyBrandingToDocument(branding: OrgBranding): void {
   const root = document.documentElement;
-  const vars = brandingCssVars(branding);
+  const vars = brandingCssVars(branding, readResolvedTheme());
   for (const [key, value] of Object.entries(vars)) {
     root.style.setProperty(key, value);
   }

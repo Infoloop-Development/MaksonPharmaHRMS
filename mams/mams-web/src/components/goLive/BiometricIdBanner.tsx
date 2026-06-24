@@ -14,7 +14,7 @@ export function BiometricIdBanner() {
         Agree the ID format with IT before go-live (e.g. <span className="font-mono">42</span> on device and{' '}
         <span className="font-mono">42</span> in MAMS, or <span className="font-mono">BIO042</span> in both).
         See the{' '}
-        <Link to="/devices" className="text-primary font-semibold hover:underline">
+        <Link to="/devices" className="text-link font-semibold hover:underline">
           Devices
         </Link>{' '}
         page for go-live checklist and unmapped punch alerts.

@@ -67,7 +67,7 @@ export function PunchCardList({
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="font-semibold">{p.employeeId?.name ?? '—'}</div>
+              <div className="font-semibold text-text">{p.employeeId?.name ?? '—'}</div>
               <div className="font-mono text-xs text-text-muted">
                 {p.employeeId?.empCode ?? '—'} · Bio {p.biometricId}
               </div>

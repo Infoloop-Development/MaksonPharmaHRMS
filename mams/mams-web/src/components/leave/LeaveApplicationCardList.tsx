@@ -32,7 +32,7 @@ export function LeaveApplicationCardList({
         {canApply && (
           <>
             {' '}
-            <button type="button" className="text-primary underline" onClick={onAddLeave}>Add leave</button>
+            <button type="button" className="text-link underline" onClick={onAddLeave}>Add leave</button>
           </>
         )}
       </div>

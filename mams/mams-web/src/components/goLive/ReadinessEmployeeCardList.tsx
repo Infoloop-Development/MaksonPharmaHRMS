@@ -16,7 +16,7 @@ export function ReadinessEmployeeCardList({ items }: { items: EmployeeRow[] }) {
       {items.map((e) => (
         <div key={e.id} className="border border-border rounded p-3 text-xs bg-surface">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <Link to={`/employees/${e.id}`} className="font-semibold text-primary hover:underline">
+            <Link to={`/employees/${e.id}`} className="font-semibold text-link hover:underline">
               {e.name}
             </Link>
             <span className="font-mono text-text-muted shrink-0">{e.empCode}</span>

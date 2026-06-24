@@ -21,7 +21,7 @@ export function FeatureFlagsDeployPanel({ deploySnippet }: { deploySnippet: stri
       headerRight={
         <button
           type="button"
-          className="text-xs font-semibold text-primary hover:underline"
+          className="text-xs font-semibold text-link hover:underline"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >

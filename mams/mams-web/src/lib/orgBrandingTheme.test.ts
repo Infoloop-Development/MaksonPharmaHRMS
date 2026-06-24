@@ -4,6 +4,8 @@ import {
   contrastTextOnBackground,
   fontFamilyStack,
   lightenHex,
+  linkColorOnDarkSurface,
+  linkColorOnSurface,
   relativeLuminance,
   swatchOptions,
 } from './orgBrandingTheme';
@@ -24,6 +26,25 @@ describe('contrastTextOnBackground', () => {
   it('uses dark text on light primary', () => {
     expect(contrastTextOnBackground('#F5F5F5')).toBe('#1A1F36');
     expect(contrastTextOnBackground('#FFFFFF')).toBe('#1A1F36');
+  });
+});
+
+describe('linkColorOnSurface', () => {
+  it('uses brand primary when dark enough for light backgrounds', () => {
+    expect(linkColorOnSurface('#1A2878')).toBe('#1A2878');
+  });
+
+  it('falls back to dark text when brand primary is too light', () => {
+    expect(linkColorOnSurface('#FFFFFF')).toBe('#1A1F36');
+  });
+});
+
+describe('linkColorOnDarkSurface', () => {
+  it('lightens dark brand primary for dark backgrounds', () => {
+    expect(linkColorOnDarkSurface('#1A2878')).not.toBe('#1A2878');
+    expect(relativeLuminance(linkColorOnDarkSurface('#1A2878'))).toBeGreaterThan(
+      relativeLuminance('#1A2878')
+    );
   });
 });
 
@@ -62,7 +83,18 @@ describe('brandingCssVars', () => {
     expect(vars['--color-brand-secondary']).toBe('#E82C2C');
     expect(vars['--sidebar-text']).toBe('#FFFFFF');
     expect(vars['--color-brand-primary-text']).toBe('#FFFFFF');
+    expect(vars['--color-link']).toBe('#1A2878');
     expect(vars['--font-brand-sans']).toContain('DM Sans');
+  });
+
+  it('uses readable link color on light surfaces when primary is white', () => {
+    const vars = brandingCssVars({ ...DEFAULT_ORG_BRANDING, primaryColor: '#FFFFFF' }, 'light');
+    expect(vars['--color-link']).toBe('#1A1F36');
+  });
+
+  it('uses dark-theme link color when requested', () => {
+    const vars = brandingCssVars(DEFAULT_ORG_BRANDING, 'dark');
+    expect(vars['--color-link']).toBe(linkColorOnDarkSurface(DEFAULT_ORG_BRANDING.primaryColor));
   });
 
   it('uses white primary button text on dark primary', () => {
