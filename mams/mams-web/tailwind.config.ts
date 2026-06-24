@@ -27,6 +27,7 @@ export default {
           muted: 'var(--color-text-muted)',
           subtle: 'var(--color-text-subtle)',
         },
+        link: 'var(--color-link)',
       },
       fontFamily: {
         sans: ['var(--font-brand-sans)', 'DM Sans', 'system-ui', 'sans-serif'],

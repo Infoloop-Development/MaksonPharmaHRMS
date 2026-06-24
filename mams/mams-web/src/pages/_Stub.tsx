@@ -15,7 +15,7 @@ export function Stub({ title, reference }: { title: string; reference: string })
           Approved mockup:{' '}
           <a
             href="https://makson-payroll-mockup.netlify.app"
-            className="text-primary hover:underline"
+            className="text-link hover:underline"
             target="_blank"
             rel="noreferrer"
           >

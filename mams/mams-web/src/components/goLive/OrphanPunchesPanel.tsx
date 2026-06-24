@@ -119,7 +119,7 @@ export function OrphanPunchesPanel() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-text-muted">
             <span>
               {data.total} event{data.total === 1 ? '' : 's'} — search{' '}
-              <Link to="/employees" className="text-primary hover:underline">
+              <Link to="/employees" className="text-link hover:underline">
                 Employees
               </Link>{' '}
               by Biometric ID to fix mapping

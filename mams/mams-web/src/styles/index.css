@@ -12,6 +12,7 @@
   --color-text-subtle: #8492a6;
   --color-primary-bg: #e8eaf5;
   --color-primary-on-bg: #1a2878;
+  --color-link: #1a2878;
   --color-red: #e82c2c;
   --color-red-bg: #fde8e8;
   --color-amber-bg: #fef3c7;
@@ -47,6 +48,7 @@
   --color-text-subtle: #7a8699;
   --color-primary-bg: #1e2a5a;
   --color-primary-on-bg: #b8c9ff;
+  --color-link: #b8c9ff;
   --color-red: #f04a4a;
   --color-red-bg: #3d1f1f;
   --color-amber-bg: #3d3018;
@@ -100,6 +102,15 @@ input, select, textarea {
   .tbl-scroll {
     @apply overflow-x-auto -mx-1 px-1;
     -webkit-overflow-scrolling: touch;
+  }
+  .tbl-scroll tbody td {
+    color: var(--color-text);
+  }
+  .text-link {
+    color: var(--color-link);
+  }
+  .text-link:hover {
+    text-decoration: underline;
   }
 
   /* Dashboard attendance table — aligned with mockup/index.html table-card */
@@ -156,7 +167,7 @@ input, select, textarea {
     @apply opacity-100;
   }
   .dash-table-scroll td {
-    @apply px-3.5 py-2.5 text-[13px] text-text-muted border-b border-border whitespace-nowrap;
+    @apply px-3.5 py-2.5 text-[13px] text-text border-b border-border whitespace-nowrap;
   }
   .dash-table-scroll tbody tr {
     @apply transition-colors;
@@ -168,7 +179,7 @@ input, select, textarea {
     @apply border-b-0;
   }
   .dash-emp-link {
-    @apply font-semibold text-text no-underline border-b-[1.5px] border-transparent hover:text-primary hover:border-primary transition-colors;
+    @apply font-semibold text-link no-underline border-b-[1.5px] border-transparent hover:border-[color:var(--color-link)] transition-colors;
   }
   .dash-pill {
     @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap;

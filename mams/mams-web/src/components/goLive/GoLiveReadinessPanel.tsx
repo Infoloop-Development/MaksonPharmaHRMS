@@ -74,7 +74,7 @@ export function GoLiveReadinessPanel() {
                     <tr key={e.id}>
                       <td className="px-3 py-2 font-mono">{e.empCode}</td>
                       <td className="px-3 py-2">
-                        <Link to={`/employees/${e.id}`} className="text-primary hover:underline">
+                        <Link to={`/employees/${e.id}`} className="text-link hover:underline">
                           {e.name}
                         </Link>
                       </td>
