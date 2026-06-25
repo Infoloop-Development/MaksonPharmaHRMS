@@ -27,6 +27,14 @@ function buildDayRange(startDate: string, endDate: string): SeedDay[] {
   return days;
 }
 
+/** Last N IST calendar days ending today (inclusive). */
+export function buildLastNSeedDays(dayCount: number, now: Date = new Date()): SeedDay[] {
+  const n = Math.max(1, Math.floor(dayCount));
+  const end = utcToIstDateString(now);
+  const start = addIstDays(end, -(n - 1));
+  return buildDayRange(start, end);
+}
+
 /** Last 7 IST days through today, plus tomorrow (8 days total). */
 export function buildRollingSeedDays(now: Date = new Date()): SeedDay[] {
   const days: SeedDay[] = [];
