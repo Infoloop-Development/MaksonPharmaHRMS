@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { NavIcon } from './navIcons';
+import { useEffect, useState, useRef } from 'react';
 import { Link ,useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 import { fmtIstHeaderDate } from '../lib/format';
@@ -69,6 +68,20 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
     }
   };
 
+  const[profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const onClickOutside = (e:MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)){
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown',onClickOutside);
+    return () => document.removeEventListener('mousedown',onClickOutside);
+  }, [profileMenuOpen])
+
   return (
     <header className="min-h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-4 md:px-7 py-4 sticky top-0 z-10">
       <div className="flex items-center gap-3 min-w-0">
@@ -100,31 +113,46 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
           <div className="text-[11px] text-text-subtle mt-0.5">{fmtIstHeaderDate(now)}</div>
         </div>
 
-        <div className="flex items-center gap-3 border-l border-border pl-6">
-          <div className='hidden md:flex flex-col items-end leading-tight'>
-            <Link to="/settings" className="text-[12px] font-semibold truncate max-w-[120px] hover:underline">
-            {user?.name}
-            </Link>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="text-[11px] text-text-muted hover:text-red transition-colors"
-            > Sign out
-            </button>
-          </div>
-          <Link
-            to="/settings"
-            className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0"
-          >
-            {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0, 2).join('')}
-          </Link>
+        <div className="relative border-l border-border pl-6" ref={profileMenuRef}>
           <button
             type="button"
-            onClick={onLogout}
-            aria-label="Sign Out"
-            className='md:hidden text-text-muted hover:text-red transition-colors shrink-0'>
-              <NavIcon name="signOut"/>
-            </button>
+            onClick={() => setProfileMenuOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={profileMenuOpen}
+            className="flex items-center gap-3"
+          >
+            <span className="hidden md:inline text-[12px] font-semibold truncate max-w-[120px]">
+              {user?.name}
+            </span>
+            <span className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center font-bold text-xs text-primary shrink-0">
+              {(user?.name ?? '??').split(' ').map((s) => s[0]).slice(0,2).join('')}
+            </span>
+          </button>
+
+          {profileMenuOpen && (
+            <div
+              role="menu"
+              className='absolute right-0 top-full mt-2 w-40 rounded-md border border-border bg-surface shadow-lg overflow-hidden z-20'
+            >
+              <Link
+                to="/settings"
+                role="menuitem"
+                onClick={() => setProfileMenuOpen(false)}
+                className='block px-3 py-2 text-sm hover:bg-surface2 transition-colors'
+              >
+                Profile
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={onLogout}
+                className='block w-full text-left px-3 py-2 text-sm text-red hover:bg-surface2 transition-colors'
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
     </header>
