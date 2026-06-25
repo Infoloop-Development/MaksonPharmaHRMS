@@ -33,6 +33,7 @@ function buildNav(isCompliant: boolean) {
 export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: boolean; onClose: () => void; collapsed:boolean; onToggleCollapsed: () => void; }) {
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
+  const canViewComplianceActivity = user?.permissions.includes('read.compliance_activity') ?? false;
   const location = useLocation();
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -128,6 +129,20 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             {!collapsed && <span>{n.label}</span>}
           </NavLink>
         ))}
+        {canViewComplianceActivity && (
+          <NavLink
+            to="/compliance-activity"
+            title={collapsed ? 'Compliance Activity' : undefined}
+            className={({ isActive }) =>
+              `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
+                collapsed ? 'lg:justify-center' : ''
+              } ${isActive ? 'sidebar-nav-link--active font-semibold' : ''}`
+            }
+          >
+            <NavIcon name="reports" />
+            {!collapsed && <span>Compliance Activity</span>}
+          </NavLink>
+        )}
       </nav>
     </aside>
   );
