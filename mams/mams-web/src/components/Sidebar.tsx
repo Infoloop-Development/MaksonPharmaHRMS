@@ -25,9 +25,36 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
 
 const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
 
-function buildNav() {
-  if (!isAutogenDemoEnabled()) return [...BASE_NAV];
-  return [...BASE_NAV.slice(0, 4), AUTOGEN_NAV, ...BASE_NAV.slice(4)];
+const COMPLIANCE_ATTENDANCE_NAV = {
+  to: '/compliance-attendance',
+  label: 'Compliance Attendance',
+  icon: 'attendance' as const,
+};
+
+function buildNav(permissions: string[]) {
+  const hasCompliant = permissions.includes('read.compliant');
+  const hasReal = permissions.includes('read.real');
+
+  let nav = [...BASE_NAV];
+  if (hasCompliant && !hasReal) {
+    nav = nav.filter((item) => item.to !== '/attendance');
+    nav = [
+      ...nav.slice(0, 3),
+      COMPLIANCE_ATTENDANCE_NAV,
+      ...nav.slice(3),
+    ];
+  } else if (hasCompliant && hasReal) {
+    nav = [
+      ...nav.slice(0, 3),
+      COMPLIANCE_ATTENDANCE_NAV,
+      ...nav.slice(3),
+    ];
+  }
+
+  if (!isAutogenDemoEnabled()) return nav;
+  const attendanceIdx = nav.findIndex((n) => n.to === '/attendance' || n.to === '/compliance-attendance');
+  const insertAt = attendanceIdx >= 0 ? attendanceIdx + 1 : 3;
+  return [...nav.slice(0, insertAt), AUTOGEN_NAV, ...nav.slice(insertAt)];
 }
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -108,7 +135,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         {user && isOrgAdminRole(user.role) ? null : (
           <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Navigation</div>
         )}
-        {buildNav().map((n) => (
+        {buildNav(user?.permissions ?? []).map((n) => (
           <NavLink
             key={n.to}
             to={n.to}

@@ -25,6 +25,8 @@ services:
         value: v2.0.0
       - key: FEATURE_UNMASK_ENABLED
         value: "true"
+      - key: COMPLIANCE_AUTOGEN_ENABLED
+        value: "false"
       - key: MAIL_ENABLED
         value: "false"
       - key: CORS_ORIGIN
