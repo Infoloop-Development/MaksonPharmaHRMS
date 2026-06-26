@@ -92,16 +92,6 @@ router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res
 
 const FinancialReportBodySchema = z.object({
   yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
-  employees: z
-    .array(
-      z.object({
-        employeeId: z.string().min(1),
-        name: z.string(),
-        realHours: z.number().min(0),
-      })
-    )
-    .min(1)
-    .max(200),
 });
 
 router.get(
@@ -130,7 +120,7 @@ router.post(
   async (req, res, next) => {
     try {
       const body = FinancialReportBodySchema.parse(req.body);
-      const rows = await buildFinancialReportRows(body);
+      const rows = await buildFinancialReportRows(body.yearMonth);
       const buffer = buildFinancialReportXlsx(rows);
       const filename = financialReportFilename(body.yearMonth);
       res.setHeader('Content-Type', XLSX_CONTENT_TYPE);

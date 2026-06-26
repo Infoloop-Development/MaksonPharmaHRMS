@@ -68,15 +68,8 @@ export interface ComplianceReportRequest {
   overrides?: ComplianceReportOverride[];
 }
 
-export interface FinancialReportEmployee {
-  employeeId: string;
-  name: string;
-  realHours: number;
-}
-
 export interface FinancialReportRequest {
   yearMonth: string;
-  employees: FinancialReportEmployee[];
 }
 
 export const complianceAttendanceApi = {
