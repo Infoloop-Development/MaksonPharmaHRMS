@@ -113,6 +113,41 @@ export async function runComplianceAutogenForDate(targetDate: string): Promise<C
   return { date: targetDate, skippedSunday: false, generated, errors };
 }
 
+export interface ComplianceAutogenMonthResult {
+  yearMonth: string;
+  weekdaysProcessed: number;
+  generated: number;
+  errors: number;
+}
+
+/** Generate compliance attendance for every weekday in a calendar month (YYYY-MM). */
+export async function runComplianceAutogenForMonth(yearMonth: string): Promise<ComplianceAutogenMonthResult> {
+  const m = yearMonth.match(/^(\d{4})-(\d{2})$/);
+  if (!m) throw new Error('yearMonth must be YYYY-MM');
+
+  const year = parseInt(m[1]!, 10);
+  const month = parseInt(m[2]!, 10);
+  if (month < 1 || month > 12) throw new Error('Invalid month');
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let weekdaysProcessed = 0;
+  let generated = 0;
+  let errors = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = `${yearMonth}-${String(d).padStart(2, '0')}`;
+    const dow = new Date(year, month - 1, d).getDay();
+    if (dow === 0) continue;
+    weekdaysProcessed++;
+    const result = await runComplianceAutogenForDate(date);
+    generated += result.generated;
+    errors += result.errors;
+  }
+
+  logger.info('compliance_autogen_month_complete', { yearMonth, weekdaysProcessed, generated, errors });
+  return { yearMonth, weekdaysProcessed, generated, errors };
+}
+
 /** Yesterday IST calendar date (YYYY-MM-DD). */
 export function yesterdayIstDateString(now: Date = new Date()): string {
   const fmt = new Intl.DateTimeFormat('en-CA', {

@@ -31,4 +31,5 @@ export * from './visitorFormLayout.js';
 export * from './visitorLocales.js';
 export * from './shiftWindow.js';
 export * from './complianceDailyGenerator.js';
+export * from './monthlyCompliancePlanner.js';
 export * from './featureFlags.js';
