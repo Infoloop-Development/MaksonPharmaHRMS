@@ -25,6 +25,7 @@ import { AdminSystemHealth } from './pages/admin/AdminSystemHealth';
 import { AdminFeatureFlags } from './pages/admin/AdminFeatureFlags';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
+import { ComplianceAttendanceLog } from './pages/ComplianceAttendanceLog';
 import { defaultHomePath } from '@mams/types';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -91,6 +92,7 @@ export function App() {
         <Route path="employees" element={<Employees />} />
         <Route path="employees/:id" element={<EmployeeDetail />} />
         <Route path="attendance" element={<AttendanceLog />} />
+        <Route path="compliance-attendance" element={<ComplianceAttendanceLog />} />
         <Route path="reports" element={<Reports />} />
         {isAutogenDemoEnabled() && (
           <Route path="autogeneration-demo" element={<AutogenerationDemo />} />

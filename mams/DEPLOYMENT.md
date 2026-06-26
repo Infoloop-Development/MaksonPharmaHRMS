@@ -90,6 +90,8 @@ Copy from `mams-server/.env.example`. **Required in production:**
 | `TZ` | `Asia/Kolkata` | |
 | `LOG_LEVEL` | `info` | |
 | `FEATURE_UNMASK_ENABLED` | `true` or `false` | Demo vs production |
+| `COMPLIANCE_AUTOGEN_ENABLED` | `false` then `true` | Nightly 00:00 IST compliance clock-in/out generation |
+| `COMPLIANCE_AUTOGEN_CRON_SECRET` | *(optional)* | External cron fallback for `POST /api/compliance-attendance/generate` |
 
 Optional mail (user welcome emails):
 

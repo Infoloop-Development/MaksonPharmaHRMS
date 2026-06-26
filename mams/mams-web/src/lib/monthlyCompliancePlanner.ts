@@ -1,16 +1,12 @@
 import {
-  addMsFromAnchor,
   formatTimeHmsMs,
+  generateDailyCompliancePunches,
   parseTimeHmsMs,
-  type AlternateShift,
-} from './shiftAutogeneration';
+  type ComplianceShift,
+} from '@mams/types';
 
 export const BASELINE_WORKING_DAYS = 26;
 export const BASELINE_HOURS = BASELINE_WORKING_DAYS * 8; // 208
-
-const MIN_WORK_MS = (7 * 60 + 50) * 60 * 1000;
-const MAX_WORK_MS = (8 * 60 + 10) * 60 * 1000;
-const EXACT_8H_MS = 8 * 60 * 60 * 1000;
 
 export type DayStatus = 'present' | 'leave' | 'weeklyOff' | 'empty' | 'unassigned';
 
@@ -63,7 +59,7 @@ export interface MonthlyPlanResult {
 
 export interface MonthlyPlanInput {
   yearMonth: string;
-  shift: AlternateShift;
+  shift: ComplianceShift;
   bufferStart: string;
   bufferEnd: string;
   realHours: number;
@@ -166,41 +162,27 @@ function shuffleSeeded<T>(items: T[], seedKey: string): T[] {
   return copy;
 }
 
-function randomClockInMs(date: string, yearMonth: string, bufferStartMs: number, bufferEndMs: number): number {
-  const rand = seededRandom(hashString(`${yearMonth}:${date}:in`));
-  if (bufferEndMs <= bufferStartMs) return bufferStartMs;
-  return Math.floor(bufferStartMs + rand() * (bufferEndMs - bufferStartMs));
-}
-
-function randomWorkDurationMs(date: string, yearMonth: string): number {
-  const rand = seededRandom(hashString(`${yearMonth}:${date}:dur`));
-  let durationMs: number;
-  let attempts = 0;
-  do {
-    durationMs = Math.floor(MIN_WORK_MS + rand() * (MAX_WORK_MS - MIN_WORK_MS));
-    attempts++;
-  } while (durationMs === EXACT_8H_MS && attempts < 20);
-  if (durationMs === EXACT_8H_MS) {
-    durationMs = EXACT_8H_MS + 1000;
-  }
-  return durationMs;
-}
-
 function generatePunches(
   date: string,
   yearMonth: string,
   bufferStartMs: number,
-  bufferEndMs: number
+  bufferEndMs: number,
+  shift: ComplianceShift
 ): Pick<MonthlyPlanDay, 'checkIn' | 'checkOut' | 'checkOutNextDay' | 'hoursWorked' | 'hoursWorkedFormatted'> {
-  const inMs = randomClockInMs(date, yearMonth, bufferStartMs, bufferEndMs);
-  const durationMs = randomWorkDurationMs(date, yearMonth);
-  const out = addMsFromAnchor(inMs, durationMs);
+  const bufferStart = formatTimeHmsMs(bufferStartMs).slice(0, 8);
+  const bufferEnd = formatTimeHmsMs(bufferEndMs).slice(0, 8);
+  const punches = generateDailyCompliancePunches({
+    seedBase: `${yearMonth}:${date}`,
+    alternateShift: shift,
+    bufferStart,
+    bufferEnd,
+  });
   return {
-    checkIn: formatTimeHms(inMs),
-    checkOut: formatTimeHms(out.ms),
-    checkOutNextDay: out.nextDay,
-    hoursWorked: durationMs / (60 * 60 * 1000),
-    hoursWorkedFormatted: formatHoursDecimal(durationMs),
+    checkIn: punches.checkIn,
+    checkOut: punches.checkOut,
+    checkOutNextDay: punches.checkOutNextDay,
+    hoursWorked: punches.hoursWorked,
+    hoursWorkedFormatted: punches.hoursWorkedFormatted,
   };
 }
 
@@ -385,7 +367,7 @@ export function computeMonthlyPlan(input: MonthlyPlanInput): MonthlyPlanResult |
     }
 
     if (presentSet.has(ds)) {
-      const punches = generatePunches(ds, input.yearMonth, bufferStartMs, bufferEndMs);
+      const punches = generatePunches(ds, input.yearMonth, bufferStartMs, bufferEndMs, input.shift);
       dayByDate.set(
         ds,
         blankDay({
@@ -441,11 +423,24 @@ export function clockInMsForTest(
   date: string,
   yearMonth: string,
   bufferStartMs: number,
-  bufferEndMs: number
+  bufferEndMs: number,
+  shift: ComplianceShift = 'A'
 ): number {
-  return randomClockInMs(date, yearMonth, bufferStartMs, bufferEndMs);
+  const bufferStart = formatTimeHmsMs(bufferStartMs).slice(0, 8);
+  const bufferEnd = formatTimeHmsMs(bufferEndMs).slice(0, 8);
+  const punches = generateDailyCompliancePunches({
+    seedBase: `${yearMonth}:${date}`,
+    alternateShift: shift,
+    bufferStart,
+    bufferEnd,
+  });
+  return parseTimeHmsMs(punches.checkIn)!;
 }
 
-export function workDurationMsForTest(date: string, yearMonth: string): number {
-  return randomWorkDurationMs(date, yearMonth);
+export function workDurationMsForTest(date: string, yearMonth: string, shift: ComplianceShift = 'A'): number {
+  const punches = generateDailyCompliancePunches({
+    seedBase: `${yearMonth}:${date}`,
+    alternateShift: shift,
+  });
+  return punches.hoursWorked * 60 * 60 * 1000;
 }
