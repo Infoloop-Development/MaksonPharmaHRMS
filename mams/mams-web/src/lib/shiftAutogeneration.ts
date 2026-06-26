@@ -11,6 +11,15 @@ export const ALTERNATE_SHIFT_STARTS: Record<AlternateShift, string> = {
 
 export const ALTERNATE_SHIFT_OPTIONS: AlternateShift[] = ['A', 'B', 'C'];
 
+export const COMPLIANCE_SHIFT_BUFFER_PRESETS: Record<
+  AlternateShift,
+  { nominalStart: string; bufferStart: string; bufferEnd: string }
+> = {
+  A: { nominalStart: '07:00', bufferStart: '06:50', bufferEnd: '07:20' },
+  B: { nominalStart: '14:00', bufferStart: '13:50', bufferEnd: '14:20' },
+  C: { nominalStart: '22:00', bufferStart: '21:50', bufferEnd: '22:20' },
+};
+
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MINUTES_PER_DAY = 24 * 60;
 const MAX_OVERNIGHT_DURATION_MS = 16 * 60 * 60 * 1000;

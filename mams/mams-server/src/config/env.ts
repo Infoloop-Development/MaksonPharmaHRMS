@@ -21,6 +21,11 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.string().default('info'),
   TZ: z.string().default('Asia/Kolkata'),
   SMART_ANCHOR_VERSION: z.string().default('v2.0.0'),
+  COMPLIANCE_AUTOGEN_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
+  COMPLIANCE_AUTOGEN_CRON_SECRET: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);

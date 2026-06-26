@@ -15,7 +15,7 @@ export function DeviceSetupGuide() {
       <ol className="list-decimal list-inside space-y-2 text-xs text-text-muted">
         <li>
           <span className="font-medium text-text">Employees first:</span> Load{' '}
-          <Link to="/employees" className="text-primary hover:underline">
+          <Link to="/employees" className="text-link hover:underline">
             Employees
           </Link>{' '}
           with Biometric ID matching device enrollment (before or after device setup).
@@ -28,7 +28,7 @@ export function DeviceSetupGuide() {
           <span className="font-medium text-text">eSSL (ADMS push):</span> Register serial number → on device set server
           URL to <code className="font-mono text-[11px] bg-surface2 px-1 rounded">{iclockUrl}</code> → confirm
           connection shows <strong>Live</strong> and punches appear in{' '}
-          <Link to="/attendance" className="text-primary hover:underline">
+          <Link to="/attendance" className="text-link hover:underline">
             Attendance Log
           </Link>
           .

@@ -168,7 +168,7 @@ export function VisitorRequestDetailModal({
                   {fileAtt ? (
                     <a
                       href={visitorsApi.fileUrl(fileAtt.storageKey)}
-                      className="text-sm text-primary hover:underline"
+                      className="text-sm text-link hover:underline"
                       download={fileAtt.filename}
                       onClick={(e) => {
                         if (accessToken) {

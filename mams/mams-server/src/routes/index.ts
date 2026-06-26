@@ -17,12 +17,14 @@ import regularizationRoutes from './regularization.routes.js';
 import visitorsRoutes from './visitors.routes.js';
 import adminRoutes from './admin.routes.js';
 import adminOverviewRoutes from './adminOverview.routes.js';
+import complianceAttendanceRoutes from './complianceAttendance.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
 apiRouter.use('/employees', employeesRoutes);
 apiRouter.use('/employees/import-csv', csvImportRoutes);
 apiRouter.use('/attendance', attendanceRoutes);
+apiRouter.use('/compliance-attendance', complianceAttendanceRoutes);
 apiRouter.use('/dashboard', dashboardRoutes);
 apiRouter.use('/adjustments', adjustmentsRoutes);
 apiRouter.use('/employee-change-requests', employeeChangeRequestsRoutes);

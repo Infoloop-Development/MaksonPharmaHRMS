@@ -129,7 +129,7 @@ export function FeatureFlagsPage() {
         <div className="card p-8 text-center text-sm text-text-muted settings-layout__full">
           No flags match your filters.{' '}
           {activeCount > 0 && (
-            <button type="button" className="text-primary underline" onClick={clearFilters}>
+            <button type="button" className="text-link underline" onClick={clearFilters}>
               Clear filters
             </button>
           )}

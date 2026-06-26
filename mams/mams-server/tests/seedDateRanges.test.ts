@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   buildAnchorSeedDays,
+  buildLastNSeedDays,
   buildMergedSeedDays,
   buildRollingSeedDays,
   mergeSeedDays,
@@ -37,6 +38,13 @@ describe('seedDateRanges', () => {
     const anchor = buildAnchorSeedDays('2026-06-02');
     const merged = mergeSeedDays(rolling, anchor);
     expect(merged).toHaveLength(8);
+  });
+
+  it('buildLastNSeedDays returns N days ending today', () => {
+    const days = buildLastNSeedDays(10, fixedNow);
+    expect(days).toHaveLength(10);
+    expect(days[0]?.date).toBe('2026-05-24');
+    expect(days[9]?.date).toBe('2026-06-02');
   });
 
   it('buildMergedSeedDays unions rolling and demo anchor when they differ', () => {
