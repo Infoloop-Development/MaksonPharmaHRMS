@@ -1,6 +1,9 @@
+import { format as formatTz, toZonedTime } from 'date-fns-tz';
 import type { CanonicalPunchEvent } from '@mams/types';
 import type { AdapterParseContext, DeviceAdapter } from '../../types.js';
 import { buildIdempotencyKey } from '../../idempotency.js';
+
+const IST = 'Asia/Kolkata';
 
 export const ESSL_PARSER_VERSION = '1.0.0';
 export const ESSL_RAW_PROTOCOL = 'ADMS/ATTLOG';
@@ -71,15 +74,16 @@ export const esslAdapter: DeviceAdapter = {
   },
 };
 
+/** Force device to treat server as empty so buffered ATTLOG rows are pushed. */
 export function buildEsslHandshakeResponse(serialNumber: string): string {
   return [
     `GET OPTION FROM: ${serialNumber}`,
-    'ATTLOGStamp=9999',
-    'OPERLOGStamp=9999',
+    'ATTLOGStamp=0',
+    'OPERLOGStamp=0',
     'ATTPHOTOStamp=None',
     'ErrorDelay=30',
     'Delay=30',
-    'TransTimes=00:00;14:05',
+    'TransTimes=00:00;23:59',
     'TransInterval=1',
     'TransFlag=TransData AttLog OpLog AttPhoto EnrollUser ChgUser EnrollFP ChgFP UserPic',
     'TimeZone=8',
@@ -87,4 +91,13 @@ export function buildEsslHandshakeResponse(serialNumber: string): string {
     'Encrypt=None',
     '',
   ].join('\n');
+}
+
+/** ADMS command polled via GET /iclock/getrequest — asks device to upload ATTLOG rows. */
+export function buildEsslAttLogQueryCommand(now: Date = new Date()): string {
+  const cmdId = now.getTime() % 100000;
+  const end = formatTz(toZonedTime(now, IST), 'yyyy-MM-dd HH:mm:ss', { timeZone: IST });
+  const startAt = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const start = formatTz(toZonedTime(startAt, IST), 'yyyy-MM-dd HH:mm:ss', { timeZone: IST });
+  return `C:${cmdId}:DATA QUERY ATTLOG StartTime=${start}\tEndTime=${end}\n`;
 }
