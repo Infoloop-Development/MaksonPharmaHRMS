@@ -23,6 +23,8 @@ export interface ComplianceAttendanceRow {
 export interface ComplianceAttendanceStats {
   total: number;
   byShift: Record<ComplianceShift, number>;
+  scope: 'today' | 'date' | 'range';
+  scopeDate?: string;
 }
 
 export interface ComplianceAttendanceListResponse {
