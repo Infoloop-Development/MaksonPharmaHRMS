@@ -2,6 +2,16 @@ import type { ComplianceShift, SortDir } from '@mams/types';
 import { compareComplianceShift } from '@mams/types';
 import { ComplianceGeneratedAttendanceModel } from '../models/ComplianceGeneratedAttendance.js';
 import { EmployeeModel } from '../models/Employee.js';
+import { utcToIstDateString } from '../utils/time.js';
+
+export type ComplianceStatsScope = 'today' | 'date' | 'range';
+
+export interface ComplianceAttendanceStatsResult {
+  total: number;
+  byShift: Record<ComplianceShift, number>;
+  scope: ComplianceStatsScope;
+  scopeDate?: string;
+}
 
 export interface ListComplianceAttendanceQuery {
   date?: string;
@@ -73,6 +83,35 @@ function sortComplianceRows(rows: ComplianceRow[], sortBy?: string, sortDir: Sor
   rows.sort((a, b) => compareSortValues(spec.get(a), spec.get(b), sortDir, spec.type));
 }
 
+/** Stat cards default to today (IST) when the list has no date/range filter. */
+export function resolveComplianceStatsScope(
+  q: Pick<ListComplianceAttendanceQuery, 'date' | 'startDate' | 'endDate'>
+): Pick<ComplianceAttendanceStatsResult, 'scope' | 'scopeDate'> {
+  if (q.date) {
+    return { scope: 'date', scopeDate: q.date };
+  }
+  if (q.startDate || q.endDate) {
+    return { scope: 'range', scopeDate: q.startDate ?? q.endDate };
+  }
+  const today = utcToIstDateString(new Date());
+  return { scope: 'today', scopeDate: today };
+}
+
+function applyStatsDateScope(
+  statsFilter: Record<string, unknown>,
+  scope: ComplianceStatsScope,
+  scopeDate?: string
+): void {
+  if (scope === 'today' && scopeDate) {
+    statsFilter.date = scopeDate;
+    return;
+  }
+  if (scope === 'date' && scopeDate) {
+    statsFilter.date = scopeDate;
+  }
+  // range: list filter already set statsFilter.date via $gte/$lte when startDate/endDate present
+}
+
 export async function listComplianceGeneratedAttendance(q: ListComplianceAttendanceQuery) {
   const filter: Record<string, unknown> = {};
 
@@ -99,8 +138,10 @@ export async function listComplianceGeneratedAttendance(q: ListComplianceAttenda
     filter.employeeId = { $in: emps.map((e) => e._id) };
   }
 
+  const statsScope = resolveComplianceStatsScope(q);
   const statsFilter = { ...filter };
   delete statsFilter.alternateShift;
+  applyStatsDateScope(statsFilter, statsScope.scope, statsScope.scopeDate);
 
   const allForStats = await ComplianceGeneratedAttendanceModel.find(statsFilter)
     .select('alternateShift')
@@ -127,6 +168,11 @@ export async function listComplianceGeneratedAttendance(q: ListComplianceAttenda
     total,
     page: q.page,
     pageSize: q.pageSize,
-    stats: { total: allForStats.length, byShift },
+    stats: {
+      total: allForStats.length,
+      byShift,
+      scope: statsScope.scope,
+      scopeDate: statsScope.scopeDate,
+    },
   };
 }

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
-import { complianceAttendanceApi } from '../api/complianceAttendance';
+import { complianceAttendanceApi, type ComplianceAttendanceStats } from '../api/complianceAttendance';
 import { fmtDate, fmtNumber } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { countActiveFilters } from '../lib/countActiveFilters';
@@ -21,12 +21,28 @@ type ShiftFilter = 'all' | ComplianceShift;
 
 const REPORT_DEFAULT_MONTH = '2026-05';
 
-const SHIFT_TILES: { id: ShiftFilter; label: string; sub: string; accent: 'primary' | 'green' | 'amber' | 'red' }[] = [
-  { id: 'all', label: 'All Records', sub: 'every shift', accent: 'primary' },
-  { id: 'A', label: 'Morning', sub: 'shift A', accent: 'green' },
-  { id: 'B', label: 'Afternoon', sub: 'shift B', accent: 'amber' },
-  { id: 'C', label: 'Night', sub: 'shift C', accent: 'red' },
+const SHIFT_TILES: { id: ShiftFilter; label: string; accent: 'primary' | 'green' | 'amber' | 'red' }[] = [
+  { id: 'all', label: 'All Records', accent: 'primary' },
+  { id: 'A', label: 'Morning', accent: 'green' },
+  { id: 'B', label: 'Afternoon', accent: 'amber' },
+  { id: 'C', label: 'Night', accent: 'red' },
 ];
+
+function statsScopeLabel(stats: ComplianceAttendanceStats | undefined, dateFilter: string): string {
+  if (dateFilter) return dateFilter;
+  if (!stats) return 'today';
+  if (stats.scope === 'today') return 'today';
+  if (stats.scope === 'date' && stats.scopeDate) return stats.scopeDate;
+  if (stats.scope === 'range') return 'date range';
+  return 'today';
+}
+
+function shiftTileSub(tile: ShiftFilter, scopeLabel: string): string {
+  if (tile === 'all') return scopeLabel;
+  if (tile === 'A') return `shift A · ${scopeLabel}`;
+  if (tile === 'B') return `shift B · ${scopeLabel}`;
+  return `shift C · ${scopeLabel}`;
+}
 
 function filterBarLabel(search: string, date: string, shiftFilter: ShiftFilter): string {
   const parts: string[] = [];
@@ -89,6 +105,7 @@ export function ComplianceAttendanceLog() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const stats = data?.stats;
+  const scopeLabel = statsScopeLabel(stats, date);
 
   const isModified = Boolean(search.trim() || date || shiftFilter !== 'all');
   const emptyMessage = isModified
@@ -178,7 +195,7 @@ export function ComplianceAttendanceLog() {
             key={tile.id}
             label={tile.label}
             value={shiftStatValue(tile.id)}
-            sub={tile.sub}
+            sub={shiftTileSub(tile.id, scopeLabel)}
             accent={tile.accent}
             selected={shiftFilter === tile.id}
             onClick={() => clickShiftTile(tile.id)}
@@ -186,6 +203,13 @@ export function ComplianceAttendanceLog() {
           />
         ))}
       </div>
+
+      {!date && (
+        <p className="text-xs text-text-muted mb-3 -mt-1">
+          Stat counts are for <strong className="text-text">{scopeLabel}</strong> (IST). The table below
+          shows all dates until you filter by date.
+        </p>
+      )}
 
       {isModified && (
         <div className="dash-filter-bar">
