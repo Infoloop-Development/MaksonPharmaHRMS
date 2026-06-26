@@ -40,7 +40,7 @@ function buildNav(permissions: string[]) {
     nav = nav.filter((item) => item.to !== '/attendance');
     nav = [
       ...nav.slice(0, 3),
-      COMPLIANCE_ATTENDANCE_NAV,
+      { ...COMPLIANCE_ATTENDANCE_NAV, label: 'Attendance Log' },
       ...nav.slice(3),
     ];
   } else if (hasCompliant && hasReal) {

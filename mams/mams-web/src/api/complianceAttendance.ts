@@ -19,11 +19,17 @@ export interface ComplianceAttendanceRow {
   } | null;
 }
 
+export interface ComplianceAttendanceStats {
+  total: number;
+  byShift: Record<ComplianceShift, number>;
+}
+
 export interface ComplianceAttendanceListResponse {
   items: ComplianceAttendanceRow[];
   total: number;
   page: number;
   pageSize: number;
+  stats: ComplianceAttendanceStats;
 }
 
 export interface ComplianceAutogenResult {
