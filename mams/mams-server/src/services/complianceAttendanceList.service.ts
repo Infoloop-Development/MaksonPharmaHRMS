@@ -39,6 +39,19 @@ export async function listComplianceGeneratedAttendance(q: ListComplianceAttenda
     filter.employeeId = { $in: emps.map((e) => e._id) };
   }
 
+  const statsFilter = { ...filter };
+  delete statsFilter.alternateShift;
+
+  const allForStats = await ComplianceGeneratedAttendanceModel.find(statsFilter)
+    .select('alternateShift')
+    .lean();
+
+  const byShift: Record<ComplianceShift, number> = { A: 0, B: 0, C: 0 };
+  for (const row of allForStats) {
+    const shift = (row.alternateShift ?? 'A') as ComplianceShift;
+    byShift[shift] += 1;
+  }
+
   const all = await ComplianceGeneratedAttendanceModel.find(filter)
     .populate('employeeId', 'name empCode department alternateShift')
     .lean();
@@ -58,5 +71,11 @@ export async function listComplianceGeneratedAttendance(q: ListComplianceAttenda
   const start = (q.page - 1) * q.pageSize;
   const items = all.slice(start, start + q.pageSize);
 
-  return { items, total, page: q.page, pageSize: q.pageSize };
+  return {
+    items,
+    total,
+    page: q.page,
+    pageSize: q.pageSize,
+    stats: { total: allForStats.length, byShift },
+  };
 }
