@@ -7,10 +7,12 @@ export function ComplianceAttendanceCardList({
   items,
   isLoading,
   emptyMessage = 'No attendance records yet. Use Generate or wait for nightly autogen at 00:00 IST.',
+  onEditRow,
 }: {
   items: ComplianceAttendanceRow[] | undefined;
   isLoading: boolean;
   emptyMessage?: string;
+  onEditRow?: (row: ComplianceAttendanceRow) => void;
 }) {
   const { fmtTime } = useTimeDisplay();
 
@@ -58,6 +60,11 @@ export function ComplianceAttendanceCardList({
               <dd className="font-mono dash-time">{row.hoursWorked.toFixed(2)}</dd>
             </div>
           </dl>
+          {onEditRow && (
+            <button type="button" className="btn-outline btn-sm mt-3 w-full" onClick={() => onEditRow(row)}>
+              Edit
+            </button>
+          )}
         </div>
       ))}
     </div>

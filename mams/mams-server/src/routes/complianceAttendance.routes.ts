@@ -12,12 +12,28 @@ import { listComplianceGeneratedAttendance } from '../services/complianceAttenda
 import {
   buildComplianceMonthlyReportXlsx,
   complianceReportFilename,
-  XLSX_CONTENT_TYPE,
 } from '../services/complianceMonthlyReport.service.js';
+import {
+  buildFinancialReportRows,
+  buildFinancialReportXlsx,
+  financialReportFilename,
+  sumComplianceHoursForMonth,
+  XLSX_CONTENT_TYPE,
+} from '../services/complianceFinancialReport.service.js';
+import { updateComplianceGeneratedAttendance } from '../services/complianceAttendanceUpdate.service.js';
+import { ComplianceAttendanceUpdateSchema } from '@mams/types';
 import { env } from '../config/env.js';
 
 const router = Router();
 router.use(requireAuth);
+
+function requireOrgAdmin(req: import('express').Request, _res: import('express').Response, next: import('express').NextFunction) {
+  if (!req.auth || req.auth.role !== 'org.admin') {
+    next(new ApiError(403, 'forbidden', 'Org admin only'));
+    return;
+  }
+  next();
+}
 
 const ListQuerySchema = z.object({
   date: z.string().optional(),
@@ -72,6 +88,76 @@ router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res
     next(err);
   }
 });
+
+const FinancialReportBodySchema = z.object({
+  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  employees: z
+    .array(
+      z.object({
+        employeeId: z.string().min(1),
+        name: z.string(),
+        realHours: z.number().min(0),
+      })
+    )
+    .min(1)
+    .max(200),
+});
+
+router.get(
+  '/month-hours',
+  requirePermission('read.compliant'),
+  requireOrgAdmin,
+  async (req, res, next) => {
+    try {
+      const employeeId = String(req.query.employeeId ?? '');
+      const yearMonth = String(req.query.yearMonth ?? '');
+      if (!employeeId || !/^\d{4}-\d{2}$/.test(yearMonth)) {
+        throw new ApiError(400, 'invalid_query', 'employeeId and yearMonth (YYYY-MM) required');
+      }
+      const raw = await sumComplianceHoursForMonth(employeeId, yearMonth);
+      res.json({ complianceHours: raw });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/financial-report.xlsx',
+  requirePermission('read.compliant'),
+  requireOrgAdmin,
+  async (req, res, next) => {
+    try {
+      const body = FinancialReportBodySchema.parse(req.body);
+      const rows = await buildFinancialReportRows(body);
+      const buffer = buildFinancialReportXlsx(rows);
+      const filename = financialReportFilename(body.yearMonth);
+      res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.patch(
+  '/:id',
+  requirePermission('read.compliant'),
+  requireOrgAdmin,
+  async (req, res, next) => {
+    try {
+      const body = ComplianceAttendanceUpdateSchema.parse(req.body);
+      const updated = await updateComplianceGeneratedAttendance(req.params.id, body, {
+        userId: req.auth!.sub,
+        ipAddress: req.clientIp ?? null,
+      });
+      res.json(updated);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.post('/generate-month', async (req, res, next) => {
   try {

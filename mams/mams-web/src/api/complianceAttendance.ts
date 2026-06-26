@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { ComplianceShift } from '@mams/types';
+import type { ComplianceAttendanceUpdate, ComplianceShift } from '@mams/types';
 import { downloadAuthenticatedExportPost } from '../lib/downloadExport';
 
 export interface ComplianceAttendanceRow {
@@ -63,6 +63,17 @@ export interface ComplianceReportRequest {
   employees: ComplianceReportEmployee[];
 }
 
+export interface FinancialReportEmployee {
+  employeeId: string;
+  name: string;
+  realHours: number;
+}
+
+export interface FinancialReportRequest {
+  yearMonth: string;
+  employees: FinancialReportEmployee[];
+}
+
 export const complianceAttendanceApi = {
   list: (q: {
     date?: string;
@@ -92,5 +103,17 @@ export const complianceAttendanceApi = {
       '/compliance-attendance/report.xlsx',
       body,
       `compliance-attendance-${body.yearMonth}.xlsx`
+    ),
+  update: (id: string, body: ComplianceAttendanceUpdate) =>
+    api.patch<ComplianceAttendanceRow>(`/compliance-attendance/${id}`, body),
+  getMonthComplianceHours: (employeeId: string, yearMonth: string) => {
+    const params = new URLSearchParams({ employeeId, yearMonth });
+    return api.get<{ complianceHours: number }>(`/compliance-attendance/month-hours?${params.toString()}`);
+  },
+  downloadFinancialReport: (body: FinancialReportRequest) =>
+    downloadAuthenticatedExportPost(
+      '/compliance-attendance/financial-report.xlsx',
+      body,
+      `financial-report-${body.yearMonth}.xlsx`
     ),
 };
