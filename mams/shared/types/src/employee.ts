@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SortDirSchema } from './sort.js';
 
 export const TimeShiftSchema = z.enum(['Day', 'Night']);
 export type TimeShift = z.infer<typeof TimeShiftSchema>;
@@ -145,6 +146,8 @@ export const EmployeeListQuerySchema = z.object({
   status: EmployeeStatusSchema.optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  sortBy: z.enum(['name', 'empCode', 'department', 'status', 'joinDate']).optional(),
+  sortDir: SortDirSchema.optional(),
 });
 export type EmployeeListQuery = z.infer<typeof EmployeeListQuerySchema>;
 

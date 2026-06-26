@@ -1,8 +1,11 @@
 import type { ActivityListItem, AuditLogCategory } from '@mams/types';
 import { AUDIT_LOG_CATEGORIES, ROLE_LABELS, type Role } from '@mams/types';
+import { useCallback } from 'react';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityDescription } from './ActivityDescription';
+import { SortableTh } from '../ui/SortableTh';
+import { useTableSort } from '../../lib/tableSort';
 
 type ActiveFilters = {
   category: AuditLogCategory;
@@ -69,18 +72,31 @@ export function AuditLogResults({
 }) {
   const { fmtDateTimeMs } = useTimeDisplay();
 
+  const getSortValue = useCallback((row: ActivityListItem, col: string) => {
+    if (col === 'occurredAt') return row.occurredAt;
+    if (col === 'user') return row.userName ?? '';
+    if (col === 'eventType') return activityPageBadge(row.eventType, row.payload);
+    return '';
+  }, []);
+
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(
+    items ?? [],
+    getSortValue,
+    { occurredAt: 'date' }
+  );
+
   if (isLoading) {
     return <div className="text-sm text-text-muted py-6 text-center">Loading audit…</div>;
   }
 
-  if (!items?.length) {
+  if (!sortedRows.length) {
     return <div className="text-sm text-text-muted py-6 text-center">No matching events.</div>;
   }
 
   return (
     <>
       <div className="space-y-3 md:hidden">
-        {items.map((row) => (
+        {sortedRows.map((row) => (
           <div key={row.id} className="border border-border rounded-lg p-3 text-sm">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="text-xs text-text-muted">{fmtDateTimeMs(row.occurredAt)}</span>
@@ -102,14 +118,14 @@ export function AuditLogResults({
         <table className="w-full text-sm">
           <thead className="bg-surface2 sticky top-0">
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <th className="px-3 py-2 font-semibold w-[200px]">Time</th>
-              <th className="px-3 py-2 font-semibold w-[100px]">Area</th>
-              <th className="px-3 py-2 font-semibold w-[180px]">User</th>
+              <SortableTh label="Time" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[200px]" />
+              <SortableTh label="Area" sortKey="eventType" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" />
+              <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[180px]" />
               <th className="px-3 py-2 font-semibold">Activity</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {items.map((row) => (
+            {sortedRows.map((row) => (
               <tr key={row.id} className="hover:bg-surface2/40 align-top">
                 <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
                 <td className="px-3 py-2">

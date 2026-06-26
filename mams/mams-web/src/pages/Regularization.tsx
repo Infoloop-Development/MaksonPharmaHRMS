@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { regularizationApi, type RegularizationListItem } from '../api/regularization';
 import { useAuth } from '../store/auth';
-import { StatCard } from '../components/ui/StatCard';
+import { DashboardStatCard } from '../components/ui/DashboardStatCard';
 import { RegularizationPageHeader } from '../components/regularization/RegularizationPageHeader';
 import { RegularizationRequestCardList } from '../components/regularization/RegularizationRequestCardList';
 import { CreateRegularizationModal } from '../components/regularization/CreateRegularizationModal';
@@ -14,6 +14,7 @@ import {
   regularizationTourScript,
 } from '../lib/onboarding/scripts/regularizationTourScript';
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
+import { CardSortSelect } from '../components/ui/CardSortSelect';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 
@@ -24,6 +25,7 @@ export function Regularization() {
   const pageApiRef = useRef<TourPageApi>({});
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Pending');
+  const [cardSort, setCardSort] = useState('date-desc');
   const [createOpen, setCreateOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<RegularizationListItem | null>(null);
 
@@ -34,6 +36,26 @@ export function Regularization() {
   });
 
   const items = data?.items ?? [];
+  const sortedItems = useMemo(() => {
+    const list = [...items];
+    const [field, dir] = cardSort.split('-') as [string, 'asc' | 'desc'];
+    list.sort((a, b) => {
+      let av = '';
+      let bv = '';
+      if (field === 'name') {
+        const ae = typeof a.employeeId === 'object' && a.employeeId ? a.employeeId : null;
+        const be = typeof b.employeeId === 'object' && b.employeeId ? b.employeeId : null;
+        av = ae?.name ?? '';
+        bv = be?.name ?? '';
+      } else {
+        av = a.date;
+        bv = b.date;
+      }
+      const cmp = field === 'date' ? av.localeCompare(bv) : av.localeCompare(bv);
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [items, cardSort]);
   const counts = data?.counts ?? { Pending: 0, Approved: 0, Rejected: 0 };
 
   const tour = usePageTourController('regularization', regularizationTourScript, {
@@ -69,45 +91,62 @@ export function Regularization() {
       />
 
       <div className="dash-stat-grid mb-6" data-tour-id="regularization-status-filters">
-        <StatCard
+        <DashboardStatCard
           label="Pending"
-          value={counts.Pending}
+          value={String(counts.Pending)}
+          sub=""
           accent="amber"
           selected={statusFilter === 'Pending'}
           onClick={() => setStatusFilter('Pending')}
         />
-        <StatCard
+        <DashboardStatCard
           label="Approved"
-          value={counts.Approved}
+          value={String(counts.Approved)}
+          sub=""
           accent="green"
           selected={statusFilter === 'Approved'}
           onClick={() => setStatusFilter('Approved')}
         />
-        <StatCard
+        <DashboardStatCard
           label="Rejected"
-          value={counts.Rejected}
+          value={String(counts.Rejected)}
+          sub=""
           accent="red"
           selected={statusFilter === 'Rejected'}
           onClick={() => setStatusFilter('Rejected')}
         />
-        <StatCard
+        <DashboardStatCard
           label="All"
-          value={counts.Pending + counts.Approved + counts.Rejected}
+          value={String(counts.Pending + counts.Approved + counts.Rejected)}
+          sub=""
           accent="primary"
           selected={statusFilter === 'All'}
           onClick={() => setStatusFilter('All')}
         />
       </div>
 
+      <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
+        <CardSortSelect
+          value={cardSort}
+          onChange={setCardSort}
+          options={[
+            { value: 'date-desc', label: 'Date newest' },
+            { value: 'date-asc', label: 'Date oldest' },
+            { value: 'name-asc', label: 'Name A–Z' },
+            { value: 'name-desc', label: 'Name Z–A' },
+          ]}
+        />
+      </div>
+
       {isLoading && <div className="text-text-muted">Loading...</div>}
-      {!isLoading && items.length === 0 && (
+      {!isLoading && sortedItems.length === 0 && (
         <div className="card p-12 text-center text-text-muted">
           No {statusFilter.toLowerCase()} regularization requests.
         </div>
       )}
 
       <div data-tour-id="regularization-list">
-        <RegularizationRequestCardList items={items} onOpen={setDetailItem} />
+        <RegularizationRequestCardList items={sortedItems} onOpen={setDetailItem} />
       </div>
 
       {createOpen && <CreateRegularizationModal onClose={() => setCreateOpen(false)} />}

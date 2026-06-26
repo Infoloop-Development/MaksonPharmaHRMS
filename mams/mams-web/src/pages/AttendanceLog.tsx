@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { AttendanceRawStats } from '@mams/types';
 import { attendanceApi } from '../api/attendance';
@@ -13,6 +13,10 @@ import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { attendanceTourScript } from '../lib/onboarding/scripts/attendanceTourScript';
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
+import { SortableTh } from '../components/ui/SortableTh';
+import { TablePagination } from '../components/ui/TablePagination';
+import { sortArrowFor, useTableSort, type SortDir } from '../lib/tableSort';
+import type { RawPunchRow } from '../api/attendance';
 
 type PunchTypeFilter = 'all' | 'IN' | 'OUT' | 'OTHER';
 type PunchTile = 'all' | 'in' | 'out' | 'other';
@@ -67,6 +71,8 @@ export function AttendanceLog() {
   const [outsideShiftOnly, setOutsideShiftOnly] = useState(false);
   const [activeTile, setActiveTile] = useState<PunchTile>('all');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<string | undefined>();
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const pageSize = 50;
 
   const isLiveMode = !search.trim() && !date && punchType === 'all' && !outsideShiftOnly;
@@ -82,7 +88,7 @@ export function AttendanceLog() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['attendance', 'raw', { search, date, punchType, outsideShiftOnly, page, isLiveMode }],
+    queryKey: ['attendance', 'raw', { search, date, punchType, outsideShiftOnly, page, isLiveMode, sortBy, sortDir }],
     queryFn: () => {
       if (isLiveMode) {
         return attendanceApi.listRaw({ limit: pageSize }).then((r) => ({
@@ -100,10 +106,64 @@ export function AttendanceLog() {
         outsideShiftOnly: outsideShiftOnly || undefined,
         page,
         pageSize,
+        sortBy,
+        sortDir,
       });
     },
     refetchInterval: isLiveMode ? 5000 : false,
   });
+
+  const getLiveSortValue = useCallback((row: RawPunchRow, col: string) => {
+    switch (col) {
+      case 'rawTimestamp':
+        return row.rawTimestamp;
+      case 'name':
+        return row.employeeId?.name;
+      case 'empCode':
+        return row.employeeId?.empCode;
+      case 'punchType':
+        return row.punchType;
+      default:
+        return '';
+    }
+  }, []);
+
+  const liveSort = useTableSort(
+    (data?.items ?? []) as RawPunchRow[],
+    getLiveSortValue,
+    { rawTimestamp: 'date' }
+  );
+
+  const toggleSort = useCallback(
+    (col: string) => {
+      if (isLiveMode) {
+        liveSort.toggleSort(col);
+        return;
+      }
+      setSortBy((prev) => {
+        if (prev === col) {
+          setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+          return col;
+        }
+        setSortDir('asc');
+        return col;
+      });
+      setPage(1);
+    },
+    [isLiveMode, liveSort]
+  );
+
+  const activeSortCol = isLiveMode ? liveSort.sortCol : sortBy ?? null;
+  const activeSortDir = isLiveMode ? liveSort.sortDir : sortDir;
+  const sortArrow = useCallback(
+    (col: string) => sortArrowFor(col, activeSortCol, activeSortDir),
+    [activeSortCol, activeSortDir]
+  );
+
+  const displayItems = useMemo(() => {
+    if (isLiveMode) return liveSort.sortedRows;
+    return data?.items ?? [];
+  }, [isLiveMode, liveSort.sortedRows, data?.items]);
 
   const stats = statsQuery.data;
   const scopeLabel = statsScopeLabel(stats, Boolean(search.trim()));
@@ -338,7 +398,7 @@ export function AttendanceLog() {
 
       <div data-tour-id="attendance-list">
       <PunchCardList
-        items={data?.items}
+        items={displayItems}
         isLoading={isLoading}
         emptyMessage={emptyMessage}
       />
@@ -348,12 +408,12 @@ export function AttendanceLog() {
           <table className="w-full text-sm">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Time</th>
-                <th className="px-4 py-3 font-semibold">Employee</th>
-                <th className="px-4 py-3 font-semibold">Code</th>
+                <SortableTh label="Time" sortKey="rawTimestamp" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Employee" sortKey="name" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Department</th>
                 <th className="px-4 py-3 font-semibold">Bio ID</th>
-                <th className="px-4 py-3 font-semibold">Type</th>
+                <SortableTh label="Type" sortKey="punchType" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Shift</th>
                 <th className="px-4 py-3 font-semibold">Outside shift</th>
                 <th className="px-4 py-3 font-semibold">Date</th>
@@ -363,10 +423,10 @@ export function AttendanceLog() {
               {isLoading && (
                 <tr><td colSpan={9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
-              {!isLoading && data?.items.length === 0 && (
+              {!isLoading && displayItems.length === 0 && (
                 <tr><td colSpan={9} className="px-4 py-10 text-center text-text-muted">{emptyMessage}</td></tr>
               )}
-              {data?.items.map((p) => (
+              {displayItems.map((p) => (
                 <tr
                   key={p._id}
                   className={`hover:bg-surface2/50 ${
@@ -412,30 +472,13 @@ export function AttendanceLog() {
       </div>
       </div>
 
-      {data && data.total > pageSize && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <div className="text-text-muted">
-            Page {page} of {Math.ceil(data.total / pageSize)}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn-outline"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="btn-outline"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page * pageSize >= data.total}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+      {data && data.total > pageSize && !isLiveMode && (
+        <TablePagination
+          page={page}
+          totalPages={Math.ceil(data.total / pageSize)}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
     </div>
   );

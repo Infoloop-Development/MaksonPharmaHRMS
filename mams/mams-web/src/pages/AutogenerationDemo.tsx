@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Field, Input, Select } from '../components/ui/Field';
 import { Badge } from '../components/ui/Badge';
+import { SortableTh } from '../components/ui/SortableTh';
+import { useTableSort } from '../lib/tableSort';
 import { ComplianceMonthCalendar } from '../components/autogen/ComplianceMonthCalendar';
 import { computeMonthlyPlan, formatCheckOutLabel, type MonthlyPlanDay } from '../lib/monthlyCompliancePlanner';
 import {
@@ -257,6 +259,21 @@ export function AutogenerationDemo() {
 
   const empA = batchResult.employees.find((e) => e.id === 'A');
   const empB = batchResult.employees.find((e) => e.id === 'B');
+
+  const assignedDays = useMemo(
+    () => ('error' in monthlyPlan ? [] : monthlyPlan.days.filter((d) => d.status !== 'unassigned')),
+    [monthlyPlan]
+  );
+  const getDaySortValue = useCallback((row: MonthlyPlanDay, col: string) => {
+    if (col === 'date') return row.date;
+    if (col === 'weekday') return row.weekday;
+    if (col === 'status') return row.status;
+    if (col === 'involved') return row.involvedPerson ?? '';
+    if (col === 'hours') return row.hoursWorked;
+    return '';
+  }, []);
+  const daySort = useTableSort(assignedDays, getDaySortValue, { date: 'date', hours: 'number' });
+  const batchSort = useTableSort(batchResult.employees, (row, col) => (col === 'employee' ? row.id : ''), {});
   const mainInDeltaMs =
     parseTimeHmsMs(empAClockIn) !== null && parseTimeHmsMs(empBClockIn) !== null
       ? parseTimeHmsMs(empBClockIn)! - parseTimeHmsMs(empAClockIn)!
@@ -376,9 +393,7 @@ export function AutogenerationDemo() {
             </p>
 
             <div className="md:hidden space-y-2 mb-2">
-              {monthlyPlan.days
-                .filter((d) => d.status !== 'unassigned')
-                .map((d) => (
+              {daySort.sortedRows.map((d) => (
                   <ComplianceDayCard key={d.date} day={d} />
                 ))}
             </div>
@@ -387,10 +402,10 @@ export function AutogenerationDemo() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-text-muted uppercase border-b border-border">
-                    <th className="py-2 pr-4">Date</th>
-                    <th className="py-2 pr-4">Weekday</th>
-                    <th className="py-2 pr-4">Status</th>
-                    <th className="py-2 pr-4">Involved</th>
+                    <SortableTh label="Date" sortKey="date" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
+                    <SortableTh label="Weekday" sortKey="weekday" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
+                    <SortableTh label="Status" sortKey="status" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
+                    <SortableTh label="Involved" sortKey="involved" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
                     <th className="py-2 pr-4">
                       Check in
                       <span className="block normal-case text-text-subtle font-normal">HH:mm:ss</span>
@@ -399,16 +414,11 @@ export function AutogenerationDemo() {
                       Check out
                       <span className="block normal-case text-text-subtle font-normal">HH:mm:ss</span>
                     </th>
-                    <th className="py-2 pr-4">
-                      Hours
-                      <span className="block normal-case text-text-subtle font-normal">decimal</span>
-                    </th>
+                    <SortableTh label="Hours" sortKey="hours" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyPlan.days
-                    .filter((d) => d.status !== 'unassigned')
-                    .map((d) => (
+                  {daySort.sortedRows.map((d) => (
                       <ComplianceDayRow key={d.date} day={d} />
                     ))}
                 </tbody>
@@ -651,7 +661,7 @@ export function AutogenerationDemo() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-text-muted uppercase border-b border-border">
-                <th className="py-2 pr-4">Employee</th>
+                <SortableTh label="Employee" sortKey="employee" activeCol={batchSort.sortCol} sortArrow={batchSort.sortArrow} onSort={batchSort.toggleSort} className="py-2 pr-4" />
                 <th className="py-2 pr-4">Main X</th>
                 <th className="py-2 pr-4">Main Y</th>
                 <th className="py-2 pr-4">Alternate in</th>
@@ -659,8 +669,9 @@ export function AutogenerationDemo() {
               </tr>
             </thead>
             <tbody>
-              {(['A', 'B'] as const).map((id) => {
-                const emp = id === 'A' ? empA : empB;
+              {batchSort.sortedRows.map((empRow) => {
+                const id = empRow.id as 'A' | 'B';
+                const emp = empRow;
                 const g = emp?.generated;
                 const cin = id === 'A' ? empAClockIn : empBClockIn;
                 const cout = id === 'A' ? empAClockOut : empBClockOut;

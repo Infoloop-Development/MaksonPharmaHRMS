@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
 import { complianceAttendanceApi } from '../api/complianceAttendance';
@@ -13,6 +13,9 @@ import {
   AttendanceStatusPill,
   ComplianceShiftPill,
 } from '../components/compliance/complianceAttendanceUi';
+import { SortableTh } from '../components/ui/SortableTh';
+import { TablePagination } from '../components/ui/TablePagination';
+import { sortArrowFor, type SortDir } from '../lib/tableSort';
 
 type ShiftFilter = 'all' | ComplianceShift;
 
@@ -42,11 +45,13 @@ export function ComplianceAttendanceLog() {
   const [date, setDate] = useState('');
   const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('all');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<string | undefined>();
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [reportOpen, setReportOpen] = useState(false);
   const pageSize = 50;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['compliance-attendance', { search, date, shiftFilter, page }],
+    queryKey: ['compliance-attendance', { search, date, shiftFilter, page, sortBy, sortDir }],
     queryFn: () =>
       complianceAttendanceApi.list({
         search: search.trim() || undefined,
@@ -54,8 +59,24 @@ export function ComplianceAttendanceLog() {
         alternateShift: shiftFilter === 'all' ? undefined : shiftFilter,
         page,
         pageSize,
+        sortBy,
+        sortDir,
       }),
   });
+
+  const toggleSort = useCallback((col: string) => {
+    setSortBy((prev) => {
+      if (prev === col) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return col;
+      }
+      setSortDir('asc');
+      return col;
+    });
+    setPage(1);
+  }, []);
+
+  const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy ?? null, sortDir), [sortBy, sortDir]);
 
   const generateMutation = useMutation({
     mutationFn: () => complianceAttendanceApi.generate(date || undefined),
@@ -241,15 +262,15 @@ export function ComplianceAttendanceLog() {
           <table className="w-full text-sm">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Date</th>
-                <th className="px-4 py-3 font-semibold">Employee</th>
-                <th className="px-4 py-3 font-semibold">Code</th>
-                <th className="px-4 py-3 font-semibold hidden lg:table-cell">Department</th>
-                <th className="px-4 py-3 font-semibold">Shift</th>
+                <SortableTh label="Date" sortKey="date" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Employee" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" />
+                <SortableTh label="Shift" sortKey="alternateShift" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
                 <th className="px-4 py-3 font-semibold">Clock-in</th>
                 <th className="px-4 py-3 font-semibold">Clock-out</th>
-                <th className="px-4 py-3 font-semibold">Hours</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <SortableTh label="Hours" sortKey="hoursWorked" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -295,29 +316,12 @@ export function ComplianceAttendanceLog() {
       </div>
 
       {total > pageSize && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <div className="text-text-muted">
-            Page {page} of {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn-outline"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="btn-outline"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page >= totalPages}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
       {reportOpen && (
         <ComplianceReportModal

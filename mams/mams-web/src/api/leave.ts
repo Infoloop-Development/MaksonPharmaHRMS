@@ -81,6 +81,8 @@ export const leaveApi = {
     endDate?: string;
     page?: number;
     pageSize?: number;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
   }) => {
     const q = new URLSearchParams();
     if (params.search) q.set('search', params.search);
@@ -91,6 +93,8 @@ export const leaveApi = {
     if (params.endDate) q.set('endDate', params.endDate);
     if (params.page) q.set('page', String(params.page));
     if (params.pageSize) q.set('pageSize', String(params.pageSize));
+    if (params.sortBy) q.set('sortBy', params.sortBy);
+    if (params.sortDir) q.set('sortDir', params.sortDir);
     const qs = q.toString();
     return api.get<{ items: LeaveApplicationItem[]; total: number; page: number; pageSize: number }>(
       `/leave/applications${qs ? `?${qs}` : ''}`

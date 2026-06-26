@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
@@ -19,6 +19,9 @@ import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { employeesTourScript } from '../lib/onboarding/scripts/employeesTourScript';
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import type { EmployeeMasked } from '@mams/types';
+import { SortableTh } from '../components/ui/SortableTh';
+import { TablePagination } from '../components/ui/TablePagination';
+import { sortArrowFor, type SortDir } from '../lib/tableSort';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
@@ -26,6 +29,8 @@ export function Employees() {
   const { logSearch } = useActivityLog();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<'name' | 'empCode' | 'department' | 'status' | 'joinDate'>('empCode');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [importOpen, setImportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
@@ -36,9 +41,24 @@ export function Employees() {
   const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['employees', { search, page }],
-    queryFn: () => employeesApi.list({ search, page, pageSize }),
+    queryKey: ['employees', { search, page, sortBy, sortDir }],
+    queryFn: () => employeesApi.list({ search, page, pageSize, sortBy, sortDir }),
   });
+
+  const toggleSort = useCallback((col: string) => {
+    const key = col as typeof sortBy;
+    setSortBy((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return key;
+      }
+      setSortDir('asc');
+      return key;
+    });
+    setPage(1);
+  }, []);
+
+  const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy, sortDir), [sortBy, sortDir]);
 
   const tour = usePageTourController('employees', employeesTourScript, {
     pageApiRef,
@@ -75,7 +95,7 @@ export function Employees() {
             {data ? `${data.total.toLocaleString()} total` : ''}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 page-toolbar">
           <GiveMeATourButton onClick={tour.onReplayTour} />
         {canManage && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
@@ -125,15 +145,15 @@ export function Employees() {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Code</th>
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
                 <th className="px-4 py-3 font-semibold">Biometric ID</th>
-                <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold">Department</th>
+                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
                 <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Shift</th>
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Joined</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
                 {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
@@ -180,15 +200,12 @@ export function Employees() {
       </div>
 
       {data && data.total > pageSize && (
-        <div className="mt-4 flex items-center justify-between text-sm" data-tour-id="employees-pagination">
-          <div className="text-text-muted">
-            Page {page} of {Math.ceil(data.total / pageSize)}
-          </div>
-          <div className="flex gap-2">
-            <button className="btn-outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
-            <button className="btn-outline" onClick={() => setPage(p => p + 1)} disabled={page * pageSize >= data.total}>Next</button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          totalPages={Math.ceil(data.total / pageSize)}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
 
       {importOpen && <CsvImportModal onClose={() => setImportOpen(false)} />}
