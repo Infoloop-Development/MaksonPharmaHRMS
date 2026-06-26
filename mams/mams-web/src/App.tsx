@@ -18,6 +18,7 @@ import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
 import { ComplianceSettings } from './pages/ComplianceSettings';
 import { ComplianceActivity } from './pages/ComplianceActivity';
+import { EmployeeChangeRequests } from './pages/EmployeeChangeRequests';
 import { AdminOverview } from './pages/admin/AdminOverview';
 import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminOrganization } from './pages/admin/AdminOrganization';
@@ -108,6 +109,7 @@ export function App() {
         <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />
         <Route path="compliance-activity" element={<ComplianceActivity/>} />
+        <Route path="employee-change-requests" element={<EmployeeChangeRequests />} />
         <Route path="settings" element={<SettingsGate />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />

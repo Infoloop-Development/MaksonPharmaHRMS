@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
+import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
 import { downloadEmployeeCsvTemplate, uploadEmployeeCsv, type CsvImportResult } from '../api/csvImport';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
+import { Link as RouterLink } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 import { fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
@@ -30,15 +32,24 @@ export function Employees() {
   const [addOpen, setAddOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
+  const [deleteRequestEmployee, setDeleteRequestEmployee] = useState<EmployeeMasked | null>(null);
   const pageSize = 50;
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
+  const canWriteChangeRequest = user?.permissions.includes('write.employee_change') ?? false;
+  const canEdit = canManage || canWriteChangeRequest;
   const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['employees', { search, page }],
     queryFn: () => employeesApi.list({ search, page, pageSize }),
+  });
+
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['employee-change-requests', { status: 'Pending' }],
+    queryFn: () => employeeChangeRequestsApi.list({ status: 'Pending', pageSize: 200 }),
+    enabled: isCompliant,
   });
 
   const tour = usePageTourController('employees', employeesTourScript, {
@@ -60,6 +71,7 @@ export function Employees() {
       setAddOpen(false);
       setEditEmployee(null);
       setDeleteEmployee(null);
+      setDeleteRequestEmployee(null);
     },
   };
 
@@ -78,22 +90,31 @@ export function Employees() {
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <GiveMeATourButton onClick={tour.onReplayTour} />
-        {canManage && (
+        {canEdit && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-              Add employee
+              {isCompliant ? 'Request new employee' : 'Add employee'}
             </button>
-            <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
-              Import CSV
-            </button>
+            {canManage && (
+              <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
+                Import CSV
+              </button>
+            )}
           </div>
         )}
         </div>
       </div>
 
-      {canManage && (
+      {canManage && !isCompliant && (
         <div data-tour-id="employees-biometric-banner">
           <BiometricIdBanner />
+        </div>
+      )}
+
+      {isCompliant && pendingRequests && pendingRequests.counts.Pending > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
+          <span className="font-semibold">{pendingRequests.counts.Pending} change request{pendingRequests.counts.Pending !== 1 ? 's' : ''} pending HR review.</span>
+          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">View requests</RouterLink>
         </div>
       )}
 
@@ -116,9 +137,9 @@ export function Employees() {
         items={data?.items}
         isLoading={isLoading}
         error={!!error}
-        canManage={canManage}
+        canManage={canEdit}
         onEdit={setEditEmployee}
-        onDelete={setDeleteEmployee}
+        onDelete={(e) => isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e)}
       />
 
       <div className="card overflow-hidden hidden md:block" data-tour-id="employees-table">
@@ -135,15 +156,15 @@ export function Employees() {
                 {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>}
                 <th className="px-4 py-3 font-semibold hidden xl:table-cell">Joined</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
-                {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
+                {canEdit && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canManage ? 1 : 0)} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canEdit ? 1 : 0)} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {error && (
-                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canManage ? 1 : 0)} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
+                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canEdit ? 1 : 0)} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
@@ -160,13 +181,17 @@ export function Employees() {
                   <td className="px-4 py-3">
                     <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
                   </td>
-                  {canManage && (
+                  {canEdit && (
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button type="button" className="btn-outline btn-sm" onClick={() => setEditEmployee(e)}>
                           Edit
                         </button>
-                        <button type="button" className="btn-outline btn-sm text-red" onClick={() => setDeleteEmployee(e)}>
+                        <button
+                          type="button"
+                          className="btn-outline btn-sm text-red"
+                          onClick={() => isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e)}
+                        >
                           Delete
                         </button>
                       </div>
@@ -199,6 +224,9 @@ export function Employees() {
       )}
       {deleteEmployee && (
         <EmployeeDeleteModal employee={deleteEmployee} onClose={() => setDeleteEmployee(null)} />
+      )}
+      {deleteRequestEmployee && (
+        <EmployeeDeleteRequestModal employee={deleteRequestEmployee} onClose={() => setDeleteRequestEmployee(null)} />
       )}
     </div>
   );
@@ -386,6 +414,65 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       )}
+    </Modal>
+  );
+}
+
+function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeMasked; onClose: () => void }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+
+  const onConfirm = async () => {
+    if (reason.trim().length < 10) {
+      setError('Reason must be at least 10 characters.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await employeeChangeRequestsApi.submit({ changeType: 'delete', employeeId: employee.id, reason: reason.trim() });
+      toast('Deletion request submitted for HR review', 'success');
+      qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
+      onClose();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not submit request.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Request employee deletion"
+      footer={
+        <>
+          <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
+            {busy ? 'Submitting…' : 'Submit request'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4 text-sm">
+        <p className="text-text-muted">
+          Request deletion of <strong className="text-text">{employee.name}</strong> ({employee.empCode}). HR must approve before the record is removed.
+        </p>
+        <div>
+          <label className="label">Reason</label>
+          <textarea
+            className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
+            placeholder="Describe why this employee should be removed (min 10 characters)…"
+            value={reason}
+            onChange={(e) => { setReason(e.target.value); setError(null); }}
+          />
+          {error && <p className="mt-1 text-[11px] text-red">{error}</p>}
+        </div>
+      </div>
     </Modal>
   );
 }
