@@ -21,7 +21,7 @@ Browser  →  https://maksonhrms.netlify.app/api/...   (same origin)
                 ↓ Netlify redirect proxy
            https://mams-api-xvso.onrender.com/api/...  (Render: mams-server)
                 ↓ MONGO_URI
-           mongodb+srv://...mongodb.net/...             (MongoDB Atlas)
+           Atlas MONGO_URI (Render env only)             (MongoDB Atlas)
 ```
 
 Leave `VITE_API_BASE_URL` **empty** on Netlify. The SPA calls `/api` on the Netlify host; [`netlify.toml`](netlify.toml) proxies to Render.
@@ -45,11 +45,7 @@ Only use this if you must call Render directly from the browser. Set `CORS_ORIGI
 3. **Network Access** → **Add IP Address**:
    - For Render/Railway: **Allow access from anywhere** (`0.0.0.0/0`) unless your API host gives a fixed egress IP.
    - Tighten later to office/VPN IPs if you move API on-prem.
-4. **Database** → **Connect** → Drivers → copy the **connection string**, e.g.  
-   `mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/`
-5. Append database name and options:  
-   `mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/mams_prod?retryWrites=true&w=majority`
-6. **URL-encode** special characters in the password (`@` → `%40`, `#` → `%23`, etc.).
+4. **Database** → **Connect** → **Drivers** → copy the SRV connection string. Append database name and options (`mams_prod?retryWrites=true&w=majority`). **URL-encode** special characters in the password (`@` → `%40`, `#` → `%23`, etc.).
 
 ### Seed Atlas (first time)
 
@@ -86,7 +82,7 @@ Copy from `mams-server/.env.example`. **Required in production:**
 |----------|---------|--------|
 | `NODE_ENV` | `production` | |
 | `PORT` | `3001` | Render sets `PORT` automatically — keep default or use theirs |
-| `MONGO_URI` | `mongodb+srv://...` | Atlas connection string |
+| `MONGO_URI` | Atlas connection string (from Connect dialog) | Atlas connection string |
 | `JWT_ACCESS_SECRET` | *(32+ random chars)* | `openssl rand -base64 32` |
 | `JWT_REFRESH_SECRET` | *(32+ random chars)* | Different from access secret |
 | `CORS_ORIGIN` | `https://maksonhrms.netlify.app` | **Exact** Netlify URL, no trailing slash. Comma-separate multiple origins if needed. Required if the browser calls Render directly; still recommended as a safety net. |
@@ -158,7 +154,7 @@ If you use a custom domain on Netlify:
 ```env
 NODE_ENV=production
 PORT=3001
-MONGO_URI=mongodb+srv://USER:ENCODED_PASSWORD@cluster0.xxxxx.mongodb.net/mams_prod?retryWrites=true&w=majority
+MONGO_URI=<paste-from-atlas-connect-dialog>
 JWT_ACCESS_SECRET=your-long-random-secret-here
 JWT_REFRESH_SECRET=another-long-random-secret-here
 JWT_ACCESS_EXPIRES=15m
