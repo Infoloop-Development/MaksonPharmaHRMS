@@ -12,6 +12,7 @@ import { listComplianceGeneratedAttendance } from '../services/complianceAttenda
 import {
   buildComplianceMonthlyReportXlsx,
   complianceReportFilename,
+  resolveComplianceReportEmployees,
 } from '../services/complianceMonthlyReport.service.js';
 import {
   buildFinancialReportRows,
@@ -61,25 +62,25 @@ router.get('/', requirePermission('read.compliant'), async (req, res, next) => {
 
 const ReportBodySchema = z.object({
   yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
-  employees: z
+  overrides: z
     .array(
       z.object({
         employeeId: z.string().min(1),
-        empCode: z.string(),
-        name: z.string(),
-        department: z.string(),
-        alternateShift: ComplianceShiftSchema,
         totalHours: z.number().min(0),
       })
     )
-    .min(1)
-    .max(200),
+    .max(500)
+    .default([]),
 });
 
 router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res, next) => {
   try {
     const body = ReportBodySchema.parse(req.body);
-    const buffer = buildComplianceMonthlyReportXlsx(body);
+    const employees = await resolveComplianceReportEmployees(body.yearMonth, body.overrides);
+    const buffer = buildComplianceMonthlyReportXlsx({
+      yearMonth: body.yearMonth,
+      employees,
+    });
     const filename = complianceReportFilename(body.yearMonth);
     res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
