@@ -5,6 +5,7 @@ import { complianceAttendanceApi } from '../api/complianceAttendance';
 import { fmtDate, fmtNumber } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { alternateShiftLabel } from '../lib/shiftAutogeneration';
+import { countActiveFilters } from '../lib/countActiveFilters';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 
 const SHIFT_FILTERS: { id: 'all' | ComplianceShift; label: string }[] = [
@@ -79,25 +80,42 @@ export function ComplianceAttendanceLog() {
       )}
 
       <MobileFilterBar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v);
-          setPage(1);
-        }}
-        searchPlaceholder="Search employee, code, department…"
-        date={date}
-        onDateChange={(v) => {
-          setDate(v);
-          setPage(1);
-        }}
+        search={
+          <div className="flex-1 min-w-[200px]">
+            <input
+              className="input w-full"
+              placeholder="Search employee, code, department…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+        }
+        activeCount={countActiveFilters(
+          { search: search.trim(), date, shiftFilter },
+          { search: '', date: '', shiftFilter: 'all' }
+        )}
         onClear={() => {
           setSearch('');
           setDate('');
           setShiftFilter('all');
           setPage(1);
         }}
-        isModified={Boolean(search.trim() || date || shiftFilter !== 'all')}
-      />
+        desktopClassName="hidden md:flex flex-row gap-3 flex-wrap"
+      >
+        <input
+          type="date"
+          className="input w-full sm:w-auto"
+          value={date}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by date"
+        />
+      </MobileFilterBar>
 
       <div className="flex flex-wrap gap-2">
         {SHIFT_FILTERS.map((f) => (
