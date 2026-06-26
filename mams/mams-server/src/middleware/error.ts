@@ -28,5 +28,13 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     res.status(500).json({ error: 'internal_error', message: err.message, code: (err as NodeJS.ErrnoException).code });
     return;
   }
+  if (req.path.endsWith('/compliance-attendance/report.xlsx')) {
+    res.status(500).json({
+      error: 'internal_error',
+      message:
+        'Report generation failed (likely timeout with large staff count). Try again off-peak or contact admin.',
+    });
+    return;
+  }
   res.status(500).json({ error: 'internal_error' });
 }
