@@ -4,7 +4,11 @@ import rateLimit from 'express-rate-limit';
 import { DeviceModel } from '../models/Device.js';
 import { ingestCanonicalPunches } from '../services/attendanceIngestion.service.js';
 import { logger } from '../utils/logger.js';
-import { esslAdapter, buildEsslHandshakeResponse } from '../integrations/adapters/essl/adapter.js';
+import {
+  esslAdapter,
+  buildEsslAttLogQueryCommand,
+  buildEsslHandshakeResponse,
+} from '../integrations/adapters/essl/adapter.js';
 
 /**
  * eSSL ADMS protocol receiver.
@@ -78,8 +82,16 @@ router.post('/cdata', textBody, async (req, res) => {
   res.type('text/plain').send('OK');
 });
 
-router.get('/getrequest', (_req, res) => {
-  res.type('text/plain').send('OK');
+router.get('/getrequest', async (req, res) => {
+  const sn = String(req.query.SN ?? '');
+  const device = await findEsslDevice(sn);
+  if (!device) {
+    res.status(404).type('text/plain').send('Device not registered');
+    return;
+  }
+  device.lastPingAt = new Date();
+  await device.save();
+  res.type('text/plain').send(buildEsslAttLogQueryCommand());
 });
 
 router.post('/devicecmd', textBody, (_req, res) => {

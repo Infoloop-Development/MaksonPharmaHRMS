@@ -60,7 +60,7 @@ export function GoLiveChecklist() {
                 <div className="font-medium text-text">{step.title}</div>
                 <p className="text-xs text-text-muted mt-0.5">{step.body}</p>
                 {'link' in step && step.link && (
-                  <Link to={step.link.to} className="text-xs text-primary font-semibold hover:underline mt-1 inline-block">
+                  <Link to={step.link.to} className="text-xs text-link font-semibold hover:underline mt-1 inline-block">
                     Open {step.link.label} →
                   </Link>
                 )}

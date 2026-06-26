@@ -12,6 +12,7 @@
     "dev:server": "npm --workspace mams-server run dev",
     "dev:web": "npm --workspace mams-web run dev",
     "seed": "npm --workspace mams-server run seed",
+    "seed:attendance": "npm --workspace mams-server run seed:attendance",
     "seed:users": "npm --workspace mams-server run seed:users",
     "build": "npm --workspaces --if-present run build",
     "build:server": "npm run build --workspace @mams/types && npm run build --workspace mams-server",

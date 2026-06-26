@@ -4,6 +4,7 @@ build/
 .env
 .env.local
 .env.*.local
+scripts/.essl-sync-state.json
 *.log
 npm-debug.log*
 .DS_Store

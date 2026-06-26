@@ -56,6 +56,15 @@ export function OrgBrandingProvider({ children }: { children: ReactNode }) {
     applyPersistedBranding(next);
   }, [settings?.orgBranding]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      applyBrandingToDocument(committedRef.current);
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const applyPreview = useCallback((next: OrgBranding) => {
     applyBrandingToDocument(next);
   }, []);

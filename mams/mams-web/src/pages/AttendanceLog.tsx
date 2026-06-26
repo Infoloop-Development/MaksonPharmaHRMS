@@ -374,7 +374,7 @@ export function AttendanceLog() {
                   }`}
                 >
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtTime(p.rawTimestamp)}</td>
-                  <td className="px-4 py-2.5 font-medium">{p.employeeId?.name ?? '-'}</td>
+                  <td className="px-4 py-2.5 font-medium text-text">{p.employeeId?.name ?? '-'}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{p.employeeId?.empCode ?? '-'}</td>
                   <td className="px-4 py-2.5 text-text-muted hidden lg:table-cell">{p.employeeId?.department ?? '-'}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{p.biometricId}</td>
