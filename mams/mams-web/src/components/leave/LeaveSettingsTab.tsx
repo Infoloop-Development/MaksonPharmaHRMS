@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { LeaveQuotaResetPolicy } from '@mams/types';
 import { leaveApi, type LeaveTypeItem } from '../../api/leave';
@@ -6,6 +6,8 @@ import { useToast } from '../ui/Toast';
 import { Field, Input, Select } from '../ui/Field';
 import { LeaveTypeFormModal } from './LeaveTypeFormModal';
 import { LeaveTypeCardList } from './LeaveTypeCardList';
+import { SortableTh } from '../ui/SortableTh';
+import { useTableSort } from '../../lib/tableSort';
 
 export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
   const toast = useToast((s) => s.push);
@@ -36,6 +38,19 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
   const policyMu = useMutation({
     mutationFn: () => leaveApi.patchPolicy({ leaveQuotaResetPolicy: resetPolicy, financialYearStartMonth: fyMonth }),
     onSuccess: () => toast('Policy saved', 'success'),
+  });
+
+  const typeItems = types?.items ?? [];
+  const getTypeSortValue = useCallback((row: LeaveTypeItem, col: string) => {
+    if (col === 'name') return row.name;
+    if (col === 'annualQuotaDefault') return row.annualQuotaDefault;
+    if (col === 'paid') return row.paid ? '1' : '0';
+    if (col === 'halfDayEligible') return row.halfDayEligible ? '1' : '0';
+    if (col === 'active') return row.active ? '1' : '0';
+    return '';
+  }, []);
+  const { sortCol, toggleSort, sortArrow, sortedRows: sortedTypes } = useTableSort(typeItems, getTypeSortValue, {
+    annualQuotaDefault: 'number',
   });
 
   return (
@@ -80,7 +95,7 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
           )}
         </div>
         <LeaveTypeCardList
-          items={types?.items ?? []}
+          items={sortedTypes}
           canConfigure={canConfigure}
           onEdit={setEditType}
         />
@@ -88,11 +103,11 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Paid</th>
-                <th className="px-4 py-3">Half day</th>
-                <th className="px-4 py-3">Default quota</th>
-                <th className="px-4 py-3">Active</th>
+                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+                <SortableTh label="Paid" sortKey="paid" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+                <SortableTh label="Half day" sortKey="halfDayEligible" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+                <SortableTh label="Default quota" sortKey="annualQuotaDefault" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+                <SortableTh label="Active" sortKey="active" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
                 {canConfigure && <th className="px-4 py-3" />}
               </tr>
             </thead>
@@ -100,7 +115,7 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
               {(types?.items ?? []).length === 0 && (
                 <tr><td colSpan={canConfigure ? 6 : 5} className="px-4 py-8 text-center text-text-muted">No leave types. Seed defaults to get started.</td></tr>
               )}
-              {(types?.items ?? []).map((t) => (
+              {sortedTypes.map((t) => (
                 <tr key={t.id} className="border-b border-border/60">
                   <td className="px-4 py-3 font-medium">{t.name}</td>
                   <td className="px-4 py-3">{t.paid ? 'Yes' : 'No'}</td>

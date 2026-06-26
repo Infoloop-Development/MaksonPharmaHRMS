@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LeaveStatus } from '@mams/types';
 import { leaveApi, type LeaveApplicationItem, type LeaveTypeItem } from '../../api/leave';
 import type { LeaveSummary } from '../../api/leave';
-import { StatCard } from '../ui/StatCard';
+import { DashboardStatCard } from '../ui/DashboardStatCard';
 import { Badge } from '../ui/Badge';
 import { Input, Select } from '../ui/Field';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
@@ -12,6 +12,9 @@ import { fmtDate } from '../../lib/format';
 import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 import { LeaveApplicationCardList } from './LeaveApplicationCardList';
 import { useToast } from '../ui/Toast';
+import { SortableTh } from '../ui/SortableTh';
+import { TablePagination } from '../ui/TablePagination';
+import { sortArrowFor, type SortDir } from '../../lib/tableSort';
 
 export function LeaveRequestsTab({
   canApply,
@@ -42,6 +45,8 @@ export function LeaveRequestsTab({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<string | undefined>();
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [expandedReason, setExpandedReason] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const toast = useToast((s) => s.push);
@@ -87,7 +92,7 @@ export function LeaveRequestsTab({
   };
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate, page }],
+    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate, page, sortBy, sortDir }],
     queryFn: () =>
       leaveApi.listApplications({
         status: statusFilter === 'All' ? undefined : statusFilter,
@@ -97,8 +102,24 @@ export function LeaveRequestsTab({
         endDate: endDate || undefined,
         page,
         pageSize: 50,
+        sortBy,
+        sortDir,
       }),
   });
+
+  const toggleSort = useCallback((col: string) => {
+    setSortBy((prev) => {
+      if (prev === col) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return col;
+      }
+      setSortDir('asc');
+      return col;
+    });
+    setPage(1);
+  }, []);
+
+  const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy ?? null, sortDir), [sortBy, sortDir]);
 
   const items = applications?.items ?? [];
   const totalPages = Math.max(1, Math.ceil((applications?.total ?? 0) / (applications?.pageSize ?? 50)));
@@ -170,30 +191,41 @@ export function LeaveRequestsTab({
 
       <div className="dash-stat-grid mb-6">
         <div title={summary?.leavesTodayNames?.join(', ') || 'No one on leave today'}>
-          <StatCard
+          <DashboardStatCard
             label="Leaves Today"
             value={String(summary?.leavesToday ?? 0)}
             accent="primary"
-            sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : undefined}
+            sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : ''}
+            selected={false}
+            onClick={() => {}}
+            hint=""
           />
         </div>
-        <StatCard
+        <DashboardStatCard
           label="Pending Approvals"
           value={String(summary?.pendingApprovals ?? 0)}
           accent="amber"
+          sub=""
           selected={statusFilter === 'Pending'}
           onClick={() => { setStatusFilter('Pending'); setPage(1); }}
         />
-        <StatCard
+        <DashboardStatCard
           label="Upcoming (7 days)"
           value={String(summary?.upcomingLeaves7Days ?? 0)}
           accent="green"
+          sub=""
+          selected={false}
+          onClick={() => {}}
+          hint=""
         />
-        <StatCard
+        <DashboardStatCard
           label="Leaves This Month"
           value={String(summary?.leavesThisMonth ?? 0)}
           accent="primary"
           sub="Total days consumed"
+          selected={false}
+          onClick={() => {}}
+          hint=""
         />
       </div>
 
@@ -239,12 +271,12 @@ export function LeaveRequestsTab({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
-              <th className="px-4 py-3">Employee</th>
+              <SortableTh label="Employee" sortKey="employee" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
               <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Dates</th>
-              <th className="px-4 py-3">Days</th>
+              <SortableTh label="Dates" sortKey="fromDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Days" sortKey="totalDays" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
               <th className="px-4 py-3">Reason</th>
-              <th className="px-4 py-3">Status</th>
+              <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -318,13 +350,14 @@ export function LeaveRequestsTab({
         </table>
       </div>
 
-      <div className="flex items-center justify-between mt-4 text-sm">
-        <span className="text-text-muted">Page {page} of {totalPages} · {applications?.total ?? 0} total</span>
-        <div className="flex gap-2">
-          <button type="button" className="btn-outline btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
-          <button type="button" className="btn-outline btn-sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</button>
-        </div>
-      </div>
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={applications?.total}
+        showTotal
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => p + 1)}
+      />
     </div>
   );
 }

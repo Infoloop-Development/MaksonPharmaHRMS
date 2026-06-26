@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { HolidayCreate } from '@mams/types';
 import { leaveApi } from '../../api/leave';
@@ -8,6 +8,8 @@ import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { fmtDate } from '../../lib/format';
 import { HolidayFormModal, type HolidayRow } from './HolidayFormModal';
 import { LeaveHolidayCardList } from './LeaveHolidayCardList';
+import { SortableTh } from '../ui/SortableTh';
+import { useTableSort } from '../../lib/tableSort';
 
 function parseHolidayCsv(text: string): HolidayCreate[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
@@ -38,6 +40,15 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
   });
 
   const holidayItems = data?.items ?? [];
+
+  const getSortValue = useCallback((row: (typeof holidayItems)[number], col: string) => {
+    if (col === 'name') return row.name;
+    if (col === 'date') return row.date;
+    if (col === 'type') return row.type;
+    return '';
+  }, []);
+
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(holidayItems, getSortValue, { date: 'date' });
 
   const deleteMu = useMutation({
     mutationFn: (id: string) => leaveApi.deleteHoliday(id),
@@ -73,7 +84,7 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
       )}
 
       <LeaveHolidayCardList
-        items={holidayItems}
+        items={sortedRows}
         isLoading={isLoading}
         canConfigure={canConfigure}
         onEdit={setEditHoliday}
@@ -84,16 +95,16 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Type</th>
+              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
               <th className="px-4 py-3">Scope</th>
               {canConfigure && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody>
             {isLoading && <tr><td colSpan={canConfigure ? 5 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
-            {holidayItems.map((h) => (
+            {sortedRows.map((h) => (
               <tr key={h.id} className="border-b border-border/60">
                 <td className="px-4 py-3 font-medium">{h.name}</td>
                 <td className="px-4 py-3">{fmtDate(h.date)}</td>

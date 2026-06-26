@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { ComplianceShiftSchema } from '@mams/types';
+import { ComplianceShiftSchema, SortDirSchema } from '@mams/types';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import {
@@ -27,6 +27,10 @@ const ListQuerySchema = z.object({
   alternateShift: ComplianceShiftSchema.optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(500).default(50),
+  sortBy: z
+    .enum(['date', 'name', 'empCode', 'department', 'alternateShift', 'hoursWorked', 'status'])
+    .optional(),
+  sortDir: SortDirSchema.optional(),
 });
 
 router.get('/', requirePermission('read.compliant'), async (req, res, next) => {

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { goLiveApi } from '../../api/goLive';
 import { fmtIstDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
+import { SortableTh } from '../ui/SortableTh';
+import { useTableSort } from '../../lib/tableSort';
 
 export function OrphanPunchesPanel() {
   const { fmtTime } = useTimeDisplay();
@@ -16,6 +18,13 @@ export function OrphanPunchesPanel() {
     queryFn: () => goLiveApi.orphanPunches({ page, pageSize, sinceDays }),
     refetchInterval: 60_000,
   });
+
+  const getSortValue = useCallback((row: NonNullable<typeof data>['items'][number], col: string) => {
+    if (col === 'when') return row.occurredAt;
+    if (col === 'device') return row.deviceSerial ?? row.deviceCode ?? '';
+    return '';
+  }, []);
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(data?.items ?? [], getSortValue, { when: 'date' });
 
   return (
     <div className="card p-4 space-y-3">
@@ -56,7 +65,7 @@ export function OrphanPunchesPanel() {
       {data && data.items.length > 0 && (
         <>
           <div className="space-y-2 md:hidden">
-            {data.items.map((row) => (
+            {sortedRows.map((row) => (
               <div key={row.id} className="border border-border rounded p-3 text-xs space-y-2">
                 <div className="font-mono text-text-muted">
                   {fmtIstDate(row.occurredAt)} {fmtTime(row.occurredAt)}
@@ -84,14 +93,14 @@ export function OrphanPunchesPanel() {
             <table className="w-full text-xs">
               <thead className="bg-surface2">
                 <tr className="text-left text-text-muted uppercase tracking-wider">
-                  <th className="px-3 py-2">When</th>
-                  <th className="px-3 py-2">Device</th>
+                  <SortableTh label="When" sortKey="when" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" />
+                  <SortableTh label="Device" sortKey="device" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" />
                   <th className="px-3 py-2">Unknown IDs</th>
                   <th className="px-3 py-2">Source IP</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.items.map((row) => (
+                {sortedRows.map((row) => (
                   <tr key={row.id}>
                     <td className="px-3 py-2 whitespace-nowrap">
                       {fmtIstDate(row.occurredAt)} {fmtTime(row.occurredAt)}

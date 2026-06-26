@@ -1,6 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { activityApi, ORG_ACTIVITY_QUERY_PREFIX } from '../../../api/activity';
 import { AdminSectionCard } from '../../ui/AdminSectionCard';
+import { SortableTh } from '../../ui/SortableTh';
+import { useTableSort } from '../../../lib/tableSort';
+
+type AuditRow = {
+  id: string;
+  eventType: string;
+  userName?: string | null;
+  occurredAt: string;
+  payload?: Record<string, unknown>;
+};
 
 export function FeatureFlagsAuditPanel() {
   const { data, isLoading } = useQuery({
@@ -23,7 +34,7 @@ export function FeatureFlagsAuditPanel() {
       }),
   });
 
-  const rows = [
+  const rows: AuditRow[] = [
     ...(data?.items ?? []),
     ...(settingsQ.data?.items ?? []).filter((item) => {
       const fields = (item.payload?.changedFields as string[] | undefined) ?? [];
@@ -33,27 +44,36 @@ export function FeatureFlagsAuditPanel() {
     .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
     .slice(0, 10);
 
+  const getSortValue = useCallback((row: AuditRow, col: string) => {
+    if (col === 'event') return row.eventType === 'feature_flags_changed' ? 'Feature flag' : 'Settings';
+    if (col === 'user') return row.userName ?? 'System';
+    if (col === 'occurredAt') return row.occurredAt;
+    return '';
+  }, []);
+
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(rows, getSortValue, { occurredAt: 'date' });
+
   return (
     <AdminSectionCard title="Recent changes">
       <p className="text-xs text-text-muted mb-4 -mt-1">
         Feature flag and linked settings updates from the audit log.
       </p>
       {isLoading && <div className="text-text-muted text-sm">Loading…</div>}
-      {!isLoading && rows.length === 0 && (
+      {!isLoading && sortedRows.length === 0 && (
         <div className="text-sm text-text-muted">No recent flag changes recorded.</div>
       )}
-      {rows.length > 0 && (
+      {sortedRows.length > 0 && (
         <div className="tbl-scroll -mx-1">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="py-2 px-1">Event</th>
-                <th className="py-2 px-1">User</th>
-                <th className="py-2 px-1 text-right">When</th>
+                <SortableTh label="Event" sortKey="event" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1" />
+                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1" />
+                <SortableTh label="When" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1 text-right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {rows.map((row) => (
+              {sortedRows.map((row) => (
                 <tr key={row.id}>
                   <td className="py-2 px-1 font-medium">
                     {row.eventType === 'feature_flags_changed' ? 'Feature flag' : 'Settings'}

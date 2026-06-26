@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, type UserSummary } from '../../api/users';
 import { useToast } from '../../components/ui/Toast';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../store/auth';
+import { SortableTh } from '../../components/ui/SortableTh';
+import { useTableSort } from '../../lib/tableSort';
 
 export function AdminSecurity() {
   const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
@@ -14,6 +16,13 @@ export function AdminSecurity() {
   );
 
   const items = data?.items ?? [];
+  const getSortValue = useCallback((row: UserSummary, col: string) => {
+    if (col === 'user') return row.name;
+    if (col === 'role') return row.role;
+    if (col === 'lastLogin') return row.lastLoginAt ?? '';
+    return '';
+  }, []);
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(items, getSortValue, { lastLogin: 'date' });
 
   return (
     <div>
@@ -31,14 +40,14 @@ export function AdminSecurity() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="py-2">User</th>
-                <th className="py-2">Role</th>
-                <th className="py-2">Last login</th>
+                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+                <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+                <SortableTh label="Last login" sortKey="lastLogin" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
                 <th className="py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {items.map((u) => (
+              {sortedRows.map((u) => (
                 <tr key={u._id}>
                   <td className="py-2">
                     <div className="font-medium">{u.name}</div>

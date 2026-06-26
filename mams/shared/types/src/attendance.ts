@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SortDirSchema } from './sort.js';
 
 export const PunchTypeSchema = z.enum(['IN', 'OUT', 'OTHER']);
 export type PunchType = z.infer<typeof PunchTypeSchema>;
@@ -31,6 +32,8 @@ export const AttendanceRawListQuerySchema = z.object({
   outsideShiftOnly: z.coerce.boolean().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  sortBy: z.enum(['rawTimestamp', 'name', 'empCode', 'punchType']).optional(),
+  sortDir: SortDirSchema.optional(),
   /** Live feed shortcut: return first `limit` rows (page forced to 1). */
   limit: z.coerce.number().int().min(1).max(200).optional(),
 });

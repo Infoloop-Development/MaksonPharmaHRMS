@@ -70,6 +70,8 @@ export const complianceAttendanceApi = {
     alternateShift?: ComplianceShift;
     page?: number;
     pageSize?: number;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
   } = {}) => {
     const params = new URLSearchParams();
     Object.entries(q).forEach(([k, v]) => v !== undefined && v !== '' && params.set(k, String(v)));

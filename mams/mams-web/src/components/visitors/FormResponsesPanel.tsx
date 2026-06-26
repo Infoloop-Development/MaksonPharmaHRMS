@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { VisitorField, VisitorRequestStatus } from '@mams/types';
 import { visitorsApi, type VisitorFormItem, type VisitorRequestListItem } from '../../api/visitors';
@@ -15,6 +15,8 @@ import { useToast } from '../ui/Toast';
 import { Badge } from '../ui/Badge';
 import { Input, Select } from '../ui/Field';
 import { formatVisitorResponse, visitorStatusTone } from './visitorsUtils';
+import { SortableTh } from '../ui/SortableTh';
+import { useTableSort } from '../../lib/tableSort';
 
 const PAGE_SIZE = 10;
 
@@ -61,6 +63,16 @@ export function FormResponsesPanel({
   });
 
   const items = data?.items ?? [];
+  const getSortValue = useCallback((row: VisitorRequestListItem, col: string) => {
+    if (col === 'submitted') return row.submittedAt;
+    if (col === 'status') return row.status;
+    if (col === 'validUntil') return row.visitValidUntil ?? '';
+    return '';
+  }, []);
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(items, getSortValue, {
+    submitted: 'date',
+    validUntil: 'date',
+  });
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const fieldColumns = [...form.fields].sort((a, b) => a.order - b.order);
@@ -158,9 +170,9 @@ export function FormResponsesPanel({
         <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
-              <th className="px-3 py-2 whitespace-nowrap">Submitted</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2 whitespace-nowrap">Valid until</th>
+              <SortableTh label="Submitted" sortKey="submitted" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 whitespace-nowrap" />
+              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" />
+              <SortableTh label="Valid until" sortKey="validUntil" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 whitespace-nowrap" />
               {fieldColumns.map((f) => (
                 <th key={f.id} className="px-3 py-2 whitespace-nowrap">
                   {f.label}
@@ -185,7 +197,7 @@ export function FormResponsesPanel({
               </tr>
             )}
             {!isLoading &&
-              items.map((item) => (
+              sortedRows.map((item) => (
                 <tr key={item._id} className="border-b border-border/60 hover:bg-surface2/50">
                   <td className="px-3 py-2 whitespace-nowrap text-xs">
                     <div>{fmtIstDate(item.submittedAt)}</div>

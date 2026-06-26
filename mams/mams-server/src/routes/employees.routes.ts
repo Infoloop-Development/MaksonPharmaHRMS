@@ -16,6 +16,7 @@ import { requireAuth, requirePermission, requireAnyPermission } from '../middlew
 import { ApiError } from '../middleware/error.js';
 import { isUnmaskEnabled } from '../config/featureFlags.js';
 import { audit, logUnmask, logUnmaskActivity } from '../services/audit.service.js';
+import { parseSortQuery } from '../utils/sortQuery.js';
 import { mapEmployeeCreateDuplicateError } from '../utils/mongoDuplicate.js';
 
 const router = Router();
@@ -48,8 +49,15 @@ router.get('/', async (req, res, next) => {
     if (q.status) filter.status = q.status;
 
     const total = await EmployeeModel.countDocuments(filter);
+    const sort = parseSortQuery(q.sortBy, q.sortDir, {
+      name: 'name',
+      empCode: 'empCode',
+      department: 'department',
+      status: 'status',
+      joinDate: 'joinDate',
+    }, { empCode: 1 });
     const items = await EmployeeModel.find(filter)
-      .sort({ empCode: 1 })
+      .sort(sort)
       .skip((q.page - 1) * q.pageSize)
       .limit(q.pageSize);
 

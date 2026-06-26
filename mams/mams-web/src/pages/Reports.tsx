@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { reportsApi } from '../api/reports';
@@ -20,6 +20,8 @@ import { countActiveFilters } from '../lib/countActiveFilters';
 import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { reportsTourScript } from '../lib/onboarding/scripts/reportsTourScript';
+import { SortableTh } from '../components/ui/SortableTh';
+import { useTableSort } from '../lib/tableSort';
 
 type Tab = 'daily' | 'monthly' | 'department' | 'location';
 
@@ -104,6 +106,29 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
     queryKey: ['reports', 'daily', startDate, endDate, department, location],
     queryFn: () => reportsApi.daily({ startDate, endDate, department: department || undefined, location: location || undefined }),
   });
+
+  type DailyRow = NonNullable<typeof data>['rows'][number];
+  const getDailySortValue = useCallback(
+    (row: DailyRow, col: string) => {
+      const emp = row.employeeId;
+      if (col === 'date') return row.date;
+      if (col === 'code') return emp?.empCode;
+      if (col === 'name') return emp?.name;
+      if (col === 'department') return emp?.department;
+      if (col === 'location') return emp?.location;
+      if (col === 'hours') return isCompliant ? row.compliantHours : row.realNetHours;
+      if (col === 'ot') return row.otHours;
+      if (col === 'status') return row.status;
+      return '';
+    },
+    [isCompliant]
+  );
+  const { sortCol, toggleSort, sortArrow, sortedRows: sortedDailyRows } = useTableSort(
+    data?.rows ?? [],
+    getDailySortValue,
+    { date: 'date', hours: 'number', ot: 'number' }
+  );
+  const displayDailyRows = sortedDailyRows.slice(0, 500);
 
   const branding = brandingFromSettings(settings);
 
@@ -224,7 +249,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
         </div>
       </div>
 
-      <DailyReportCardList rows={data?.rows} isLoading={isLoading} isCompliant={isCompliant} />
+      <DailyReportCardList rows={displayDailyRows} isLoading={isLoading} isCompliant={isCompliant} />
 
       {data && data.rows.length > 500 && (
         <div className="mb-2 p-3 text-center text-xs text-text-muted bg-surface2 rounded-md md:hidden print:hidden">
@@ -237,16 +262,16 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Date</th>
-                <th className="px-4 py-3 font-semibold">Code</th>
-                <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold hidden lg:table-cell">Dept</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Location</th>
+                <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Code" sortKey="code" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Dept" sortKey="department" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" />
+                <SortableTh label="Location" sortKey="location" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" />
                 <th className="px-4 py-3 font-semibold">Entry</th>
                 <th className="px-4 py-3 font-semibold">Exit</th>
-                <th className="px-4 py-3 font-semibold">{isCompliant ? 'Hours' : 'Net Hrs'}</th>
-                {!isCompliant && <th className="px-4 py-3 font-semibold hidden lg:table-cell">OT</th>}
-                <th className="px-4 py-3 font-semibold">Status</th>
+                <SortableTh label={isCompliant ? 'Hours' : 'Net Hrs'} sortKey="hours" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                {!isCompliant && <SortableTh label="OT" sortKey="ot" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" />}
+                <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -256,7 +281,7 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
               {!isLoading && !data?.rows.length && (
                 <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">No records for this date range.</td></tr>
               )}
-              {data?.rows.slice(0, 500).map((r, i) => {
+              {displayDailyRows.map((r, i) => {
                 const emp = r.employeeId;
                 const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
                 const exit = isCompliant ? r.compliantExitAt : r.realExitAt;
@@ -318,6 +343,28 @@ function MonthlyReport() {
   });
 
   const isCompliant = data?.viewMode === 'compliant';
+  type MonthlyRow = NonNullable<typeof data>['rows'][number];
+  const getMonthlySortValue = useCallback((row: MonthlyRow, col: string) => {
+    if (col === 'code') return row.empCode;
+    if (col === 'name') return row.name;
+    if (col === 'department') return row.department;
+    if (col === 'present') return row.presentDays;
+    if (col === 'absent') return row.absentDays;
+    if (col === 'weeklyOff') return row.weeklyOffDays;
+    if (col === 'totalHrs') return isCompliant ? row.totalCompliantHours : row.totalRealNetHours;
+    if (col === 'ot') return row.totalOtHours;
+    if (col === 'equivDays') return row.equivalentDays;
+    return '';
+  }, [isCompliant]);
+  const { sortCol: monthlySortCol, toggleSort: toggleMonthlySort, sortArrow: monthlySortArrow, sortedRows: sortedMonthlyRows } =
+    useTableSort(data?.rows ?? [], getMonthlySortValue, {
+      present: 'number',
+      absent: 'number',
+      weeklyOff: 'number',
+      totalHrs: 'number',
+      ot: 'number',
+      equivDays: 'number',
+    });
   const monthlyFilterDefaults = { yearMonth: defaultYearMonth, department: '', location: '' };
 
   return (
@@ -396,7 +443,7 @@ function MonthlyReport() {
       />
 
       <MonthlyReportCardList
-        rows={data?.rows}
+        rows={sortedMonthlyRows}
         isLoading={isLoading}
         isCompliant={isCompliant ?? false}
       />
@@ -406,15 +453,15 @@ function MonthlyReport() {
           <table className="w-full text-sm md:min-w-[560px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Code</th>
-                <th className="px-4 py-3 font-semibold">Name</th>
-                <th className="px-4 py-3 font-semibold hidden lg:table-cell">Dept</th>
-                <th className="px-4 py-3 font-semibold">Present</th>
-                <th className="px-4 py-3 font-semibold">Absent</th>
-                <th className="px-4 py-3 font-semibold hidden lg:table-cell">Weekly Off</th>
-                <th className="px-4 py-3 font-semibold">Total Hrs</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">OT</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Equiv. Days</th>
+                <SortableTh label="Code" sortKey="code" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Name" sortKey="name" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Dept" sortKey="department" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden lg:table-cell" />
+                <SortableTh label="Present" sortKey="present" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Absent" sortKey="absent" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Weekly Off" sortKey="weeklyOff" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden lg:table-cell" />
+                <SortableTh label="Total Hrs" sortKey="totalHrs" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="OT" sortKey="ot" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden xl:table-cell" />
+                <SortableTh label="Equiv. Days" sortKey="equivDays" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden xl:table-cell" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -422,7 +469,7 @@ function MonthlyReport() {
               {!isLoading && !data?.rows.length && (
                 <tr><td colSpan={9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
               )}
-              {data?.rows.map((r) => (
+              {sortedMonthlyRows.map((r) => (
                 <tr key={r.employeeId} className="hover:bg-surface2/50">
                   <td className="px-4 py-2.5 font-mono text-xs">{r.empCode}</td>
                   <td className="px-4 py-2.5 font-medium">{r.name}</td>
@@ -456,6 +503,27 @@ function DepartmentReport() {
     queryKey: ['reports', 'department', yearMonth],
     queryFn: () => reportsApi.department({ yearMonth }),
   });
+
+  type DeptRow = NonNullable<typeof data>['rows'][number];
+  const getDeptSortValue = useCallback((row: DeptRow, col: string) => {
+    if (col === 'department') return row.department;
+    if (col === 'employees') return row.employeeCount;
+    if (col === 'present') return row.presentDays;
+    if (col === 'absent') return row.absentDays;
+    if (col === 'compliantHrs') return row.totalCompliantHours;
+    if (col === 'ot') return row.totalOtHours;
+    if (col === 'rate') return row.attendanceRate;
+    return '';
+  }, []);
+  const { sortCol: deptSortCol, toggleSort: toggleDeptSort, sortArrow: deptSortArrow, sortedRows: sortedDeptRows } =
+    useTableSort(data?.rows ?? [], getDeptSortValue, {
+      employees: 'number',
+      present: 'number',
+      absent: 'number',
+      compliantHrs: 'number',
+      ot: 'number',
+      rate: 'number',
+    });
 
   const deptFilterDefaults = { yearMonth: defaultYearMonth };
 
@@ -514,20 +582,20 @@ function DepartmentReport() {
         }}
       />
 
-      <DepartmentReportCardList rows={data?.rows} isLoading={isLoading} />
+      <DepartmentReportCardList rows={sortedDeptRows} isLoading={isLoading} />
 
       <div className="card overflow-hidden hidden md:block">
         <div className="tbl-scroll">
         <table className="w-full text-sm md:min-w-[640px]">
           <thead className="bg-surface2">
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <th className="px-4 py-3 font-semibold">Department</th>
-              <th className="px-4 py-3 font-semibold">Employees</th>
-              <th className="px-4 py-3 font-semibold">Present</th>
-              <th className="px-4 py-3 font-semibold">Absent</th>
-              <th className="px-4 py-3 font-semibold">Compliant Hrs</th>
-              <th className="px-4 py-3 font-semibold">OT Hrs</th>
-              <th className="px-4 py-3 font-semibold">Attendance Rate</th>
+              <SortableTh label="Department" sortKey="department" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Employees" sortKey="employees" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Present" sortKey="present" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Absent" sortKey="absent" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Compliant Hrs" sortKey="compliantHrs" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="OT Hrs" sortKey="ot" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Attendance Rate" sortKey="rate" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -535,7 +603,7 @@ function DepartmentReport() {
             {!isLoading && !data?.rows.length && (
               <tr><td colSpan={7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
             )}
-            {data?.rows.map((r) => (
+            {sortedDeptRows.map((r) => (
               <tr key={r.department} className="hover:bg-surface2/50">
                 <td className="px-4 py-2.5 font-medium">{r.department}</td>
                 <td className="px-4 py-2.5">{r.employeeCount}</td>
@@ -574,6 +642,27 @@ function LocationReport() {
     queryKey: ['reports', 'location', yearMonth],
     queryFn: () => reportsApi.location({ yearMonth }),
   });
+
+  type LocRow = NonNullable<typeof data>['rows'][number];
+  const getLocSortValue = useCallback((row: LocRow, col: string) => {
+    if (col === 'location') return row.location;
+    if (col === 'employees') return row.employeeCount;
+    if (col === 'present') return row.presentDays;
+    if (col === 'absent') return row.absentDays;
+    if (col === 'compliantHrs') return row.totalCompliantHours;
+    if (col === 'ot') return row.totalOtHours;
+    if (col === 'rate') return row.attendanceRate;
+    return '';
+  }, []);
+  const { sortCol: locSortCol, toggleSort: toggleLocSort, sortArrow: locSortArrow, sortedRows: sortedLocRows } =
+    useTableSort(data?.rows ?? [], getLocSortValue, {
+      employees: 'number',
+      present: 'number',
+      absent: 'number',
+      compliantHrs: 'number',
+      ot: 'number',
+      rate: 'number',
+    });
 
   const locFilterDefaults = { yearMonth: defaultYearMonth };
 
@@ -634,7 +723,7 @@ function LocationReport() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
         {isLoading && <div className="text-text-muted">Loading...</div>}
-        {data?.rows.map((r) => (
+        {sortedLocRows.map((r) => (
           <div key={r.location} className="card p-5">
             <div className="font-bold mb-1">{r.location}</div>
             <div className="text-xs text-text-muted mb-3">{r.employeeCount} employees</div>
@@ -666,13 +755,13 @@ function LocationReport() {
           <table className="w-full text-sm md:min-w-[640px]">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Location</th>
-                <th className="px-4 py-3 font-semibold">Employees</th>
-                <th className="px-4 py-3 font-semibold">Present</th>
-                <th className="px-4 py-3 font-semibold">Absent</th>
-                <th className="px-4 py-3 font-semibold">Compliant Hrs</th>
-                <th className="px-4 py-3 font-semibold">OT Hrs</th>
-                <th className="px-4 py-3 font-semibold">Attendance Rate</th>
+                <SortableTh label="Location" sortKey="location" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Employees" sortKey="employees" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Present" sortKey="present" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Absent" sortKey="absent" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Compliant Hrs" sortKey="compliantHrs" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="OT Hrs" sortKey="ot" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Attendance Rate" sortKey="rate" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -680,7 +769,7 @@ function LocationReport() {
               {!isLoading && !data?.rows.length && (
                 <tr><td colSpan={7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
               )}
-              {data?.rows.map((r) => (
+              {sortedLocRows.map((r) => (
                 <tr key={r.location} className="hover:bg-surface2/50">
                   <td className="px-4 py-2.5 font-medium">{r.location}</td>
                   <td className="px-4 py-2.5">{r.employeeCount}</td>
