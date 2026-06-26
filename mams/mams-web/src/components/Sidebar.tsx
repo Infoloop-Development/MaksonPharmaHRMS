@@ -34,6 +34,8 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const canViewComplianceActivity = user?.permissions.includes('read.compliance_activity') ?? false;
+  const canViewChangeRequests =
+    (user?.permissions.includes('approve.employee_change') || user?.permissions.includes('write.employee_change')) ?? false;
   const location = useLocation();
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -129,6 +131,20 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             {!collapsed && <span>{n.label}</span>}
           </NavLink>
         ))}
+        {canViewChangeRequests && (
+          <NavLink
+            to="/employee-change-requests"
+            title={collapsed ? 'Employee Change Requests' : undefined}
+            className={({ isActive }) =>
+              `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
+                collapsed ? 'lg:justify-center' : ''
+              } ${isActive ? 'sidebar-nav-link--active font-semibold' : ''}`
+            }
+          >
+            <NavIcon name="adjustments" />
+            {!collapsed && <span>Change Requests</span>}
+          </NavLink>
+        )}
         {canViewComplianceActivity && (
           <NavLink
             to="/compliance-activity"

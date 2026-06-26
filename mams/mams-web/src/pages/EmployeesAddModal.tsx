@@ -16,6 +16,8 @@ import { StatusToggle } from '../components/ui/StatusToggle';
 import { DateField } from '../components/ui/DateField';
 import { useToast } from '../components/ui/Toast';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { useAuth } from '../store/auth';
+import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
 
 const WEEKDAYS = WeekdaySchema.options;
 
@@ -86,9 +88,9 @@ const SENSITIVE_KEYS = [
   'accountType',
 ] as const;
 
-function draftFromEmployee(employee: EmployeeMasked): Draft {
-  if (!employee.timeShift){
-    throw new Error('EmployeesAddModal: edit requires real view (timeshift is masked)')
+function draftFromEmployee(employee: EmployeeMasked, isCompliant: boolean): Draft {
+  if (!isCompliant && !employee.timeShift) {
+    throw new Error('EmployeesAddModal: edit requires real view (timeShift is masked)');
   }
   return {
     biometricId: employee.biometricId,
@@ -96,7 +98,7 @@ function draftFromEmployee(employee: EmployeeMasked): Draft {
     department: employee.department,
     designation: employee.designation,
     location: employee.location,
-    timeShift: employee.timeShift,
+    timeShift: employee.timeShift ?? 'Day',
     alternateShift: employee.alternateShift,
     weeklyOff: employee.weeklyOff[0] ?? 'Sunday',
     joinDate: employee.joinDate.slice(0, 10),
@@ -123,9 +125,13 @@ export function EmployeesAddModal({
   mode?: 'create' | 'edit';
   employee?: EmployeeMasked;
 }) {
+  const user = useAuth((s) => s.user);
+  const isCompliant = user?.viewMode === 'compliant';
   const isEdit = mode === 'edit' && !!employee;
   const [step, setStep] = useState<1 | 2>(1);
-  const [draft, setDraft] = useState<Draft>(() => (isEdit && employee ? draftFromEmployee(employee) : emptyDraft()));
+  const [draft, setDraft] = useState<Draft>(() => (isEdit && employee ? draftFromEmployee(employee, isCompliant) : emptyDraft()));
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -184,7 +190,15 @@ export function EmployeesAddModal({
 
   const goStep2 = () => {
     setFormError(null);
-    const parsed = EmployeeCreateStep1Schema.safeParse(step1Payload);
+    setReasonError('');
+    if (isCompliant && reason.trim().length < 10) {
+      setReasonError('Reason must be at least 10 characters');
+      return;
+    }
+    const schemaToUse = isCompliant
+      ? EmployeeCreateStep1Schema.omit({ timeShift: true })
+      : EmployeeCreateStep1Schema;
+    const parsed = schemaToUse.safeParse(step1Payload);
     if (!parsed.success) {
       setFieldErrors(issuesToRecord(parsed.error.issues));
       return;
@@ -195,6 +209,48 @@ export function EmployeesAddModal({
 
   const onSubmit = async () => {
     setFormError(null);
+
+    if (isCompliant) {
+      setBusy(true);
+      try {
+        const proposedData = {
+          biometricId: draft.biometricId.trim(),
+          name: draft.name.trim(),
+          gender: draft.gender,
+          department: draft.department,
+          designation: draft.designation.trim(),
+          location: draft.location.trim(),
+          alternateShift: draft.alternateShift,
+          weeklyOff: [draft.weeklyOff],
+          joinDate: draft.joinDate ? `${draft.joinDate}T00:00:00.000Z` : '',
+          status: draft.status,
+          ...(draft.pan.trim() ? { pan: draft.pan.trim() } : {}),
+          ...(draft.aadhaar.trim() ? { aadhaar: draft.aadhaar.trim() } : {}),
+          ...(draft.bankAccountNumber.trim() ? { bankAccountNumber: draft.bankAccountNumber.trim() } : {}),
+          ...(draft.ifsc.trim() ? { ifsc: draft.ifsc.trim() } : {}),
+          ...(draft.bankName.trim() ? { bankName: draft.bankName.trim() } : {}),
+          ...(draft.accountHolderName.trim() ? { accountHolderName: draft.accountHolderName.trim() } : {}),
+          ...(draft.pfNumber.trim() ? { pfNumber: draft.pfNumber.trim() } : {}),
+          ...(draft.esiNumber.trim() ? { esiNumber: draft.esiNumber.trim() } : {}),
+          accountType: draft.accountType,
+        };
+        if (isEdit && employee) {
+          await employeeChangeRequestsApi.submit({ changeType: 'update', employeeId: employee.id, proposedData, reason });
+          toast('Update request submitted for HR review', 'success');
+        } else {
+          await employeeChangeRequestsApi.submit({ changeType: 'create', proposedData, reason });
+          toast('New employee request submitted for HR review', 'success');
+        }
+        qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
+        onClose();
+      } catch (e: unknown) {
+        setFormError(e instanceof Error ? e.message : 'Could not submit change request.');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (isEdit && employee) {
       const step1Parsed = EmployeeCreateStep1Schema.safeParse(step1Payload);
       if (!step1Parsed.success) {
@@ -326,7 +382,15 @@ export function EmployeesAddModal({
   );
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? 'Edit employee' : 'Add employee'} size="xl" footer={footer}>
+    <Modal
+      open
+      onClose={onClose}
+      title={isEdit
+        ? (isCompliant ? 'Request employee update' : 'Edit employee')
+        : (isCompliant ? 'Request new employee' : 'Add employee')}
+      size="xl"
+      footer={footer}
+    >
       <div className="space-y-6 text-sm">
         <div className="flex gap-2 border-b border-border pb-4">
           <div
@@ -411,10 +475,12 @@ export function EmployeesAddModal({
                   <input id="add-loc" className={`input ${err('location') ? 'ring-1 ring-red' : ''}`} value={draft.location} onChange={(e) => set('location', e.target.value)} />
                   {err('location') && <p className="mt-1 text-[11px] text-red">{err('location')}</p>}
                 </div>
-                <SelectField id="add-shift" label="Time shift (real)" value={draft.timeShift} onChange={(v) => set('timeShift', v as Draft['timeShift'])} error={err('timeShift')}>
-                  <option value="Day">Day</option>
-                  <option value="Night">Night</option>
-                </SelectField>
+                {!isCompliant && (
+                  <SelectField id="add-shift" label="Time shift (real)" value={draft.timeShift} onChange={(v) => set('timeShift', v as Draft['timeShift'])} error={err('timeShift')}>
+                    <option value="Day">Day</option>
+                    <option value="Night">Night</option>
+                  </SelectField>
+                )}
                 <SelectField id="add-comp" label="Compliance shift" value={draft.alternateShift} onChange={(v) => set('alternateShift', v as Draft['alternateShift'])} error={err('alternateShift')}>
                   <option value="A">A</option>
                   <option value="B">B</option>
@@ -434,6 +500,21 @@ export function EmployeesAddModal({
                 <StatusToggle value={draft.status} onChange={(v) => set('status', v)} error={err('status')} />
               </div>
             </section>
+
+            {isCompliant && (
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Reason for change</h3>
+                <div>
+                  <textarea
+                    className={`input w-full min-h-[80px] resize-y ${reasonError ? 'ring-1 ring-red' : ''}`}
+                    placeholder="Describe why this change is needed (min 10 characters)…"
+                    value={reason}
+                    onChange={(e) => { setReason(e.target.value); setReasonError(''); }}
+                  />
+                  {reasonError && <p className="mt-1 text-[11px] text-red">{reasonError}</p>}
+                </div>
+              </section>
+            )}
           </div>
         )}
 

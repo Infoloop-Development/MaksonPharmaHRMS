@@ -46,6 +46,7 @@ export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
     'approve.visitors',
     'manage.visitors',
     'read.compliance_activity',
+    'approve.employee_change',
   ],
   'hr.compliance': [
     'read.compliant',
@@ -53,6 +54,7 @@ export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
     'read.leave',
     'read.visitors',
     'approve.visitors',
+    'write.employee_change',
   ],
   'it.admin': ['read.real', 'manage.devices', 'manage.leave'],
 };
@@ -83,6 +85,7 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'approve.visitors',
     'manage.visitors',
     'read.compliance_activity',
+    'approve.employee_change',
   ],
   'hr.compliance': [
     'read.compliant',
@@ -90,6 +93,7 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'read.leave',
     'read.visitors',
     'approve.visitors',
+    'write.employee_change',
   ],
   'it.admin': [
     'read.real',

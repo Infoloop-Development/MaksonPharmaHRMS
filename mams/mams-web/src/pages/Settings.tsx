@@ -74,6 +74,8 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'approve.visitors': 'Approve/reject visitor requests',
   'manage.visitors': 'Manage visitor forms, links, and QR codes',
   'read.compliance_activity': 'View compliance login activity log',
+  'write.employee_change': 'Submit employee change requests (pending HR approval)',
+  'approve.employee_change': 'Approve/reject employee change requests',
 };
 
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
@@ -83,7 +85,7 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
   { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
-  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices','read.compliance_activity'] },
+  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices', 'read.compliance_activity', 'write.employee_change', 'approve.employee_change'] },
   {
     label: 'Organization admin',
     permissions: [
