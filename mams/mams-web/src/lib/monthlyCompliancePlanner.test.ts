@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import { COMPLIANCE_SHIFT_BUFFER_PRESETS, parseTimeHmsMs } from '@mams/types';
 import {
   BASELINE_HOURS,
   BASELINE_WORKING_DAYS,
   computeMonthlyPlan,
   workDurationMsForTest,
   clockInMsForTest,
-} from './monthlyCompliancePlanner';
-import { COMPLIANCE_SHIFT_BUFFER_PRESETS, parseTimeHmsMs } from './shiftAutogeneration';
+} from '@mams/types';
 
 const JUNE_2026 = '2026-06';
 const PRESET_A = COMPLIANCE_SHIFT_BUFFER_PRESETS.A;

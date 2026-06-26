@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { ComplianceShift } from '@mams/types';
+import { downloadAuthenticatedExportPost } from '../lib/downloadExport';
 
 export interface ComplianceAttendanceRow {
   _id: string;
@@ -39,6 +40,27 @@ export interface ComplianceAutogenResult {
   errors: number;
 }
 
+export interface ComplianceAutogenMonthResult {
+  yearMonth: string;
+  weekdaysProcessed: number;
+  generated: number;
+  errors: number;
+}
+
+export interface ComplianceReportEmployee {
+  employeeId: string;
+  empCode: string;
+  name: string;
+  department: string;
+  alternateShift: ComplianceShift;
+  totalHours: number;
+}
+
+export interface ComplianceReportRequest {
+  yearMonth: string;
+  employees: ComplianceReportEmployee[];
+}
+
 export const complianceAttendanceApi = {
   list: (q: {
     date?: string;
@@ -57,4 +79,14 @@ export const complianceAttendanceApi = {
     const qs = date ? `?date=${encodeURIComponent(date)}` : '';
     return api.post<ComplianceAutogenResult>(`/compliance-attendance/generate${qs}`);
   },
+  generateMonth: (yearMonth: string) =>
+    api.post<ComplianceAutogenMonthResult>(
+      `/compliance-attendance/generate-month?yearMonth=${encodeURIComponent(yearMonth)}`
+    ),
+  downloadMonthlyReport: (body: ComplianceReportRequest) =>
+    downloadAuthenticatedExportPost(
+      '/compliance-attendance/report.xlsx',
+      body,
+      `compliance-attendance-${body.yearMonth}.xlsx`
+    ),
 };
