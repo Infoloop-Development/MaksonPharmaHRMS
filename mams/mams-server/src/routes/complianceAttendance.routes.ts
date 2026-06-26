@@ -12,6 +12,7 @@ import { listComplianceGeneratedAttendance } from '../services/complianceAttenda
 import {
   buildComplianceMonthlyReportXlsx,
   complianceReportFilename,
+  REPORT_BUILD_MAX_MS,
   resolveComplianceReportEmployees,
 } from '../services/complianceMonthlyReport.service.js';
 import {
@@ -74,24 +75,51 @@ const ReportBodySchema = z.object({
     .default([]),
 });
 
+const REPORT_TOO_LARGE_EMPLOYEES = 3000;
+
+const REPORT_GENERATION_FAILED_MESSAGE =
+  'Report generation failed (likely timeout with large staff count). Try again off-peak or contact admin.';
+
 router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res, next) => {
+  const startedAt = Date.now();
+  let employeeCount = 0;
+
   try {
     const body = ReportBodySchema.parse(req.body);
-    const startedAt = Date.now();
     const employees = await resolveComplianceReportEmployees(body.yearMonth, body.overrides);
+    employeeCount = employees.length;
+
+    if (employeeCount > REPORT_TOO_LARGE_EMPLOYEES) {
+      throw new ApiError(
+        503,
+        'report_too_large',
+        'Report too large for one download; contact admin or retry off-peak.'
+      );
+    }
+
     let buffer: Buffer;
     try {
-      buffer = buildComplianceMonthlyReportXlsx({
-        yearMonth: body.yearMonth,
-        employees,
-      });
+      buffer = await buildComplianceMonthlyReportXlsx(
+        {
+          yearMonth: body.yearMonth,
+          employees,
+        },
+        { startedAt }
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Report build failed';
+      const isTimeout =
+        message.includes('exceeded') ||
+        Date.now() - startedAt > REPORT_BUILD_MAX_MS - 5_000;
+      if (isTimeout || employeeCount > 500) {
+        throw new ApiError(503, 'report_generation_failed', REPORT_GENERATION_FAILED_MESSAGE);
+      }
       throw new ApiError(400, 'report_build_failed', message);
     }
+
     logger.info('compliance_monthly_report_generated', {
       yearMonth: body.yearMonth,
-      employeeCount: employees.length,
+      employeeCount,
       elapsedMs: Date.now() - startedAt,
     });
     const filename = complianceReportFilename(body.yearMonth);
@@ -99,6 +127,17 @@ router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
   } catch (err) {
+    if (!(err instanceof ApiError)) {
+      logger.error('compliance_monthly_report_failed', {
+        employeeCount,
+        elapsedMs: Date.now() - startedAt,
+        err: String(err),
+      });
+      if (employeeCount > 500 || Date.now() - startedAt > 20_000) {
+        next(new ApiError(503, 'report_generation_failed', REPORT_GENERATION_FAILED_MESSAGE));
+        return;
+      }
+    }
     next(err);
   }
 });

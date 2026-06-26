@@ -82,7 +82,7 @@ describe('resolveComplianceReportEmployees', () => {
       '../src/services/complianceMonthlyReport.service.js'
     );
     const employees = await resolveComplianceReportEmployees('2026-05', []);
-    const buffer = buildComplianceMonthlyReportXlsx({ yearMonth: '2026-05', employees });
+    const buffer = await buildComplianceMonthlyReportXlsx({ yearMonth: '2026-05', employees });
     expect(buffer.length).toBeGreaterThan(100);
   });
 });
