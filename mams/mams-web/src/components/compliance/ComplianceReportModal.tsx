@@ -213,9 +213,9 @@ export function ComplianceReportModal({
         )}
 
         <p className="text-xs text-text-muted">
-          Leave days are distributed across weekdays using a deterministic monthly plan based on each employee&apos;s
-          total hours (baseline 208 h / 26 days). Sundays are weekly off. Present days include generated clock-in/out
-          times.
+          Monthly baseline is 208 hours (26 working days × 8 h). Sundays are weekly off. Leave days are placed on
+          weekdays using a deterministic shuffle per employee when total hours are below 208. Values above 208 are
+          capped at 208 in the report (26 present days, no leave). Example: 160 h → 6 leave days and 20 present days.
         </p>
 
         {submitAttempted && validationErrors.length > 0 && (

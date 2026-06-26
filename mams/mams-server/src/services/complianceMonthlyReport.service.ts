@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import {
+  BASELINE_HOURS,
   COMPLIANCE_SHIFT_BUFFER_PRESETS,
   computeMonthlyPlan,
   dayStatusExportLabel,
@@ -41,7 +42,6 @@ export function buildComplianceMonthlyReportXlsx(input: ComplianceMonthlyReportI
     'Present Days',
     'Leave Days',
     'Weekly Off Days',
-    'Extra Hours',
   ];
   const summaryRows: (string | number)[][] = [];
 
@@ -75,17 +75,17 @@ export function buildComplianceMonthlyReportXlsx(input: ComplianceMonthlyReportI
     }
 
     const weeklyOffDays = plan.days.filter((d) => d.status === 'weeklyOff').length;
+    const reportedHours = Math.min(emp.totalHours, BASELINE_HOURS);
     summaryRows.push([
       emp.empCode,
       emp.name,
       emp.department,
       shiftLabel(emp.alternateShift),
       input.yearMonth,
-      emp.totalHours,
+      reportedHours,
       plan.summary.calendarPresentDays,
       plan.summary.calendarLeaveDays,
       weeklyOffDays,
-      plan.summary.extraCashHours > 0 ? plan.summary.extraCashHours : '',
     ]);
 
     for (const day of plan.days) {

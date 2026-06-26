@@ -11,6 +11,7 @@
     "seed:users": "tsx seed/ensureSeedUsers.ts",
     "seed:first-time-user": "tsx seed/firstTimeUser.ts",
     "seed:attendance": "tsx seed/seedAttendanceDays.ts",
+    "seed:compliance-month": "tsx seed/complianceMonth.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

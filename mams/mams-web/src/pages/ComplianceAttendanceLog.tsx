@@ -13,11 +13,10 @@ import {
   AttendanceStatusPill,
   ComplianceShiftPill,
 } from '../components/compliance/complianceAttendanceUi';
-import { useToast } from '../components/ui/Toast';
 
 type ShiftFilter = 'all' | ComplianceShift;
 
-const DEFAULT_GEN_MONTH = '2026-05';
+const REPORT_DEFAULT_MONTH = '2026-05';
 
 const SHIFT_TILES: { id: ShiftFilter; label: string; sub: string; accent: 'primary' | 'green' | 'amber' | 'red' }[] = [
   { id: 'all', label: 'All Records', sub: 'every shift', accent: 'primary' },
@@ -38,14 +37,12 @@ function filterBarLabel(search: string, date: string, shiftFilter: ShiftFilter):
 
 export function ComplianceAttendanceLog() {
   const { fmtTime } = useTimeDisplay();
-  const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('');
   const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('all');
   const [page, setPage] = useState(1);
   const [reportOpen, setReportOpen] = useState(false);
-  const [genMonth, setGenMonth] = useState(DEFAULT_GEN_MONTH);
   const pageSize = 50;
 
   const { data, isLoading } = useQuery({
@@ -65,18 +62,6 @@ export function ComplianceAttendanceLog() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['compliance-attendance'] });
     },
-  });
-
-  const generateMonthMutation = useMutation({
-    mutationFn: () => complianceAttendanceApi.generateMonth(genMonth),
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: ['compliance-attendance'] });
-      toast(
-        `Generated ${result.generated} records across ${result.weekdaysProcessed} weekdays for ${result.yearMonth}`,
-        'success'
-      );
-    },
-    onError: (e: Error) => toast(e.message, 'error'),
   });
 
   const items = data?.items ?? [];
@@ -121,21 +106,6 @@ export function ComplianceAttendanceLog() {
 
   const headerActions = (
     <>
-      <input
-        type="month"
-        className="input btn-sm w-auto hidden lg:block"
-        value={genMonth}
-        onChange={(e) => setGenMonth(e.target.value)}
-        aria-label="Month to generate"
-      />
-      <button
-        type="button"
-        className="btn-outline btn-sm shrink-0"
-        disabled={generateMonthMutation.isPending}
-        onClick={() => generateMonthMutation.mutate()}
-      >
-        {generateMonthMutation.isPending ? 'Generating month…' : 'Generate month'}
-      </button>
       <button type="button" className="btn-outline btn-sm shrink-0" onClick={() => setReportOpen(true)}>
         Generate report
       </button>
@@ -167,13 +137,6 @@ export function ComplianceAttendanceLog() {
         </div>
         <div className="hidden md:flex items-center gap-2 shrink-0 flex-wrap justify-end">{headerActions}</div>
       </div>
-
-      {generateMonthMutation.isSuccess && (
-        <div className="card p-3 mb-3 text-sm text-green-on-bg bg-green-bg">
-          Month {generateMonthMutation.data.yearMonth}: {generateMonthMutation.data.generated} records across{' '}
-          {generateMonthMutation.data.weekdaysProcessed} weekdays.
-        </div>
-      )}
 
       {generateMutation.isSuccess && (
         <div className="card p-3 mb-3 text-sm text-green-on-bg bg-green-bg">
@@ -358,7 +321,7 @@ export function ComplianceAttendanceLog() {
       )}
       {reportOpen && (
         <ComplianceReportModal
-          initialYearMonth={genMonth}
+          initialYearMonth={REPORT_DEFAULT_MONTH}
           onClose={() => setReportOpen(false)}
         />
       )}
