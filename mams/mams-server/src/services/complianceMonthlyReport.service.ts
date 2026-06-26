@@ -7,6 +7,8 @@ import {
   formatCheckOutLabel,
   type ComplianceShift,
 } from '@mams/types';
+import { EmployeeModel } from '../models/Employee.js';
+import { sumComplianceHoursByEmployeeForMonth } from './complianceFinancialReport.service.js';
 import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from './plainXlsx.service.js';
 
 export { XLSX_CONTENT_TYPE };
@@ -23,6 +25,47 @@ export interface ComplianceReportEmployeeInput {
 export interface ComplianceMonthlyReportInput {
   yearMonth: string;
   employees: ComplianceReportEmployeeInput[];
+}
+
+export interface ComplianceReportOverride {
+  employeeId: string;
+  totalHours: number;
+}
+
+/** All active employees for the month; overrides replace totalHours for selected ids only. */
+export async function resolveComplianceReportEmployees(
+  yearMonth: string,
+  overrides: ComplianceReportOverride[]
+): Promise<ComplianceReportEmployeeInput[]> {
+  const overrideMap = new Map(overrides.map((o) => [o.employeeId, o.totalHours]));
+  const hoursByEmployee = await sumComplianceHoursByEmployeeForMonth(yearMonth);
+
+  const employees = await EmployeeModel.find({
+    status: 'Active',
+    isDeleted: { $ne: true },
+  })
+    .select('empCode name department alternateShift')
+    .sort({ empCode: 1 })
+    .lean();
+
+  return employees.map((emp) => {
+    const employeeId = String(emp._id);
+    const dbHours = hoursByEmployee.get(employeeId) ?? 0;
+    const totalHours = overrideMap.has(employeeId)
+      ? overrideMap.get(employeeId)!
+      : dbHours > 0
+        ? dbHours
+        : BASELINE_HOURS;
+
+    return {
+      employeeId,
+      empCode: emp.empCode,
+      name: emp.name,
+      department: emp.department,
+      alternateShift: emp.alternateShift as ComplianceShift,
+      totalHours,
+    };
+  });
 }
 
 function shiftLabel(shift: ComplianceShift): string {

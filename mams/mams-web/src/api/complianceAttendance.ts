@@ -58,9 +58,14 @@ export interface ComplianceReportEmployee {
   totalHours: number;
 }
 
+export interface ComplianceReportOverride {
+  employeeId: string;
+  totalHours: number;
+}
+
 export interface ComplianceReportRequest {
   yearMonth: string;
-  employees: ComplianceReportEmployee[];
+  overrides?: ComplianceReportOverride[];
 }
 
 export interface FinancialReportEmployee {

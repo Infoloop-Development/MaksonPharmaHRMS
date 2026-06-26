@@ -41,7 +41,6 @@ export async function sumComplianceHoursForMonth(
   yearMonth: string
 ): Promise<number> {
   if (!Types.ObjectId.isValid(employeeId)) return 0;
-  const prefix = `${yearMonth}-`;
   const [agg] = await ComplianceGeneratedAttendanceModel.aggregate<{ total: number }>([
     {
       $match: {
@@ -52,6 +51,24 @@ export async function sumComplianceHoursForMonth(
     { $group: { _id: null, total: { $sum: '$hoursWorked' } } },
   ]);
   return agg?.total ?? 0;
+}
+
+/** Sum compliance hours per employee for a month (one aggregate query). */
+export async function sumComplianceHoursByEmployeeForMonth(
+  yearMonth: string
+): Promise<Map<string, number>> {
+  const rows = await ComplianceGeneratedAttendanceModel.aggregate<{
+    _id: Types.ObjectId;
+    total: number;
+  }>([
+    {
+      $match: {
+        date: { $gte: `${yearMonth}-01`, $lte: `${yearMonth}-31` },
+      },
+    },
+    { $group: { _id: '$employeeId', total: { $sum: '$hoursWorked' } } },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), r.total]));
 }
 
 export async function buildFinancialReportRows(

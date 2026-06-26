@@ -2,14 +2,21 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
 import { employeesApi } from '../../api/employees';
-import { complianceAttendanceApi, type ComplianceReportEmployee } from '../../api/complianceAttendance';
+import {
+  complianceAttendanceApi,
+  type ComplianceReportOverride,
+} from '../../api/complianceAttendance';
 import { Modal } from '../ui/Modal';
 import { Field, Input } from '../ui/Field';
 import { useToast } from '../ui/Toast';
 import { BASELINE_HOURS } from '@mams/types';
 
-export interface ReportEmployeeRow extends ComplianceReportEmployee {
+interface OverrideRow extends ComplianceReportOverride {
   key: string;
+  empCode: string;
+  name: string;
+  department: string;
+  alternateShift: ComplianceShift;
 }
 
 function defaultYearMonth() {
@@ -26,7 +33,7 @@ export function ComplianceReportModal({
   const toast = useToast((s) => s.push);
   const [yearMonth, setYearMonth] = useState(initialYearMonth ?? defaultYearMonth());
   const [empSearch, setEmpSearch] = useState('');
-  const [selected, setSelected] = useState<ReportEmployeeRow[]>([]);
+  const [overrides, setOverrides] = useState<OverrideRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
@@ -36,17 +43,17 @@ export function ComplianceReportModal({
     enabled: empSearch.trim().length >= 2,
   });
 
-  const selectedIds = useMemo(() => new Set(selected.map((e) => e.employeeId)), [selected]);
+  const overrideIds = useMemo(() => new Set(overrides.map((e) => e.employeeId)), [overrides]);
 
-  const addEmployee = (e: {
+  const addOverride = (e: {
     id: string;
     name: string;
     empCode: string;
     department: string;
     alternateShift?: ComplianceShift;
   }) => {
-    if (selectedIds.has(e.id)) return;
-    setSelected((rows) => [
+    if (overrideIds.has(e.id)) return;
+    setOverrides((rows) => [
       ...rows,
       {
         key: e.id,
@@ -62,26 +69,25 @@ export function ComplianceReportModal({
   };
 
   const updateHours = (employeeId: string, totalHours: number) => {
-    setSelected((rows) =>
+    setOverrides((rows) =>
       rows.map((r) => (r.employeeId === employeeId ? { ...r, totalHours } : r))
     );
   };
 
-  const removeEmployee = (employeeId: string) => {
-    setSelected((rows) => rows.filter((r) => r.employeeId !== employeeId));
+  const removeOverride = (employeeId: string) => {
+    setOverrides((rows) => rows.filter((r) => r.employeeId !== employeeId));
   };
 
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
     if (!/^\d{4}-\d{2}$/.test(yearMonth)) errors.push('Choose a valid month');
-    if (selected.length === 0) errors.push('Add at least one employee');
-    for (const row of selected) {
+    for (const row of overrides) {
       if (!Number.isFinite(row.totalHours) || row.totalHours < 0) {
         errors.push(`${row.empCode}: enter a valid hours value`);
       }
     }
     return errors;
-  }, [yearMonth, selected]);
+  }, [yearMonth, overrides]);
 
   const onSubmit = async () => {
     setSubmitAttempted(true);
@@ -93,12 +99,8 @@ export function ComplianceReportModal({
     try {
       await complianceAttendanceApi.downloadMonthlyReport({
         yearMonth,
-        employees: selected.map(({ employeeId, empCode, name, department, alternateShift, totalHours }) => ({
+        overrides: overrides.map(({ employeeId, totalHours }) => ({
           employeeId,
-          empCode,
-          name,
-          department,
-          alternateShift,
           totalHours,
         })),
       });
@@ -133,11 +135,19 @@ export function ComplianceReportModal({
           <Input type="month" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} />
         </Field>
 
+        <p className="text-sm text-text-muted">
+          The report includes <strong className="text-text">all active employees</strong> for the selected month.
+          Search below only to override total hours for specific employees; everyone else uses their generated
+          attendance totals (or 208 h baseline if none exist).
+        </p>
+
         <div className="border-b border-border pb-4">
-          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">Employees</h3>
+          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide mb-3">
+            Hour overrides (optional)
+          </h3>
           <Field label="Search employees" hint="Search by name or code (min 2 characters)">
             <Input
-              placeholder="Search to add employees…"
+              placeholder="Search to adjust hours for specific employees…"
               value={empSearch}
               onChange={(e) => setEmpSearch(e.target.value)}
             />
@@ -148,7 +158,7 @@ export function ComplianceReportModal({
                 <p className="px-3 py-2 text-sm text-text-muted">No employees found.</p>
               ) : (
                 empResults.items.map((e) => {
-                  const already = selectedIds.has(e.id);
+                  const already = overrideIds.has(e.id);
                   return (
                     <button
                       key={e.id}
@@ -157,11 +167,11 @@ export function ComplianceReportModal({
                       className={`block w-full text-left px-3 py-2 text-sm border-b border-border/40 last:border-0 ${
                         already ? 'opacity-50 cursor-not-allowed' : 'hover:bg-surface2'
                       }`}
-                      onClick={() => addEmployee(e)}
+                      onClick={() => addOverride(e)}
                     >
                       {e.name}{' '}
                       <span className="font-mono text-xs text-text-muted">{e.empCode}</span>
-                      {already && <span className="text-xs text-text-muted ml-2">(added)</span>}
+                      {already && <span className="text-xs text-text-muted ml-2">(override added)</span>}
                     </button>
                   );
                 })
@@ -170,13 +180,13 @@ export function ComplianceReportModal({
           )}
         </div>
 
-        {selected.length > 0 && (
+        {overrides.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">
-              Selected ({selected.length})
+              Overrides ({overrides.length})
             </h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {selected.map((row) => (
+              {overrides.map((row) => (
                 <div
                   key={row.key}
                   className="card p-3 flex flex-col sm:flex-row sm:items-center gap-3"
@@ -200,8 +210,8 @@ export function ComplianceReportModal({
                     <button
                       type="button"
                       className="btn-outline btn-sm"
-                      onClick={() => removeEmployee(row.employeeId)}
-                      aria-label={`Remove ${row.name}`}
+                      onClick={() => removeOverride(row.employeeId)}
+                      aria-label={`Remove override for ${row.name}`}
                     >
                       Remove
                     </button>
