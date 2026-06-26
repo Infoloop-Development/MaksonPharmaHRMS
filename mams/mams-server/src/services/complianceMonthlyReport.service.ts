@@ -8,7 +8,7 @@ import {
   type ComplianceShift,
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
-import { sumComplianceHoursByEmployeeForMonth } from './complianceFinancialReport.service.js';
+import { sumComplianceHoursByEmployeeForMonth } from './complianceHoursAggregate.service.js';
 import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from './plainXlsx.service.js';
 
 export { XLSX_CONTENT_TYPE };

@@ -76,4 +76,13 @@ describe('resolveComplianceReportEmployees', () => {
     const rows = await resolveComplianceReportEmployees('2026-05', []);
     expect(rows.every((r) => r.totalHours === BASELINE_HOURS)).toBe(true);
   });
+
+  it('resolves employees and builds a valid xlsx', async () => {
+    const { buildComplianceMonthlyReportXlsx } = await import(
+      '../src/services/complianceMonthlyReport.service.js'
+    );
+    const employees = await resolveComplianceReportEmployees('2026-05', []);
+    const buffer = buildComplianceMonthlyReportXlsx({ yearMonth: '2026-05', employees });
+    expect(buffer.length).toBeGreaterThan(100);
+  });
 });

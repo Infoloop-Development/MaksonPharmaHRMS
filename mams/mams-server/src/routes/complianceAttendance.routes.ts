@@ -18,12 +18,13 @@ import {
   buildFinancialReportRows,
   buildFinancialReportXlsx,
   financialReportFilename,
-  sumComplianceHoursForMonth,
-  XLSX_CONTENT_TYPE,
 } from '../services/complianceFinancialReport.service.js';
+import { sumComplianceHoursForMonth } from '../services/complianceHoursAggregate.service.js';
+import { XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
 import { updateComplianceGeneratedAttendance } from '../services/complianceAttendanceUpdate.service.js';
 import { ComplianceAttendanceUpdateSchema } from '@mams/types';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -76,10 +77,22 @@ const ReportBodySchema = z.object({
 router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res, next) => {
   try {
     const body = ReportBodySchema.parse(req.body);
+    const startedAt = Date.now();
     const employees = await resolveComplianceReportEmployees(body.yearMonth, body.overrides);
-    const buffer = buildComplianceMonthlyReportXlsx({
+    let buffer: Buffer;
+    try {
+      buffer = buildComplianceMonthlyReportXlsx({
+        yearMonth: body.yearMonth,
+        employees,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Report build failed';
+      throw new ApiError(400, 'report_build_failed', message);
+    }
+    logger.info('compliance_monthly_report_generated', {
       yearMonth: body.yearMonth,
-      employees,
+      employeeCount: employees.length,
+      elapsedMs: Date.now() - startedAt,
     });
     const filename = complianceReportFilename(body.yearMonth);
     res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
