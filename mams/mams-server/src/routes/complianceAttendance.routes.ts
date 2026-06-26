@@ -147,8 +147,12 @@ router.patch(
   requireOrgAdmin,
   async (req, res, next) => {
     try {
+      const id = req.params.id;
+      if (!id) {
+        throw new ApiError(400, 'invalid_id', 'Record id required');
+      }
       const body = ComplianceAttendanceUpdateSchema.parse(req.body);
-      const updated = await updateComplianceGeneratedAttendance(req.params.id, body, {
+      const updated = await updateComplianceGeneratedAttendance(id, body, {
         userId: req.auth!.sub,
         ipAddress: req.clientIp ?? null,
       });
