@@ -3,6 +3,14 @@
  */
 const IST = 'Asia/Kolkata';
 
+/** Shown when a table cell or field has no value. */
+export const EMPTY_CELL = 'N/A';
+
+export function displayOrEmpty(value: unknown): string {
+  if (value == null || value === '') return EMPTY_CELL;
+  return String(value);
+}
+
 export function fmtIstDate(d: Date | string | null): string {
   if (!d) return '-';
   const date = typeof d === 'string' ? new Date(d) : d;

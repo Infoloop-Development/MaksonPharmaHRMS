@@ -12,7 +12,7 @@ function networkErrorMessage(): string {
   if (apiRoot) {
     return `Cannot reach API (${target}). Check that Render CORS_ORIGIN includes this site’s URL, or leave VITE_API_BASE_URL empty so Netlify proxies /api.`;
   }
-  return `Cannot reach API (${target}). The Netlify /api proxy or API server may be down — try again in a minute.`;
+  return `Cannot reach API (${target}). The Netlify /api proxy or API server may be down; try again in a minute.`;
 }
 
 export class ApiError extends Error {

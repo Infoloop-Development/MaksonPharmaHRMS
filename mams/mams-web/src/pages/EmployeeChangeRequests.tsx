@@ -6,7 +6,7 @@ import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { SelectField } from '../components/ui/SelectField';
-import { fmtDate } from '../lib/format';
+import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { ApiError } from '../api/client';
 
 type ChangeRequest = {
@@ -39,7 +39,7 @@ const STATUS_TONE: Record<string, 'amber' | 'green' | 'red'> = {
 function employeeDisplayName(req: ChangeRequest): string {
   if (req.employeeId) return req.employeeId.name;
   if (req.proposedData?.name) return String(req.proposedData.name);
-  return '—';
+  return EMPTY_CELL;
 }
 
 function employeeDisplayCode(req: ChangeRequest): string {
@@ -134,10 +134,10 @@ export function EmployeeChangeRequests() {
                     <div className="text-xs text-text-muted font-mono">{employeeDisplayCode(req)}</div>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell text-text-muted">
-                    {req.initiatedBy?.name ?? '—'}
+                    {req.initiatedBy?.name ?? EMPTY_CELL}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell text-text-muted text-xs">
-                    {req.initiatedAt ? fmtDate(req.initiatedAt.slice(0, 10)) : '—'}
+                    {req.initiatedAt ? fmtDate(req.initiatedAt.slice(0, 10)) : EMPTY_CELL}
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={STATUS_TONE[req.status]}>{req.status}</Badge>
@@ -226,8 +226,8 @@ function ReviewModal({
   const previous = request.previousData ?? {};
 
   function DataRow({ label, prev, next }: { label: string; prev?: unknown; next?: unknown }) {
-    const prevStr = prev != null ? String(prev) : '—';
-    const nextStr = next != null ? String(next) : '—';
+    const prevStr = prev != null ? String(prev) : EMPTY_CELL;
+    const nextStr = next != null ? String(next) : EMPTY_CELL;
     const changed = prev != null && next != null && prevStr !== nextStr;
     return (
       <tr className={changed ? 'bg-amber-bg/40' : ''}>
@@ -284,7 +284,7 @@ function ReviewModal({
         <div className="flex flex-wrap gap-4 text-xs text-text-muted">
           <span><span className="font-semibold text-text">Employee:</span> {employeeDisplayName(request)} ({employeeDisplayCode(request)})</span>
           <span><span className="font-semibold text-text">Submitted by:</span> {request.initiatedBy?.name}</span>
-          <span><span className="font-semibold text-text">Date:</span> {request.initiatedAt ? fmtDate(request.initiatedAt.slice(0, 10)) : '—'}</span>
+          <span><span className="font-semibold text-text">Date:</span> {request.initiatedAt ? fmtDate(request.initiatedAt.slice(0, 10)) : EMPTY_CELL}</span>
         </div>
 
         {/* Reason */}
@@ -293,14 +293,14 @@ function ReviewModal({
           <p className="text-sm">{request.reason}</p>
         </div>
 
-        {/* Delete — just show what will be removed */}
+        {/* Delete: just show what will be removed */}
         {request.changeType === 'delete' && (
           <div className="rounded-md border border-red/30 bg-red-bg px-4 py-3 text-sm text-red">
             This request will permanently remove <strong>{employeeDisplayName(request)}</strong> from the system when approved.
           </div>
         )}
 
-        {/* Create / Update — field comparison table */}
+        {/* Create / Update: field comparison table */}
         {request.changeType !== 'delete' && (
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
@@ -340,7 +340,7 @@ function ReviewModal({
         {isPending && canApprove && isCreate && (
           <div className="rounded-md border border-primary/30 bg-primary-bg px-4 py-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
-              Assign real time shift (HR only — not visible to compliance)
+              Assign real time shift (HR only, not visible to compliance)
             </div>
             <SelectField id="review-shift" label="Time shift" value={timeShift} onChange={(v) => setTimeShift(v as 'Day' | 'Night')}>
               <option value="Day">Day (6 AM – 6 PM)</option>
@@ -366,7 +366,7 @@ function ReviewModal({
         {!isPending && (
           <div className="rounded-md border border-border bg-surface2/40 px-4 py-3 text-xs text-text-muted space-y-1">
             <div><span className="font-semibold">Decision:</span> <Badge tone={STATUS_TONE[request.status]}>{request.status}</Badge></div>
-            {request.decidedBy && <div><span className="font-semibold">Decided by:</span> {(request.decidedBy as { name?: string }).name ?? '—'}</div>}
+            {request.decidedBy && <div><span className="font-semibold">Decided by:</span> {(request.decidedBy as { name?: string }).name ?? EMPTY_CELL}</div>}
             {request.decidedAt && <div><span className="font-semibold">Decided on:</span> {fmtDate(request.decidedAt.slice(0, 10))}</div>}
             {request.approverNote && <div><span className="font-semibold">Note:</span> {request.approverNote}</div>}
           </div>

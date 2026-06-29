@@ -20,11 +20,11 @@ export function DevicePostRegisterModal({
     <Modal
       open
       onClose={onClose}
-      title="Device registered — next steps"
+      title="Device registered: next steps"
       size="md"
       footer={
         <button type="button" className="btn-primary" onClick={onClose}>
-          Done — I will configure the device
+          Done: I will configure the device
         </button>
       }
     >
@@ -83,7 +83,7 @@ export function DevicePostRegisterModal({
         <div className="rounded-md border border-amber/30 bg-amber/5 p-3 text-xs text-text-muted">
           <strong className="text-text">Employees:</strong> Enroll each person on the device (IT/vendor software) using
           the same user ID as their <strong>Biometric ID</strong> in MAMS Employees. If the device sends an unknown ID,
-          MAMS does not save attendance — check <strong>Unmapped punches</strong> on the Devices page, fix the
+          MAMS does not save attendance; check <strong>Unmapped punches</strong> on the Devices page, fix the
           employee record, then re-punch.
         </div>
 

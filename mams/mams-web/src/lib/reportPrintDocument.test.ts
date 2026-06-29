@@ -20,7 +20,7 @@ const branding: CompanyBranding = {
 const baseOptions: ReportPrintOptions = {
   branding,
   title: 'Daily Attendance Report',
-  subtitle: '01/06/2026 — 07/06/2026',
+  subtitle: '01/06/2026 to 07/06/2026',
   columns: [
     { key: 'date', label: 'Date', mono: true },
     { key: 'name', label: 'Name' },

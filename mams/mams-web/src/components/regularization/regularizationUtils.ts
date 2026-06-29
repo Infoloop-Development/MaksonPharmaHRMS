@@ -1,6 +1,7 @@
 import type { RegularizationStatus, RegularizationType, TimeFormat } from '@mams/types';
 import { regularizationTypeNeedsIn, regularizationTypeNeedsOut } from '@mams/types';
 import { formatHhmm } from '../../lib/timeFormat';
+import { EMPTY_CELL } from '../../lib/format';
 
 export const REGULARIZATION_TYPE_LABELS: Record<RegularizationType, string> = {
   missed_in: 'Missed IN punch',
@@ -25,7 +26,7 @@ export function formatRequestedTimes(
   const parts: string[] = [];
   if (regularizationTypeNeedsIn(type) && requestedInTime) parts.push(`IN ${formatHhmm(requestedInTime, format)}`);
   if (regularizationTypeNeedsOut(type) && requestedOutTime) parts.push(`OUT ${formatHhmm(requestedOutTime, format)}`);
-  return parts.length > 0 ? parts.join(' · ') : '—';
+  return parts.length > 0 ? parts.join(' · ') : EMPTY_CELL;
 }
 
 export { regularizationTypeNeedsIn, regularizationTypeNeedsOut };

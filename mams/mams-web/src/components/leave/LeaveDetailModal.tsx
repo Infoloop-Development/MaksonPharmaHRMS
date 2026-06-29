@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { leaveApi } from '../../api/leave';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 
 export function LeaveDetailModal({ applicationId, onClose }: { applicationId: string; onClose: () => void }) {
@@ -32,7 +32,7 @@ export function LeaveDetailModal({ applicationId, onClose }: { applicationId: st
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <div className="text-xs text-text-subtle uppercase tracking-wide">Employee</div>
-              <div className="font-medium">{data.employeeId?.name ?? '—'}</div>
+              <div className="font-medium">{data.employeeId?.name ?? EMPTY_CELL}</div>
               <div className="font-mono text-xs text-text-muted">{data.employeeId?.empCode}</div>
             </div>
             <div>
@@ -41,7 +41,7 @@ export function LeaveDetailModal({ applicationId, onClose }: { applicationId: st
             </div>
             <div>
               <div className="text-xs text-text-subtle uppercase tracking-wide">Dates</div>
-              <div>{fmtDate(data.fromDate)} — {fmtDate(data.toDate)}</div>
+              <div>{fmtDate(data.fromDate)} to {fmtDate(data.toDate)}</div>
             </div>
             <div>
               <div className="text-xs text-text-subtle uppercase tracking-wide">Total days</div>

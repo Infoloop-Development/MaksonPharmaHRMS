@@ -20,7 +20,7 @@ export const attendanceTourScript: TourScript = {
           id: 'attendance-live-badge',
           title: 'Live mode',
           description:
-            'When no filters are active, you are in LIVE mode — new punches appear automatically without refreshing.',
+            'When no filters are active, you are in LIVE mode; new punches appear automatically without refreshing.',
           side: 'left',
           when: () => tourElementExists('attendance-live-badge'),
         },

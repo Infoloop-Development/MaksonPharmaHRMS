@@ -44,3 +44,41 @@ export const NotificationUnreadCountResponseSchema = z.object({
   unreadCount: z.number(),
 });
 export type NotificationUnreadCountResponse = z.infer<typeof NotificationUnreadCountResponseSchema>;
+
+/** Org-wide toggles for which events notify org admins (all default on). */
+export const OrgNotificationAlertsSchema = z.object({
+  visitorSubmitted: z.boolean(),
+  leaveApplied: z.boolean(),
+  deviceRegistered: z.boolean(),
+});
+export type OrgNotificationAlerts = z.infer<typeof OrgNotificationAlertsSchema>;
+
+export const DEFAULT_ORG_NOTIFICATION_ALERTS: OrgNotificationAlerts = {
+  visitorSubmitted: true,
+  leaveApplied: true,
+  deviceRegistered: true,
+};
+
+export function resolveOrgNotificationAlerts(
+  raw?: Partial<OrgNotificationAlerts> | null
+): OrgNotificationAlerts {
+  return {
+    visitorSubmitted: raw?.visitorSubmitted ?? true,
+    leaveApplied: raw?.leaveApplied ?? true,
+    deviceRegistered: raw?.deviceRegistered ?? true,
+  };
+}
+
+export function isNotificationKindEnabled(
+  alerts: OrgNotificationAlerts,
+  kind: NotificationKind
+): boolean {
+  switch (kind) {
+    case 'visitor_submitted':
+      return alerts.visitorSubmitted;
+    case 'leave_applied':
+      return alerts.leaveApplied;
+    case 'device_registered':
+      return alerts.deviceRegistered;
+  }
+}

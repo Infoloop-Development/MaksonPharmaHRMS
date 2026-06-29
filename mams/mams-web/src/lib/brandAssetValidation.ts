@@ -64,7 +64,7 @@ export async function validateAndReadLogo(file: File): Promise<{ dataUrl: string
   }
 }
 
-/** PNG/JPG source for favicon cropper — any aspect ratio, up to 5 MB. */
+/** PNG/JPG source for favicon cropper: any aspect ratio, up to 5 MB. */
 export async function validateFaviconSourceForCrop(
   file: File
 ): Promise<{ dataUrl: string } | { error: string }> {

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { InfoTip } from './Tooltip';
 
 export function SortableTh({
   label,
@@ -8,6 +9,7 @@ export function SortableTh({
   onSort,
   sortable = true,
   className = '',
+  tooltip,
   children,
 }: {
   label?: string;
@@ -17,12 +19,28 @@ export function SortableTh({
   onSort?: (col: string) => void;
   sortable?: boolean;
   className?: string;
+  tooltip?: string;
   children?: ReactNode;
 }) {
+  const headerContent = (
+    <>
+      <span>{children ?? label}</span>
+      {tooltip ? (
+        <span
+          className="inline-flex align-middle"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <InfoTip content={tooltip} label={`About ${label ?? sortKey ?? 'column'}`} />
+        </span>
+      ) : null}
+    </>
+  );
+
   if (!sortable || !sortKey || !onSort) {
     return (
       <th className={`px-4 py-3 font-semibold ${className}`.trim()}>
-        {children ?? label}
+        {headerContent}
       </th>
     );
   }
@@ -32,7 +50,7 @@ export function SortableTh({
       className={`sortable-th ${activeCol === sortKey ? 'sorted' : ''} ${className}`.trim()}
       onClick={() => onSort(sortKey)}
     >
-      {children ?? label}
+      {headerContent}
       <span className="sort-arrow">{sortArrow?.(sortKey) ?? '▴'}</span>
     </th>
   );

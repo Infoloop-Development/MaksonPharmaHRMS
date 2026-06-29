@@ -18,6 +18,7 @@ import { useToast } from '../components/ui/Toast';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { useAuth } from '../store/auth';
 import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
+import { EMPTY_CELL } from '../lib/format';
 
 const WEEKDAYS = WeekdaySchema.options;
 
@@ -425,7 +426,7 @@ export function EmployeesAddModal({
                 <div>
                   <div className="label">Employee code</div>
                   <div className="input bg-surface2 font-mono text-text font-semibold flex items-center min-h-[42px]">
-                    {isEdit ? employee?.empCode : nextCodeLoading ? '…' : (nextCodeData?.nextEmpCode ?? '—')}
+                    {isEdit ? employee?.empCode : nextCodeLoading ? '…' : (nextCodeData?.nextEmpCode ?? EMPTY_CELL)}
                   </div>
                   <p className="mt-1 text-[11px] text-text-subtle">
                     {isEdit ? 'Employee code cannot be changed.' : 'Assigned automatically when you save.'}

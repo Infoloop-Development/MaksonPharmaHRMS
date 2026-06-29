@@ -1,5 +1,5 @@
 import { Badge } from '../ui/Badge';
-import { fmtDate, fmtHours } from '../../lib/format';
+import { EMPTY_CELL, fmtDate, fmtHours } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 
 type DailyRow = Record<string, any>;
@@ -52,9 +52,9 @@ export function DailyReportCardList({
           <div key={i} className="card p-4 flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-semibold break-words">{emp?.name ?? '—'}</div>
+                <div className="font-semibold break-words">{emp?.name ?? EMPTY_CELL}</div>
                 <div className="font-mono text-xs text-text-muted">
-                  {emp?.empCode ?? '—'} · {fmtDate(r.date)}
+                  {emp?.empCode ?? EMPTY_CELL} · {fmtDate(r.date)}
                 </div>
               </div>
               <span className="shrink-0">
@@ -64,25 +64,25 @@ export function DailyReportCardList({
             <div className={`grid gap-2 text-sm ${isCompliant ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">Entry</div>
-                <div className="font-mono text-xs">{entry ? fmtTime(entry) : '—'}</div>
+                <div className="font-mono text-xs">{entry ? fmtTime(entry) : EMPTY_CELL}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">Exit</div>
-                <div className="font-mono text-xs">{exit ? fmtTime(exit) : '—'}</div>
+                <div className="font-mono text-xs">{exit ? fmtTime(exit) : EMPTY_CELL}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-text-muted">{hoursLabel}</div>
-                <div className="font-mono text-xs">{typeof hrs === 'number' ? fmtHours(hrs) : '—'}</div>
+                <div className="font-mono text-xs">{typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL}</div>
               </div>
               {!isCompliant && (
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-text-muted">OT</div>
-                  <div className="font-mono text-xs">{r.otHours ? fmtHours(r.otHours) : '—'}</div>
+                  <div className="font-mono text-xs">{r.otHours ? fmtHours(r.otHours) : EMPTY_CELL}</div>
                 </div>
               )}
             </div>
             <div className="text-xs text-text-muted break-words">
-              {emp?.department ?? '—'}
+              {emp?.department ?? EMPTY_CELL}
               {emp?.location ? ` · ${emp.location}` : ''}
             </div>
           </div>

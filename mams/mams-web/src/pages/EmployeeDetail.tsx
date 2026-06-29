@@ -10,7 +10,7 @@ import { employeesApi } from '../api/employees';
 import { ApiError } from '../api/client';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { useAuth } from '../store/auth';
-import { fmtDate } from '../lib/format';
+import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { UnmaskPasswordModal } from '../components/employees/UnmaskPasswordModal';
 import { isUnmaskEnabled } from '../config/featureFlags';
 import { EmployeesAddModal } from './EmployeesAddModal';
@@ -107,7 +107,7 @@ export function EmployeeDetail() {
           <Row label="Department" value={data.department} />
           <Row label="Designation" value={data.designation} />
           <Row label="Location" value={data.location} />
-          <Row label="Time Shift (real)" value={data.timeShift ?? '—'} />
+          <Row label="Time Shift (real)" value={data.timeShift ?? EMPTY_CELL} />
           <Row label="Compliance Shift" value={data.alternateShift} />
           <Row label="Weekly Off" value={data.weeklyOff.join(', ')} />
           <Row label="Joined" value={fmtDate(data.joinDate.slice(0, 10))} />

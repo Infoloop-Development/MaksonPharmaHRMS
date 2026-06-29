@@ -175,7 +175,7 @@ export function formatEarlyBeforeLabel(earlyMs: number): string {
   const minutes = Math.floor(totalSec / 60);
   const seconds = totalSec % 60;
   if (minutes > 0 && seconds === 0 && ms === 0) {
-    return `On time — ${minutes} min before last allowed login`;
+    return `On time: ${minutes} min before last allowed login`;
   }
   const parts: string[] = [];
   if (minutes > 0) parts.push(`${minutes} min`);
@@ -183,7 +183,7 @@ export function formatEarlyBeforeLabel(earlyMs: number): string {
     const s = ms > 0 ? `${seconds}.${String(ms).padStart(3, '0')}` : String(seconds);
     parts.push(`${s} sec`);
   }
-  return `On time — ${parts.join(' ')} before last allowed login`;
+  return `On time: ${parts.join(' ')} before last allowed login`;
 }
 
 export function formatAlternatePunchStatus(
@@ -203,7 +203,7 @@ export function formatAlternatePunchStatus(
   if (earlyMs > 0) {
     return { lateLabel: null, onTimeLabel: formatEarlyBeforeLabel(earlyMs) };
   }
-  return { lateLabel: null, onTimeLabel: 'On time — at last allowed login' };
+  return { lateLabel: null, onTimeLabel: 'On time: at last allowed login' };
 }
 
 export function formatLateInLabel(lateInMs: number): string | null {
@@ -660,7 +660,7 @@ export function computeAutogenerationBatch(
 }
 
 export function alternateShiftLabel(shift: AlternateShift): string {
-  return `${shift} — starts ${ALTERNATE_SHIFT_STARTS[shift]}`;
+  return `${shift}: starts ${ALTERNATE_SHIFT_STARTS[shift]}`;
 }
 
 export function mainShiftShortLabel(main: MainShiftLabel): string {

@@ -1,5 +1,6 @@
 import type { LeaveStatus } from '@mams/types';
 import type { LeaveApplicationItem } from '../../api/leave';
+import { EMPTY_CELL } from '../../lib/format';
 
 export type LeaveTab = 'requests' | 'holidays' | 'settings';
 
@@ -20,10 +21,10 @@ export function leaveStatusTone(s: LeaveStatus): 'amber' | 'green' | 'red' | 'gr
 
 export function leaveTypeLabel(item: LeaveApplicationItem) {
   const lt = item.leaveTypeId;
-  if (!lt) return '—';
+  if (!lt) return EMPTY_CELL;
   if (item.halfDayPortion) {
     const half = item.halfDayPortion === 'first' ? 'First Half' : 'Second Half';
-    return `${lt.name} — Half Day (${half})`;
+    return `${lt.name}: Half Day (${half})`;
   }
   return lt.name;
 }

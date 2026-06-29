@@ -10,7 +10,7 @@ export const reportsTourScript: TourScript = {
           id: 'reports-header',
           title: 'Attendance reports',
           description:
-            'Reports use your view mode — Real (12-hour) or Compliant (8-hour). Hours and OT columns change accordingly.',
+            'Reports use your view mode: Real (12-hour) or Compliant (8-hour). Hours and OT columns change accordingly.',
           side: 'bottom',
         },
         {
@@ -60,7 +60,7 @@ export const reportsTourScript: TourScript = {
           id: 'reports-monthly-hint',
           title: 'Other report tabs',
           description:
-            'Switch tabs above for Monthly, Department, or Location reports — each has its own date range and filter controls.',
+            'Switch tabs above for Monthly, Department, or Location reports; each has its own date range and filter controls.',
           side: 'bottom',
           when: () => tourElementExists('reports-monthly-hint'),
         },

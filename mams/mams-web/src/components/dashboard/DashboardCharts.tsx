@@ -2,7 +2,7 @@ import { DashboardBarChartCard } from './DashboardBarChartCard';
 import { DashboardDonutChartCard } from './DashboardDonutChartCard';
 import { useDashboardChartState, type UseDashboardChartStateProps } from './useDashboardChartState';
 
-/** Legacy wrapper — dashboard page uses split cards via layout editor. */
+/** Legacy wrapper: dashboard page uses split cards via layout editor. */
 export function DashboardCharts(props: UseDashboardChartStateProps) {
   const state = useDashboardChartState(props);
 

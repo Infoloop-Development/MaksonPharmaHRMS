@@ -26,7 +26,7 @@ function BellIcon() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="w-5 h-5"
+      className="w-4 h-4"
       aria-hidden
     >
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -166,7 +166,7 @@ export function NotificationBell() {
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className="relative w-9 h-9 rounded-md border border-border bg-surface2 hover:bg-border/50 flex items-center justify-center touch-target text-text"
+        className="relative"
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-expanded={open}
         aria-haspopup="true"

@@ -41,7 +41,7 @@ export function buildQrStickerHtml(qrDataUrl: string, branding: QrStickerBrandin
     : `<p class="company-name company-name-only">${escapeHtml(branding.companyName)}</p>`;
 
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(branding.formTitle)} — QR Code</title>
+<html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(branding.formTitle)}: QR Code</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {

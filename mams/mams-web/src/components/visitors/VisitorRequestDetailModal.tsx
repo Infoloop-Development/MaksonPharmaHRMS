@@ -10,7 +10,7 @@ import { Modal } from '../ui/Modal';
 import { Field, Input, Textarea } from '../ui/Field';
 import { TimeInput } from '../ui/TimeInput';
 import { Badge } from '../ui/Badge';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { AUDIT_EVENT_LABELS, formatVisitorResponse, visitorStatusTone } from './visitorsUtils';
 
 type VisitAccessMode = VisitorVisitAccess['mode'];
@@ -109,7 +109,7 @@ export function VisitorRequestDetailModal({
     <Modal
       open
       onClose={onClose}
-      title={item ? `Visitor request — ${item.formTitle}` : 'Visitor request'}
+      title={item ? `Visitor request: ${item.formTitle}` : 'Visitor request'}
       size="lg"
       footer={
         showActions ? (
@@ -202,7 +202,7 @@ export function VisitorRequestDetailModal({
           {item.status !== 'Pending' && decider && (
             <div className="text-sm text-text-muted">
               <p>
-                {item.status} by {decider.name} on {item.decidedAt ? fmtDate(item.decidedAt) : '—'}
+                {item.status} by {decider.name} on {item.decidedAt ? fmtDate(item.decidedAt) : EMPTY_CELL}
               </p>
               {item.visitValidUntil ? (
                 <p className="mt-1">Visit allowed until {fmtDateTimeMs(item.visitValidUntil)}</p>
@@ -224,7 +224,7 @@ export function VisitorRequestDetailModal({
                       <span className="shrink-0">{fmtDate(entry.occurredAt)}</span>
                       <span>
                         {AUDIT_EVENT_LABELS[entry.eventType] ?? entry.eventType}
-                        {actor ? ` — ${actor}` : entry.eventType === 'visitor_request_submitted' ? ' — Visitor' : ''}
+                        {actor ? `, ${actor}` : entry.eventType === 'visitor_request_submitted' ? ', Visitor' : ''}
                       </span>
                     </li>
                   );

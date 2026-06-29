@@ -6,6 +6,7 @@ import {
   FaviconSchema,
   LeaveQuotaResetPolicySchema,
   OrgBrandingSchema,
+  OrgNotificationAlertsSchema,
   TimeFormatSchema,
 } from '@mams/types';
 import { SettingsModel } from '../models/Settings.js';
@@ -56,6 +57,7 @@ const SettingsPatchSchema = z.object({
   companyLogo: CompanyLogoSchema.optional(),
   favicon: FaviconSchema.optional(),
   orgBranding: OrgBrandingSchema.optional(),
+  orgNotificationAlerts: OrgNotificationAlertsSchema.optional(),
 });
 
 const ORG_SETTINGS_FIELDS = new Set([
@@ -79,6 +81,7 @@ const ORG_SETTINGS_FIELDS = new Set([
   'favicon',
   'orgBranding',
   'exportNaming',
+  'orgNotificationAlerts',
 ]);
 
 function canEditOrgSettings(perms: string[]): boolean {

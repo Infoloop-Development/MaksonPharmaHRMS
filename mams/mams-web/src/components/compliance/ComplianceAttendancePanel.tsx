@@ -6,7 +6,7 @@ import {
   type ComplianceAttendanceRow,
   type ComplianceAttendanceStats,
 } from '../../api/complianceAttendance';
-import { fmtDate, fmtNumber } from '../../lib/format';
+import { EMPTY_CELL, fmtDate, fmtNumber } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { countActiveFilters } from '../../lib/countActiveFilters';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
@@ -18,7 +18,9 @@ import {
 } from './complianceAttendanceUi';
 import { SortableTh } from '../ui/SortableTh';
 import { TablePagination } from '../ui/TablePagination';
-import { sortArrowFor, type SortDir } from '../../lib/tableSort';
+import { nextSortState, sortArrowFor, type SortDir } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
+import { STAT_CARD_TOOLTIPS } from '../../lib/tooltips/statCardTooltips';
 
 export type ShiftFilter = 'all' | ComplianceShift;
 
@@ -42,6 +44,13 @@ const SHIFT_TILES: { id: ShiftFilter; accent: 'primary' | 'green' | 'amber' | 'r
   { id: 'B', accent: 'amber' },
   { id: 'C', accent: 'red' },
 ];
+
+const COMPLIANCE_STAT_TOOLTIPS: Record<ShiftFilter, string> = {
+  all: STAT_CARD_TOOLTIPS.compliance.allRecords,
+  A: STAT_CARD_TOOLTIPS.compliance.morning,
+  B: STAT_CARD_TOOLTIPS.compliance.afternoon,
+  C: STAT_CARD_TOOLTIPS.compliance.night,
+};
 
 function statsScopeLabel(stats: ComplianceAttendanceStats | undefined, dateFilter: string): string {
   if (dateFilter) return dateFilter;
@@ -115,16 +124,11 @@ export function ComplianceAttendancePanel({
   });
 
   const toggleSort = useCallback((col: string) => {
-    setSortBy((prev) => {
-      if (prev === col) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return col;
-      }
-      setSortDir('asc');
-      return col;
-    });
+    const next = nextSortState(col, { col: sortBy ?? null, dir: sortDir });
+    setSortBy(next.col ?? undefined);
+    setSortDir(next.dir);
     setPage(1);
-  }, []);
+  }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy ?? null, sortDir), [sortBy, sortDir]);
 
@@ -158,7 +162,7 @@ export function ComplianceAttendancePanel({
   };
 
   const shiftStatValue = (tile: ShiftFilter): string => {
-    if (!stats) return '—';
+    if (!stats) return EMPTY_CELL;
     if (tile === 'all') return fmtNumber(stats.total);
     return fmtNumber(stats.byShift[tile]);
   };
@@ -204,7 +208,7 @@ export function ComplianceAttendancePanel({
             accent={tile.accent}
             selected={shiftFilter === tile.id}
             onClick={() => clickShiftTile(tile.id)}
-            hint="Filters attendance list"
+            tooltip={COMPLIANCE_STAT_TOOLTIPS[tile.id]}
           />
         ))}
       </div>
@@ -307,15 +311,15 @@ export function ComplianceAttendancePanel({
           <table className="w-full text-sm">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Date" sortKey="date" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Employee" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" />
-                <SortableTh label="Shift" sortKey="alternateShift" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Date" sortKey="date" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('compliance', 'date')} />
+                <SortableTh label="Employee" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('compliance', 'name')} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('compliance', 'empCode')} />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" tooltip={tableColumnTooltip('compliance', 'department')} />
+                <SortableTh label="Shift" sortKey="alternateShift" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('compliance', 'alternateShift')} />
                 <th className="px-4 py-3 font-semibold">Clock-in</th>
                 <th className="px-4 py-3 font-semibold">Clock-out</th>
-                <SortableTh label="Hours" sortKey="hoursWorked" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Hours" sortKey="hoursWorked" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('compliance', 'hoursWorked')} />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('compliance', 'status')} />
                 {mode === 'editable' && <th className="px-4 py-3 font-semibold w-24">Actions</th>}
               </tr>
             </thead>
@@ -337,10 +341,10 @@ export function ComplianceAttendancePanel({
               {items.map((row) => (
                 <tr key={row._id} className="hover:bg-surface2/50">
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtDate(row.date)}</td>
-                  <td className="px-4 py-2.5 font-medium text-text">{row.employeeId?.name ?? '—'}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{row.employeeId?.empCode ?? '—'}</td>
+                  <td className="px-4 py-2.5 font-medium text-text">{row.employeeId?.name ?? EMPTY_CELL}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs">{row.employeeId?.empCode ?? EMPTY_CELL}</td>
                   <td className="px-4 py-2.5 text-text-muted hidden lg:table-cell">
-                    {row.employeeId?.department ?? '—'}
+                    {row.employeeId?.department ?? EMPTY_CELL}
                   </td>
                   <td className="px-4 py-2.5">
                     <ComplianceShiftPill shift={row.alternateShift} />

@@ -1,19 +1,24 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
+import { InfoTip } from './Tooltip';
 
 interface FieldProps {
   label: string;
   hint?: string;
+  labelTooltip?: string;
   error?: string;
   required?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export function Field({ label, hint, error, required, children }: FieldProps) {
+export function Field({ label, hint, labelTooltip, error, required, children }: FieldProps) {
   return (
     <div>
       <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
-        {label}
-        {required && <span className="text-red ml-0.5">*</span>}
+        <span className="inline-flex items-center gap-1">
+          {label}
+          {required && <span className="text-red ml-0.5">*</span>}
+          {labelTooltip ? <InfoTip content={labelTooltip} label={`About ${label}`} /> : null}
+        </span>
       </label>
       {children}
       {hint && !error && <div className="text-[11px] text-text-subtle mt-1">{hint}</div>}

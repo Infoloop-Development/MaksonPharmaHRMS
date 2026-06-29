@@ -8,7 +8,7 @@ export function BiometricIdBanner() {
       <p className="text-xs text-text-muted leading-relaxed">
         Every employee who will punch on a biometric machine needs a <strong>Biometric ID</strong> in MAMS that
         matches the user ID enrolled on the hardware (not employee code). When someone scans a finger or face, the
-        device sends that ID — MAMS links it to attendance only if an employee row exists with the same value.
+        device sends that ID. MAMS links it to attendance only if an employee row exists with the same value.
       </p>
       <p className="text-xs text-text-muted mt-2">
         Agree the ID format with IT before go-live (e.g. <span className="font-mono">42</span> on device and{' '}

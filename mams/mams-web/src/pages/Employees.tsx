@@ -8,7 +8,7 @@ import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
-import { fmtDate } from '../lib/format';
+import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { EmployeeDeleteModal } from './EmployeeDeleteModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
@@ -22,9 +22,12 @@ import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import type { EmployeeMasked } from '@mams/types';
 import { SortableTh } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
-import { sortArrowFor, type SortDir } from '../lib/tableSort';
+import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+
+const EMPLOYEES_DEFAULT_SORT = { col: 'empCode' as const, dir: 'asc' as const };
 
 export function Employees() {
   const { logSearch } = useActivityLog();
@@ -51,17 +54,15 @@ export function Employees() {
   });
 
   const toggleSort = useCallback((col: string) => {
-    const key = col as typeof sortBy;
-    setSortBy((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return key;
-      }
-      setSortDir('asc');
-      return key;
-    });
+    const next = nextSortState(
+      col,
+      { col: sortBy, dir: sortDir },
+      EMPLOYEES_DEFAULT_SORT
+    );
+    setSortBy((next.col ?? EMPLOYEES_DEFAULT_SORT.col) as typeof sortBy);
+    setSortDir(next.dir);
     setPage(1);
-  }, []);
+  }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy, sortDir), [sortBy, sortDir]);
 
@@ -172,15 +173,15 @@ export function Employees() {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
                 <th className="px-4 py-3 font-semibold">Biometric ID</th>
-                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'department')} />
                 <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Shift</th>
                 {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>}
-                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" />
-                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('employees', 'joinDate')} />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'status')} />
                 {canEdit && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
@@ -317,7 +318,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
       {!result && (
         <div className="space-y-4">
           <div className="rounded-md border border-border bg-surface2/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1 — template</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1: template</div>
             <button
               type="button"
               className="btn-primary w-full sm:w-auto"
@@ -344,7 +345,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           <div className="p-4 bg-primary-bg rounded-md text-sm">
             <div className="font-semibold mb-1">Before you import</div>
             <ol className="list-decimal pl-5 space-y-1 text-xs">
-              <li>Do not change or reorder the header row — column names must match the template exactly.</li>
+              <li>Do not change or reorder the header row: column names must match the template exactly.</li>
               <li>
                 <span className="font-mono">empCode</span>: unique, format <span className="font-mono">MKS</span> + four digits (e.g. <span className="font-mono">MKS0042</span>).
               </li>
@@ -359,7 +360,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <span className="font-mono">biometricId</span> must be unique and must match the user ID enrolled on
-                each biometric device (exact string — e.g. device sends <span className="font-mono">42</span>, CSV must
+                each biometric device (exact string, e.g. device sends <span className="font-mono">42</span>, CSV must
                 be <span className="font-mono">42</span>, not <span className="font-mono">BIO042</span> unless the device
                 uses that).
               </li>
@@ -377,7 +378,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
-              Step 2 — choose CSV file
+              Step 2: choose CSV file
             </label>
             <input
               type="file"
@@ -393,7 +394,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="text-xs text-text-muted bg-amber-bg text-amber px-3 py-2 rounded">
-            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility — we do not silently fix.
+            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility; we do not silently fix.
           </div>
         </div>
       )}
@@ -425,7 +426,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
                     {result.errors.map((e, i) => (
                       <tr key={i}>
                         <td className="px-3 py-2 font-mono">{e.rowIndex}</td>
-                        <td className="px-3 py-2 font-mono">{e.empCode || '—'}</td>
+                        <td className="px-3 py-2 font-mono">{e.empCode || EMPTY_CELL}</td>
                         <td className="px-3 py-2 text-red">{e.reason}</td>
                       </tr>
                     ))}

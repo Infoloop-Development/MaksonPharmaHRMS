@@ -1,4 +1,5 @@
 import type { CompanyBranding } from './companyBranding';
+import { EMPTY_CELL } from './format';
 
 export type ReportPrintColumn = {
   key: string;
@@ -46,7 +47,7 @@ function renderTableRows(
       const cells = columns
         .map((col) => {
           const raw = row[col.key];
-          const value = raw === undefined || raw === null || raw === '' ? '—' : String(raw);
+          const value = raw === undefined || raw === null || raw === '' ? EMPTY_CELL : String(raw);
           const cls = [
             col.mono ? 'mono' : '',
             col.key === 'status' && value === 'Present' ? 'status-present' : '',

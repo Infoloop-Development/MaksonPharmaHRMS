@@ -9,6 +9,7 @@ export interface DataTableColumn<T> {
   type?: SortColumnType;
   className?: string;
   headerClassName?: string;
+  tooltip?: string;
   render: (row: T) => ReactNode;
 }
 
@@ -56,6 +57,7 @@ export function DataTable<T>({
                     sortArrow={sortArrow}
                     onSort={onSort}
                     sortable={col.sortable !== false && Boolean(onSort)}
+                    tooltip={col.tooltip}
                     className={col.headerClassName ?? col.className ?? ''}
                   />
                 ))}

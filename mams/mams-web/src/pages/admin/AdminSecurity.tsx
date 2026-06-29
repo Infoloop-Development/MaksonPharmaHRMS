@@ -7,6 +7,7 @@ import { Modal } from '../../components/ui/Modal';
 import { useAuth } from '../../store/auth';
 import { SortableTh } from '../../components/ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 export function AdminSecurity() {
   const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
@@ -40,9 +41,9 @@ export function AdminSecurity() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
-                <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
-                <SortableTh label="Last login" sortKey="lastLogin" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'user')} />
+                <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'role')} />
+                <SortableTh label="Last login" sortKey="lastLogin" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'lastLogin')} />
                 <th className="py-2 text-right">Actions</th>
               </tr>
             </thead>

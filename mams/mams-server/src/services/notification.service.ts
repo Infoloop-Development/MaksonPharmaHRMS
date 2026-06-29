@@ -1,6 +1,8 @@
 import { Types } from 'mongoose';
-import type { NotificationKind, NotificationListQuery } from '@mams/types';
+import type { NotificationKind, NotificationListQuery, OrgNotificationAlerts } from '@mams/types';
+import { isNotificationKindEnabled, resolveOrgNotificationAlerts } from '@mams/types';
 import { NotificationModel } from '../models/Notification.js';
+import { SettingsModel } from '../models/Settings.js';
 import { UserModel } from '../models/User.js';
 import { ApiError } from '../middleware/error.js';
 import { logger } from '../utils/logger.js';
@@ -43,6 +45,12 @@ function toNotificationItem(doc: {
 
 export async function notifyOrgAdmins(input: NotifyOrgAdminsInput): Promise<void> {
   try {
+    const settings = await SettingsModel.findOne().select('orgNotificationAlerts').lean();
+    const alerts = resolveOrgNotificationAlerts(
+      settings?.orgNotificationAlerts as Partial<OrgNotificationAlerts> | undefined
+    );
+    if (!isNotificationKindEnabled(alerts, input.kind)) return;
+
     const admins = await UserModel.find({ role: 'org.admin', isActive: true }).select('_id').lean();
     if (admins.length === 0) return;
 
@@ -143,8 +151,8 @@ export function buildLeaveAppliedNotification(opts: {
     kind: 'leave_applied',
     title: pending ? 'Leave pending approval' : 'Leave application recorded',
     message: pending
-      ? `${opts.employeeName} submitted leave (${opts.totalDays} day${opts.totalDays === 1 ? '' : 's'}) — pending approval`
-      : `${opts.employeeName} — leave recorded (${opts.totalDays} day${opts.totalDays === 1 ? '' : 's'})`,
+      ? `${opts.employeeName} submitted leave (${opts.totalDays} day${opts.totalDays === 1 ? '' : 's'}), pending approval`
+      : `${opts.employeeName}: leave recorded (${opts.totalDays} day${opts.totalDays === 1 ? '' : 's'})`,
     href: '/leave',
     entityType: 'leave_application',
     entityId: opts.entityId,
@@ -162,7 +170,7 @@ export function buildDeviceRegisteredNotification(opts: {
   return {
     kind: 'device_registered',
     title: 'New device registered',
-    message: `${opts.name} (${opts.serialNumber}) — ${opts.model}, ${opts.vendor}`,
+    message: `${opts.name} (${opts.serialNumber}): ${opts.model}, ${opts.vendor}`,
     href: '/devices',
     entityType: 'device',
     entityId: opts.entityId,

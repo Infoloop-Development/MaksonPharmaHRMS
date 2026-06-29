@@ -5,6 +5,22 @@ import {
   buildLeaveAppliedNotification,
   buildVisitorSubmittedNotification,
 } from '../src/services/notification.service.js';
+import { isNotificationKindEnabled, resolveOrgNotificationAlerts } from '@mams/types';
+
+describe('org notification alert toggles', () => {
+  it('defaults all kinds to enabled', () => {
+    const alerts = resolveOrgNotificationAlerts(undefined);
+    expect(isNotificationKindEnabled(alerts, 'visitor_submitted')).toBe(true);
+    expect(isNotificationKindEnabled(alerts, 'leave_applied')).toBe(true);
+    expect(isNotificationKindEnabled(alerts, 'device_registered')).toBe(true);
+  });
+
+  it('respects disabled kinds', () => {
+    const alerts = resolveOrgNotificationAlerts({ visitorSubmitted: false, leaveApplied: true, deviceRegistered: true });
+    expect(isNotificationKindEnabled(alerts, 'visitor_submitted')).toBe(false);
+    expect(isNotificationKindEnabled(alerts, 'leave_applied')).toBe(true);
+  });
+});
 
 describe('notification builders', () => {
   const entityId = new Types.ObjectId();

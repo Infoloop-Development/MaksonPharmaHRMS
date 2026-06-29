@@ -1,4 +1,5 @@
 import type { VisitorFieldType, VisitorRequestStatus } from '@mams/types';
+import { EMPTY_CELL } from '../../lib/format';
 
 export type VisitorTab = 'requests' | 'forms';
 
@@ -11,8 +12,8 @@ export function visitorStatusTone(status: VisitorRequestStatus): 'amber' | 'gree
 export function formatVisitorResponse(
   value: string | string[] | null | undefined
 ): string {
-  if (value === null || value === undefined || value === '') return '—';
-  if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
+  if (value === null || value === undefined || value === '') return EMPTY_CELL;
+  if (Array.isArray(value)) return value.length ? value.join(', ') : EMPTY_CELL;
   return String(value);
 }
 

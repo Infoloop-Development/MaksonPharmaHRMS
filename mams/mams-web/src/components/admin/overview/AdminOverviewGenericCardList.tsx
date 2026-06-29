@@ -1,6 +1,7 @@
 import type { AdminOverviewTableConfig } from '@mams/types';
 import { ADMIN_OVERVIEW_TABLE_COLUMNS } from '@mams/types';
 import { kindLabel } from '../../../lib/adminOverviewTableUtils';
+import { EMPTY_CELL } from '../../../lib/format';
 
 function cellText(col: string, row: Record<string, unknown>): string {
   if (col === 'occurredAt' && row.occurredAt) return new Date(String(row.occurredAt)).toLocaleString();
@@ -8,7 +9,7 @@ function cellText(col: string, row: Record<string, unknown>): string {
   if (col === 'lastPing' && row.lastPing) return new Date(String(row.lastPing)).toLocaleString();
   if (col === 'active' || col === 'online') return row[col] ? 'Yes' : 'No';
   const val = row[col];
-  if (val == null || val === '') return '—';
+  if (val == null || val === '') return EMPTY_CELL;
   return String(val);
 }
 

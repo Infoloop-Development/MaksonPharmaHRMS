@@ -5,6 +5,8 @@ import { useTimeDisplay } from '../store/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { NotificationBell } from './notifications/NotificationBell';
+import { Tooltip } from './ui/Tooltip';
+import { TOPBAR_TOOLTIPS } from '../lib/tooltips/statCardTooltips';
 
 const DEFAULT_COMPANY_NAME = 'Makson Group';
 
@@ -33,60 +35,57 @@ export function TopBar({
   const { fmtTime } = useTimeDisplay();
 
   return (
-    <header className="app-topbar fixed top-0 left-0 right-0 z-40 bg-surface border-b border-border flex items-center justify-between gap-2 px-3 md:px-6 w-full">
-      <div className="flex items-center gap-2 md:gap-3 min-w-0">
-        <button
-          type="button"
-          className="lg:hidden shrink-0 w-11 h-11 rounded-md border border-border bg-surface2 hover:bg-border/50 flex flex-col items-center justify-center gap-0.5 touch-target"
-          aria-label="Open menu"
-          onClick={onOpenMenu}
-        >
-          <span className="block w-5 h-0.5 bg-text rounded" />
-          <span className="block w-5 h-0.5 bg-text rounded" />
-          <span className="block w-5 h-0.5 bg-text rounded" />
-        </button>
-        {companyLogo && (
-          <img
-            src={companyLogo}
-            alt=""
-            className="app-topbar-logo w-7 h-7 md:w-8 md:h-8 rounded-md object-contain bg-surface2 p-0.5 shrink-0"
-          />
-        )}
-        <h1 className="text-sm md:text-base font-bold truncate" title={displayName}>
-          {displayName}
-        </h1>
-        <span
-          title={badgeFull}
-          className={`md:hidden inline-block shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-            isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary-on-bg'
-          }`}
-        >
-          {badgeShort}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-        <NotificationBell />
-        <ThemeToggle compact />
-        <span
-          title={badgeFull}
-          className={`hidden md:inline text-[10px] font-semibold px-2 py-1 rounded-full ${
-            isCompliant ? 'bg-amber-bg text-amber' : 'bg-primary-bg text-primary-on-bg'
-          }`}
-        >
-          {badgeFull}
-        </span>
-        <div
-          className="text-right leading-tight shrink-0"
-          title={`${fmtIstTopBarDate(now)} · ${fmtTime(now)}`}
-        >
-          <div className="text-[10px] text-text-subtle whitespace-nowrap">{fmtIstTopBarDate(now)}</div>
-          <div className="font-mono text-xs md:text-sm font-semibold tracking-wide text-text whitespace-nowrap">
-            <span
-              className={isOnline ? 'live-dot' : 'live-dot live-dot-offline'}
-              aria-label={isOnline ? 'Online' : 'Offline'}
+    <header className="app-topbar fixed top-0 left-0 right-0 z-40 bg-surface border-b border-border w-full">
+      <div className="app-topbar-inner">
+        <div className="app-topbar-brand">
+          <button
+            type="button"
+            className="lg:hidden app-topbar-menu-btn shrink-0 touch-target"
+            aria-label="Open menu"
+            onClick={onOpenMenu}
+          >
+            <span className="block w-5 h-0.5 bg-text rounded" />
+            <span className="block w-5 h-0.5 bg-text rounded" />
+            <span className="block w-5 h-0.5 bg-text rounded" />
+          </button>
+          {companyLogo && (
+            <img
+              src={companyLogo}
+              alt=""
+              className="app-topbar-logo w-7 h-7 md:w-8 md:h-8 rounded-md object-contain bg-surface2 p-0.5 shrink-0"
             />
-            {fmtTime(now)}
+          )}
+          <h1 className="app-topbar-title truncate" title={displayName}>
+            {displayName}
+          </h1>
+          <Tooltip content={isCompliant ? TOPBAR_TOOLTIPS.compliantView : TOPBAR_TOOLTIPS.realView}>
+            <span className={`app-topbar-view-badge app-topbar-view-badge--mobile ${isCompliant ? 'is-compliant' : 'is-real'}`}>
+              {badgeShort}
+            </span>
+          </Tooltip>
+        </div>
+
+        <div className="app-topbar-actions">
+          <ThemeToggle compact />
+          <Tooltip content={isCompliant ? TOPBAR_TOOLTIPS.compliantView : TOPBAR_TOOLTIPS.realView}>
+            <span className={`app-topbar-view-badge app-topbar-view-badge--desktop ${isCompliant ? 'is-compliant' : 'is-real'}`}>
+              {badgeFull}
+            </span>
+          </Tooltip>
+          <Tooltip content={TOPBAR_TOOLTIPS.clock}>
+          <div className="app-topbar-clock">
+            <div className="app-topbar-clock-date">{fmtIstTopBarDate(now)}</div>
+            <div className="app-topbar-clock-time">
+              <span
+                className={isOnline ? 'live-dot' : 'live-dot live-dot-offline'}
+                aria-label={isOnline ? 'Online' : 'Offline'}
+              />
+              {fmtTime(now)}
+            </div>
+          </div>
+          </Tooltip>
+          <div className="app-topbar-bell">
+            <NotificationBell />
           </div>
         </div>
       </div>
