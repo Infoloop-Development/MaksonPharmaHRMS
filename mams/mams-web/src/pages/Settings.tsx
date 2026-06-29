@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsApi, type Settings as SettingsT } from '../api/settings';
@@ -33,6 +33,10 @@ import { BrandThemeSection } from '../components/settings/BrandThemeSection';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
+import { AdminSectionCard } from '../components/ui/AdminSectionCard';
+import { SortableTh } from '../components/ui/SortableTh';
+import { TablePagination } from '../components/ui/TablePagination';
+import { useTableSort } from '../lib/tableSort';
 import { settingsTourScript } from '../lib/onboarding/scripts/settingsTourScript';
 import { AppearanceSection } from '../components/ui/ThemeToggle';
 
@@ -280,16 +284,9 @@ export function SectionCard({
   headerRight?: React.ReactNode;
 }) {
   return (
-    <div className="card p-5 h-full flex flex-col min-h-0">
-      <div className="flex items-center justify-between gap-2 mb-4 shrink-0">
-        <h2 className="text-base font-bold">{title}</h2>
-        {headerRight}
-      </div>
-      <div className="space-y-3 flex-1 min-h-0">{children}</div>
-      {footer && (
-        <div className="mt-4 pt-4 border-t border-border settings-section-footer shrink-0">{footer}</div>
-      )}
-    </div>
+    <AdminSectionCard title={title} footer={footer} headerRight={headerRight}>
+      {children}
+    </AdminSectionCard>
   );
 }
 
@@ -1116,9 +1113,17 @@ export function UsersManagementPanel() {
   const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
   const items = data?.items ?? [];
-  const total = items.length;
+  const getUserSortValue = useCallback((row: UserSummary, col: string) => {
+    if (col === 'name') return row.name;
+    if (col === 'email') return row.email;
+    if (col === 'role') return row.role;
+    if (col === 'status') return row.isActive ? 'Active' : 'Inactive';
+    return '';
+  }, []);
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(items, getUserSortValue);
+  const total = sortedRows.length;
   const pageCount = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
-  const paginatedItems = items.slice((userPage - 1) * USERS_PAGE_SIZE, userPage * USERS_PAGE_SIZE);
+  const paginatedItems = sortedRows.slice((userPage - 1) * USERS_PAGE_SIZE, userPage * USERS_PAGE_SIZE);
 
   useEffect(() => {
     if (userPage > pageCount) setUserPage(pageCount);
@@ -1128,7 +1133,7 @@ export function UsersManagementPanel() {
     <SectionCard
       title="Users"
       footer={
-        <button className="btn-primary" onClick={() => setOpenAdd(true)}>+ Add User</button>
+        <button className="btn-primary btn-sm" onClick={() => setOpenAdd(true)}>+ Add User</button>
       }
     >
       <UserCardList
@@ -1141,10 +1146,10 @@ export function UsersManagementPanel() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <th className="py-2">Name</th>
-              <th className="py-2">Email</th>
-              <th className="py-2">Role</th>
-              <th className="py-2">Status</th>
+              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+              <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+              <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
               <th className="py-2 text-right">Actions</th>
             </tr>
           </thead>
@@ -1171,24 +1176,12 @@ export function UsersManagementPanel() {
         </table>
       </div>
       {!isLoading && total > USERS_PAGE_SIZE && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <div className="text-text-muted">
-            Page {userPage} of {pageCount}
-          </div>
-          <div className="flex gap-2">
-            <button type="button" className="btn-outline" onClick={() => setUserPage((p) => Math.max(1, p - 1))} disabled={userPage === 1}>
-              Previous
-            </button>
-            <button
-              type="button"
-              className="btn-outline"
-              onClick={() => setUserPage((p) => p + 1)}
-              disabled={userPage * USERS_PAGE_SIZE >= total}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          page={userPage}
+          totalPages={pageCount}
+          onPrev={() => setUserPage((p) => Math.max(1, p - 1))}
+          onNext={() => setUserPage((p) => p + 1)}
+        />
       )}
       {openAdd && <AddUserModal onClose={() => setOpenAdd(false)} />}
       {editUser && (

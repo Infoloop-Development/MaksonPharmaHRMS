@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { activityApi, activityQueryKey, ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { useAuth } from '../../store/auth';
@@ -6,6 +6,9 @@ import { useTimeDisplay } from '../../store/timeFormat';
 import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityCardList } from './ActivityCardList';
 import { ActivityDescription } from './ActivityDescription';
+import { SortableTh } from '../ui/SortableTh';
+import { TablePagination } from '../ui/TablePagination';
+import { useTableSort } from '../../lib/tableSort';
 
 const PAGE_SIZE = 50;
 
@@ -28,6 +31,13 @@ export function ActivityLogPanel() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
 
+  const getSortValue = useCallback((row: NonNullable<typeof data>['items'][number], col: string) => {
+    if (col === 'occurredAt') return row.occurredAt;
+    if (col === 'area') return activityPageBadge(row.eventType, row.payload);
+    return '';
+  }, []);
+  const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(data?.items ?? [], getSortValue, { occurredAt: 'date' });
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
@@ -36,7 +46,7 @@ export function ActivityLogPanel() {
         </p>
         <button
           type="button"
-          className="btn-outline text-xs shrink-0 w-full sm:w-auto"
+          className="btn-outline btn-sm shrink-0 w-full sm:w-auto"
           onClick={refresh}
           disabled={isFetching}
         >
@@ -59,13 +69,13 @@ export function ActivityLogPanel() {
           <table className="w-full text-sm">
             <thead className="bg-surface2 sticky top-0">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-3 py-2 font-semibold w-[220px]">Time (IST)</th>
-                <th className="px-3 py-2 font-semibold w-[100px]">Area</th>
+                <SortableTh label="Time (IST)" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[220px]" />
+                <SortableTh label="Area" sortKey="area" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" />
                 <th className="px-3 py-2 font-semibold">Activity</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {data.items.map((row) => (
+              {sortedRows.map((row) => (
                 <tr key={row.id} className="hover:bg-surface2/40">
                   <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
                   <td className="px-3 py-2">
@@ -84,29 +94,14 @@ export function ActivityLogPanel() {
       )}
 
       {data && data.total > PAGE_SIZE && (
-        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
-          <span className="text-text-muted">
-            Page {page} of {Math.ceil(data.total / PAGE_SIZE)} ({data.total} total)
-          </span>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              className="btn-outline flex-1 sm:flex-none"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              className="btn-outline flex-1 sm:flex-none"
-              disabled={page * PAGE_SIZE >= data.total}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          totalPages={Math.ceil(data.total / PAGE_SIZE)}
+          total={data.total}
+          showTotal
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
     </div>
   );

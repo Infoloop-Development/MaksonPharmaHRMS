@@ -48,6 +48,8 @@ export type RawPunchListQuery = {
   page?: number;
   pageSize?: number;
   limit?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
 };
 
 export const attendanceApi = {

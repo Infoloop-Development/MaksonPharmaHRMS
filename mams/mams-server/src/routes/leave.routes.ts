@@ -16,6 +16,7 @@ import {
 } from '@mams/types';
 import type { Permission } from '@mams/types';
 import { resolveLeaveAdminApply } from '@mams/types';
+import { parseSortQuery } from '../utils/sortQuery.js';
 import { requireAuth, requireAnyPermission, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
@@ -325,6 +326,47 @@ router.get('/applications', async (req, res, next) => {
   try {
     const q = LeaveListQuerySchema.parse(req.query);
     const filter = await buildApplicationListFilter(q);
+    const sort = parseSortQuery(q.sortBy, q.sortDir, {
+      fromDate: 'fromDate',
+      totalDays: 'totalDays',
+      status: 'status',
+    }, { appliedAt: -1 });
+
+    if (q.sortBy === 'employee') {
+      const dir = q.sortDir === 'desc' ? -1 : 1;
+      const skip = (q.page - 1) * q.pageSize;
+      const [total, aggItems] = await Promise.all([
+        LeaveApplicationModel.countDocuments(filter),
+        LeaveApplicationModel.aggregate([
+          { $match: filter },
+          {
+            $lookup: {
+              from: 'employees',
+              localField: 'employeeId',
+              foreignField: '_id',
+              as: 'emp',
+            },
+          },
+          { $unwind: '$emp' },
+          { $sort: { 'emp.name': dir, _id: 1 } },
+          { $skip: skip },
+          { $limit: q.pageSize },
+          { $project: { emp: 0 } },
+        ]),
+      ]);
+      const ids = aggItems.map((d) => d._id);
+      const populated = await LeaveApplicationModel.find({ _id: { $in: ids } })
+        .populate('employeeId', 'name empCode department location')
+        .populate('leaveTypeId', 'name code paid halfDayEligible')
+        .populate('appliedBy', 'name email')
+        .populate('decidedBy', 'name email')
+        .lean();
+      const byId = new Map(populated.map((d) => [String(d._id), d]));
+      const items = ids.map((id) => byId.get(String(id))).filter(Boolean);
+      res.json({ items, total, page: q.page, pageSize: q.pageSize });
+      return;
+    }
+
     const [total, items] = await Promise.all([
       LeaveApplicationModel.countDocuments(filter),
       LeaveApplicationModel.find(filter)
@@ -332,7 +374,7 @@ router.get('/applications', async (req, res, next) => {
         .populate('leaveTypeId', 'name code paid halfDayEligible')
         .populate('appliedBy', 'name email')
         .populate('decidedBy', 'name email')
-        .sort({ appliedAt: -1 })
+        .sort(sort)
         .skip((q.page - 1) * q.pageSize)
         .limit(q.pageSize)
         .lean(),

@@ -201,6 +201,7 @@ export function activityPageBadge(eventType: string, payload: Record<string, unk
   }
   if (eventType.startsWith('leave_') || eventType === 'holiday_created') return 'Leave';
   if (eventType.startsWith('regularization_')) return 'Regularization';
+  if (eventType === 'compliance_record_adjusted') return 'Attendance';
   if (['login', 'logout', 'password_changed'].includes(eventType)) return 'Auth';
   return 'System';
 }
@@ -332,6 +333,10 @@ export function formatActivityDescription(item: ActivityListItem): string {
       return 'Approved regularization request — raw punches inserted';
     case 'regularization_rejected':
       return `Rejected regularization request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
+    case 'compliance_record_adjusted': {
+      const date = p.date ? ` on ${p.date}` : '';
+      return `Adjusted compliance attendance record${date}`;
+    }
     case 'visitor_request_submitted':
       return 'Visitor request submitted (public form)';
     case 'visitor_request_approved': {

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MAKSON_DEPARTMENTS, MAKSON_FACTORY_LOCATIONS } from '@mams/types';
 import { devicesApi, type Device } from '../../api/devices';
 import { useToast } from '../ui/Toast';
-import { StatCard } from '../ui/StatCard';
+import { DashboardStatCard } from '../ui/DashboardStatCard';
 import { DeviceSetupGuide } from './DeviceSetupGuide';
 import { DeviceTable } from './DeviceTable';
 import { DeviceRegisterModal } from './DeviceRegisterModal';
@@ -21,6 +21,7 @@ import { useActivityLog } from '../../hooks/useActivityLog';
 import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
+import { CardSortSelect } from '../ui/CardSortSelect';
 
 export function DeviceManagementPanel({
   canManage,
@@ -41,6 +42,7 @@ export function DeviceManagementPanel({
   const [locFilter, setLocFilter] = useState<string>('all');
   const [onlineFilter, setOnlineFilter] = useState<string>('all');
   const [connectionFilter, setConnectionFilter] = useState<string>('all');
+  const [cardSort, setCardSort] = useState('name-asc');
   const [postRegister, setPostRegister] = useState<DeviceCreate | null>(null);
 
   const toast = useToast((s) => s.push);
@@ -130,6 +132,25 @@ export function DeviceManagementPanel({
     });
   }, [allDevices, vendorFilter, deptFilter, locFilter, onlineFilter, connectionFilter]);
 
+  const sortedFiltered = useMemo(() => {
+    const list = [...filtered];
+    const [field, dir] = cardSort.split('-') as [string, 'asc' | 'desc'];
+    list.sort((a, b) => {
+      let av = '';
+      let bv = '';
+      if (field === 'name') {
+        av = a.name;
+        bv = b.name;
+      } else if (field === 'date') {
+        av = a.lastPingAt ?? '';
+        bv = b.lastPingAt ?? '';
+      }
+      const cmp = av.localeCompare(bv);
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [filtered, cardSort]);
+
   const online = allDevices.filter((d) => d.isOnline).length;
   const recentPunches = allDevices.reduce((sum, d) => sum + d.recentPunchCount, 0);
 
@@ -186,10 +207,10 @@ export function DeviceManagementPanel({
 
       {showStats && (
         <div className="dash-stat-grid mb-0" data-tour-id="devices-stats">
-          <StatCard label="Total" value={allDevices.length} accent="primary" />
-          <StatCard label="Online" value={online} accent="green" />
-          <StatCard label="Offline" value={allDevices.length - online} accent="red" />
-          <StatCard label="Punches (24h)" value={recentPunches.toLocaleString()} accent="amber" />
+          <DashboardStatCard label="Total" value={String(allDevices.length)} sub="" accent="primary" selected={false} onClick={() => {}} hint="" />
+          <DashboardStatCard label="Online" value={String(online)} sub="" accent="green" selected={false} onClick={() => {}} hint="" />
+          <DashboardStatCard label="Offline" value={String(allDevices.length - online)} sub="" accent="red" selected={false} onClick={() => {}} hint="" />
+          <DashboardStatCard label="Punches (24h)" value={recentPunches.toLocaleString()} sub="" accent="amber" selected={false} onClick={() => {}} hint="" />
         </div>
       )}
 
@@ -197,7 +218,21 @@ export function DeviceManagementPanel({
       <MobileFilterBar
         activeCount={activeCount}
         onClear={clearFilters}
-        actions={manageActions}
+        actions={
+          <>
+            <CardSortSelect
+              value={cardSort}
+              onChange={setCardSort}
+              options={[
+                { value: 'name-asc', label: 'Name A–Z' },
+                { value: 'name-desc', label: 'Name Z–A' },
+                { value: 'date-desc', label: 'Last ping newest' },
+                { value: 'date-asc', label: 'Last ping oldest' },
+              ]}
+            />
+            {manageActions}
+          </>
+        }
         noCard
         className="mb-0"
         desktopClassName="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-3 items-end"
@@ -271,7 +306,7 @@ export function DeviceManagementPanel({
 
       <div data-tour-id="devices-list">
       <DeviceTable
-        devices={filtered}
+        devices={sortedFiltered}
         isLoading={isLoading}
         canManage={canManage}
         syncing={syncing}

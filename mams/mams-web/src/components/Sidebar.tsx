@@ -5,7 +5,7 @@ import { useAuth } from '../store/auth';
 import { settingsApi } from '../api/settings';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
-import { isOrgAdminRole } from '@mams/types';
+import { isOrgAdminRole, type Role } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -29,11 +29,14 @@ const COMPLIANCE_ATTENDANCE_NAV = {
   icon: 'attendance' as const,
 };
 
-function buildNav(permissions: string[]) {
+function buildNav(permissions: string[], role?: Role) {
   const hasCompliant = permissions.includes('read.compliant');
   const hasReal = permissions.includes('read.real');
 
   let nav = [...BASE_NAV];
+  if (role === 'hr.compliance') {
+    nav = nav.filter((item) => item.to !== '/adjustments');
+  }
   if (hasCompliant && !hasReal) {
     nav = nav.filter((item) => !COMPLAINCE_HIDDEN_ROUTES.has(item.to));
     nav = [
@@ -139,7 +142,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
         {(!user || !isOrgAdminRole(user.role)) && !collapsed && (
           <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Navigation</div>
         )}
-        {buildNav(user?.permissions ?? []).map((n) => (
+        {buildNav(user?.permissions ?? [], user?.role as Role | undefined).map((n) => (
           <NavLink
             key={n.to}
             to={n.to}

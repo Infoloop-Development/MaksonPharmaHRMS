@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { ComplianceShift } from '@mams/types';
+import type { ComplianceAttendanceUpdate, ComplianceShift } from '@mams/types';
 import { downloadAuthenticatedExportPost } from '../lib/downloadExport';
 
 export interface ComplianceAttendanceRow {
@@ -23,6 +23,8 @@ export interface ComplianceAttendanceRow {
 export interface ComplianceAttendanceStats {
   total: number;
   byShift: Record<ComplianceShift, number>;
+  scope: 'today' | 'date' | 'range';
+  scopeDate?: string;
 }
 
 export interface ComplianceAttendanceListResponse {
@@ -56,9 +58,18 @@ export interface ComplianceReportEmployee {
   totalHours: number;
 }
 
+export interface ComplianceReportOverride {
+  employeeId: string;
+  totalHours: number;
+}
+
 export interface ComplianceReportRequest {
   yearMonth: string;
-  employees: ComplianceReportEmployee[];
+  overrides?: ComplianceReportOverride[];
+}
+
+export interface FinancialReportRequest {
+  yearMonth: string;
 }
 
 export const complianceAttendanceApi = {
@@ -70,6 +81,8 @@ export const complianceAttendanceApi = {
     alternateShift?: ComplianceShift;
     page?: number;
     pageSize?: number;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
   } = {}) => {
     const params = new URLSearchParams();
     Object.entries(q).forEach(([k, v]) => v !== undefined && v !== '' && params.set(k, String(v)));
@@ -88,5 +101,17 @@ export const complianceAttendanceApi = {
       '/compliance-attendance/report.xlsx',
       body,
       `compliance-attendance-${body.yearMonth}.xlsx`
+    ),
+  update: (id: string, body: ComplianceAttendanceUpdate) =>
+    api.patch<ComplianceAttendanceRow>(`/compliance-attendance/${id}`, body),
+  getMonthComplianceHours: (employeeId: string, yearMonth: string) => {
+    const params = new URLSearchParams({ employeeId, yearMonth });
+    return api.get<{ complianceHours: number }>(`/compliance-attendance/month-hours?${params.toString()}`);
+  },
+  downloadFinancialReport: (body: FinancialReportRequest) =>
+    downloadAuthenticatedExportPost(
+      '/compliance-attendance/financial-report.xlsx',
+      body,
+      `financial-report-${body.yearMonth}.xlsx`
     ),
 };

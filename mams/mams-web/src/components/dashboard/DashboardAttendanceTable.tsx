@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { DashboardAttendanceRow, DashboardAttendanceStatusFilter } from '@mams/types';
@@ -18,6 +18,7 @@ import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
 import { fmtHours, fmtWeekdayShort } from '../../lib/format';
+import { useTableSort } from '../../lib/tableSort';
 import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
 import {
   AttendanceShiftPill,
@@ -49,47 +50,6 @@ function DownloadIcon() {
       <path d="M12 3v12M7 10l5 5 5-5M5 21h14" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
-
-function sortRows(rows: DashboardAttendanceRow[], col: SortCol, dir: 'asc' | 'desc') {
-  if (!col) return rows;
-  const sorted = [...rows].sort((a, b) => {
-    let va: string | number = '';
-    let vb: string | number = '';
-    switch (col) {
-      case 'name':
-        va = a.employeeName;
-        vb = b.employeeName;
-        break;
-      case 'id':
-        va = a.empCode;
-        vb = b.empCode;
-        break;
-      case 'dept':
-        va = a.department;
-        vb = b.department;
-        break;
-      case 'shift':
-        va = a.timeShift;
-        vb = b.timeShift;
-        break;
-      case 'hrs':
-        va = a.totalHoursWorked ?? -1;
-        vb = b.totalHoursWorked ?? -1;
-        break;
-      case 'status':
-        va = a.displayStatus;
-        vb = b.displayStatus;
-        break;
-    }
-    if (typeof va === 'number' && typeof vb === 'number') {
-      return dir === 'asc' ? va - vb : vb - va;
-    }
-    return dir === 'asc'
-      ? String(va).localeCompare(String(vb))
-      : String(vb).localeCompare(String(va));
-  });
-  return sorted;
 }
 
 function renderAdminAttendanceCell(
@@ -155,16 +115,9 @@ export function DashboardAttendanceTable({
   const status = statusFilter;
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
-  const [sortCol, setSortCol] = useState<SortCol>(null);
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const adminVisibleColumns = resolveAttendanceVisibleColumns(visibleColumns);
   const isAdminColumnMode = adminVisibleColumns !== null;
-
-  useEffect(() => {
-    setSortCol(null);
-    setSortDir('asc');
-  }, [adminVisibleColumns?.join(',')]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -204,10 +157,37 @@ export function DashboardAttendanceTable({
   const isInitialLoad = isPending && !data;
   const isRefreshing = isFetching && Boolean(data);
 
-  const rows = useMemo(
-    () => sortRows(data?.items ?? [], sortCol, sortDir),
-    [data?.items, sortCol, sortDir]
+  const getSortValue = useCallback((row: DashboardAttendanceRow, col: string) => {
+    switch (col as SortCol) {
+      case 'name':
+        return row.employeeName;
+      case 'id':
+        return row.empCode;
+      case 'dept':
+        return row.department;
+      case 'shift':
+        return row.timeShift;
+      case 'hrs':
+        return row.totalHoursWorked ?? -1;
+      case 'status':
+        return row.displayStatus;
+      default:
+        return '';
+    }
+  }, []);
+
+  const { sortCol, setSortCol, setSortDir, toggleSort, sortArrow, sortedRows } = useTableSort(
+    data?.items ?? [],
+    getSortValue,
+    { hrs: 'number' }
   );
+
+  useEffect(() => {
+    setSortCol(null);
+    setSortDir('asc');
+  }, [adminVisibleColumns?.join(','), setSortCol, setSortDir]);
+
+  const rows = sortedRows;
 
   const hasFilters =
     Boolean(debouncedSearch.trim()) || Boolean(department) || shift !== 'All' || status !== 'All';
@@ -219,19 +199,11 @@ export function DashboardAttendanceTable({
     setPage(1);
   };
 
-  const toggleSort = (col: SortCol) => {
-    if (sortCol === col) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortCol(col);
-      setSortDir('asc');
-    }
+  const toggleDashboardSort = (col: SortCol) => {
+    if (col) toggleSort(col);
   };
 
-  const sortArrow = (col: SortCol) => {
-    if (sortCol !== col) return '▴';
-    return sortDir === 'asc' ? '▲' : '▼';
-  };
+  const dashboardSortArrow = (col: SortCol) => (col ? sortArrow(col) : '▴');
 
   const onExportPdf = async () => {
     if (!selectedDate) return;
@@ -464,10 +436,10 @@ export function DashboardAttendanceTable({
                     <th
                       key={colId}
                       className={sortCol === sortKey ? 'sorted' : ''}
-                      onClick={() => toggleSort(sortKey)}
+                      onClick={() => toggleDashboardSort(sortKey)}
                     >
                       {ADMIN_ATTENDANCE_COLUMN_LABELS[colId]}{' '}
-                      <span className="sort-arrow">{sortArrow(sortKey)}</span>
+                      <span className="sort-arrow">{dashboardSortArrow(sortKey)}</span>
                     </th>
                   );
                 })
@@ -475,35 +447,35 @@ export function DashboardAttendanceTable({
                 <>
                   <th
                     className={sortCol === 'name' ? 'sorted' : ''}
-                    onClick={() => toggleSort('name')}
+                    onClick={() => toggleDashboardSort('name')}
                   >
-                    Employee <span className="sort-arrow">{sortArrow('name')}</span>
+                    Employee <span className="sort-arrow">{dashboardSortArrow('name')}</span>
                   </th>
-                  <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleSort('id')}>
-                    ID <span className="sort-arrow">{sortArrow('id')}</span>
+                  <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleDashboardSort('id')}>
+                    ID <span className="sort-arrow">{dashboardSortArrow('id')}</span>
                   </th>
                   <th
                     className={sortCol === 'dept' ? 'sorted' : ''}
-                    onClick={() => toggleSort('dept')}
+                    onClick={() => toggleDashboardSort('dept')}
                   >
-                    Department <span className="sort-arrow">{sortArrow('dept')}</span>
+                    Department <span className="sort-arrow">{dashboardSortArrow('dept')}</span>
                   </th>
                   <th
                     className={sortCol === 'shift' ? 'sorted' : ''}
-                    onClick={() => toggleSort('shift')}
+                    onClick={() => toggleDashboardSort('shift')}
                   >
-                    Shift <span className="sort-arrow">{sortArrow('shift')}</span>
+                    Shift <span className="sort-arrow">{dashboardSortArrow('shift')}</span>
                   </th>
                   <th>Entry</th>
                   <th>Exit</th>
-                  <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleSort('hrs')}>
-                    Hours <span className="sort-arrow">{sortArrow('hrs')}</span>
+                  <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleDashboardSort('hrs')}>
+                    Hours <span className="sort-arrow">{dashboardSortArrow('hrs')}</span>
                   </th>
                   <th
                     className={sortCol === 'status' ? 'sorted' : ''}
-                    onClick={() => toggleSort('status')}
+                    onClick={() => toggleDashboardSort('status')}
                   >
-                    Status <span className="sort-arrow">{sortArrow('status')}</span>
+                    Status <span className="sort-arrow">{dashboardSortArrow('status')}</span>
                   </th>
                 </>
               )}

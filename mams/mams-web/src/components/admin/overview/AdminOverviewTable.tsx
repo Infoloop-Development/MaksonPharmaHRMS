@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type {
   AdminOverviewTableConfig,
@@ -27,6 +27,7 @@ import {
 } from '../../../lib/adminOverviewTableUtils';
 import { countActiveFilters } from '../../../lib/countActiveFilters';
 import { fmtDate } from '../../../lib/format';
+import { useTableSort } from '../../../lib/tableSort';
 import { useToast } from '../../ui/Toast';
 import { MobileFilterBar } from '../../ui/MobileFilterBar';
 import { AdminOverviewGenericCardList } from './AdminOverviewGenericCardList';
@@ -35,7 +36,6 @@ import { DashboardAttendanceTable } from '../../dashboard/DashboardAttendanceTab
 const PAGE_SIZE = 20;
 const DASH_SELECT =
   'px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none w-full md:w-auto';
-type SortDir = 'asc' | 'desc';
 
 const MONO_COLS = new Set(['empCode', 'deviceCode', 'biometricId', 'occurredAt', 'lastLogin', 'lastPing']);
 const TIMESTAMP_COLS = new Set(['occurredAt', 'lastLogin', 'lastPing']);
@@ -102,8 +102,6 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortCol, setSortCol] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
   const [filters, setFilters] = useState<GenericTableFilterDefaults>({ ...GENERIC_TABLE_FILTER_DEFAULTS });
 
@@ -116,8 +114,6 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
     setPage(1);
     setSearch('');
     setDebouncedSearch('');
-    setSortCol(null);
-    setSortDir('asc');
     setFilters({ ...GENERIC_TABLE_FILTER_DEFAULTS });
   }, [config.kind]);
 
@@ -127,13 +123,6 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
 
   const columns = useMemo(() => resolveGenericTableColumns(config), [config]);
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
-
-  useEffect(() => {
-    if (!isSortColumnValid(sortCol, columnIds)) {
-      setSortCol(null);
-      setSortDir('asc');
-    }
-  }, [sortCol, columnIds]);
 
   const activeFilter =
     filters.active === 'All' ? undefined : filters.active === 'yes';
@@ -208,27 +197,30 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
   const isInitialLoad = activeQuery.isLoading && !activeQuery.data;
   const isRefreshing = activeQuery.isFetching && Boolean(activeQuery.data);
 
-  const sorted = useMemo(() => {
-    if (!sortCol || !columnIds.includes(sortCol)) return items;
-    return [...items].sort((a, b) => {
-      const va = cellValue(sortCol, a);
-      const vb = cellValue(sortCol, b);
-      return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-    });
-  }, [items, sortCol, sortDir, columnIds]);
+  const getSortValue = useCallback(
+    (row: Record<string, unknown>, col: string) => cellValue(col, row),
+    []
+  );
 
-  const toggleSort = (col: string) => {
-    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else {
-      setSortCol(col);
+  const timestampColumnTypes = useMemo(
+    () => Object.fromEntries([...TIMESTAMP_COLS].map((c) => [c, 'date' as const])),
+    []
+  );
+
+  const { sortCol, setSortCol, setSortDir, toggleSort, sortArrow, sortedRows } = useTableSort(
+    items,
+    getSortValue,
+    timestampColumnTypes
+  );
+
+  useEffect(() => {
+    if (!isSortColumnValid(sortCol, columnIds)) {
+      setSortCol(null);
       setSortDir('asc');
     }
-  };
+  }, [sortCol, columnIds, setSortCol, setSortDir]);
 
-  const sortArrow = (col: string) => {
-    if (sortCol !== col) return '▴';
-    return sortDir === 'asc' ? '▲' : '▼';
-  };
+  const sorted = sortedRows;
 
   const activeCount = countActiveFilters(filters, GENERIC_TABLE_FILTER_DEFAULTS);
   const hasFilters = activeCount > 0 || Boolean(debouncedSearch.trim());

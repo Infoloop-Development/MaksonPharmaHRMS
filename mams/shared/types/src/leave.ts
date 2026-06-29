@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SortDirSchema } from './sort.js';
 
 export const LeaveStatusSchema = z.enum(['Pending', 'Approved', 'Rejected', 'Cancelled']);
 export type LeaveStatus = z.infer<typeof LeaveStatusSchema>;
@@ -129,6 +130,8 @@ export const LeaveListQuerySchema = z.object({
   startsTo: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  sortBy: z.enum(['employee', 'fromDate', 'totalDays', 'status']).optional(),
+  sortDir: SortDirSchema.optional(),
 });
 export type LeaveListQuery = z.infer<typeof LeaveListQuerySchema>;
 
