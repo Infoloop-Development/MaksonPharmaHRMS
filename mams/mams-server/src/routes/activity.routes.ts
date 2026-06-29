@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import { ActivityListQuerySchema, OrgActivityListQuerySchema, UiActivityLogBodySchema } from '@mams/types';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { logUiActivity, listMyActivity, listOrgActivity } from '../services/activity.service.js';
 
 const activityLogLimiter = rateLimit({
@@ -26,9 +26,12 @@ router.get('/me', async (req, res, next) => {
   }
 });
 
-router.get('/org', requirePermission('read.org_audit'), async (req, res, next) => {
+router.get('/org', requireAnyPermission('read.org_audit', 'read.compliance_activity'), async (req, res, next) => {
   try {
     const q = OrgActivityListQuerySchema.parse(req.query);
+    if (!req.auth!.permissions.includes('read.org_audit')) {
+      q.role = 'hr.compliance';
+    }
     const result = await listOrgActivity(q);
     res.json(result);
   } catch (err) {

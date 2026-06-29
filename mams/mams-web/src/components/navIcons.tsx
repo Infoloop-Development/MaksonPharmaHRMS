@@ -152,3 +152,12 @@ const ICON_PATHS: Record<NavIconName, ReactNode> = {
 export function NavIcon({ name }: { name: NavIconName }) {
   return <IconSvg>{ICON_PATHS[name]}</IconSvg>;
 }
+
+export function CloseIcon() {
+  return (
+    <IconSvg>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </IconSvg>
+  );
+}

@@ -16,6 +16,9 @@ import { Visitors } from './pages/Visitors';
 import { PublicVisitorForm } from './pages/PublicVisitorForm';
 import { Devices } from './pages/Devices';
 import { Settings } from './pages/Settings';
+import { ComplianceSettings } from './pages/ComplianceSettings';
+import { ComplianceActivity } from './pages/ComplianceActivity';
+import { EmployeeChangeRequests } from './pages/EmployeeChangeRequests';
 import { AdminOverview } from './pages/admin/AdminOverview';
 import { AdminUsers } from './pages/admin/AdminUsers';
 import { AdminOrganization } from './pages/admin/AdminOrganization';
@@ -42,6 +45,11 @@ function RequireAuthSession({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+function SettingsGate() {
+  const viewMode = useAuth((s) => s.user?.viewMode);
+  return viewMode === 'compliant' ? <ComplianceSettings /> : <Settings />;
 }
 
 function HomeRedirect() {
@@ -102,7 +110,9 @@ export function App() {
         <Route path="leave" element={<Leave />} />
         <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="compliance-activity" element={<ComplianceActivity />} />
+        <Route path="employee-change-requests" element={<EmployeeChangeRequests />} />
+        <Route path="settings" element={<SettingsGate />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />
     </Routes>

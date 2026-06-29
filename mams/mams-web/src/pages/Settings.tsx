@@ -77,6 +77,9 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'read.visitors': 'View visitor requests',
   'approve.visitors': 'Approve/reject visitor requests',
   'manage.visitors': 'Manage visitor forms, links, and QR codes',
+  'read.compliance_activity': 'View compliance activity log',
+  'write.employee_change': 'Submit employee add/edit/delete change requests',
+  'approve.employee_change': 'Approve/reject employee change requests',
 };
 
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
@@ -86,7 +89,8 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
   { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
-  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices'] },
+  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices', 'write.employee_change', 'approve.employee_change'] },
+  { label: 'Compliance', permissions: ['read.compliance_activity'] },
   {
     label: 'Organization admin',
     permissions: [
@@ -269,7 +273,7 @@ function SettingsLayoutCell({
   return <div className={full ? 'settings-layout__full settings-layout__cell' : 'settings-layout__cell'}>{children}</div>;
 }
 
-function SectionCard({
+export function SectionCard({
   title,
   children,
   footer,

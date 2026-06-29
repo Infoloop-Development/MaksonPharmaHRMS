@@ -42,6 +42,16 @@ export function fmtIstHeaderDate(d: Date): string {
   }).format(d);
 }
 
+/** Compact date for the app top bar (e.g. 29 Jun 2026). */
+export function fmtIstTopBarDate(d: Date): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(d);
+}
+
 /** Date + time with milliseconds in IST (Activity log). */
 export function fmtIstDateTimeMs(d: Date | string | null): string {
   if (!d) return '-';

@@ -25,11 +25,11 @@ export function Layout() {
     if (!accessToken) return;
     authApi
       .me()
-      .then(async ({ user }) => {
+      .then(async ({ user: me }) => {
         const prev = useAuth.getState().user;
-        setUser(user);
+        setUser(me);
         const prevPerms = prev?.permissions ?? [];
-        const newPerms = user.permissions ?? [];
+        const newPerms = me.permissions ?? [];
         const permsChanged =
           prevPerms.length !== newPerms.length || newPerms.some((p) => !prevPerms.includes(p));
         if (permsChanged && refreshToken) {
@@ -70,23 +70,29 @@ export function Layout() {
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
       <div
-        className={`flex min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+        className={`min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
       >
+        <TopBar
+          onOpenMenu={openSidebar}
+          companyName={settings?.companyName}
+          companyLogo={settings?.companyLogo}
+        />
         <Sidebar open={sidebarOpen} onClose={closeSidebar} />
         {sidebarOpen && (
           <button
             type="button"
-            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden app-sidebar-backdrop"
             aria-label="Close menu"
             onClick={closeSidebar}
           />
         )}
-        <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[250px]">
-          <TopBar onOpenMenu={openSidebar} />
-          <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
-            <Outlet />
-          </main>
-        </div>
+        <main
+          className={`app-shell-main app-shell-with-sidebar px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden${
+            showMobileBottomNav ? ' has-mobile-bottom-nav' : ''
+          }`}
+        >
+          <Outlet />
+        </main>
         <MobileBottomNav />
         <ToastContainer />
       </div>

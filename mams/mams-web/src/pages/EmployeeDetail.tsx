@@ -107,7 +107,7 @@ export function EmployeeDetail() {
           <Row label="Department" value={data.department} />
           <Row label="Designation" value={data.designation} />
           <Row label="Location" value={data.location} />
-          <Row label="Time Shift (real)" value={data.timeShift} />
+          <Row label="Time Shift (real)" value={data.timeShift ?? '—'} />
           <Row label="Compliance Shift" value={data.alternateShift} />
           <Row label="Weekly Off" value={data.weeklyOff.join(', ')} />
           <Row label="Joined" value={fmtDate(data.joinDate.slice(0, 10))} />
