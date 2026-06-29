@@ -236,6 +236,7 @@ export function LeaveRequestsTab({
           label="Leaves This Month"
           value={String(summary?.leavesThisMonth ?? 0)}
           accent="primary"
+          sub=""
           selected={statusFilter === 'Approved' && startDate === monthStartStr && endDate === monthEndStr}
           onClick={() => {setStatusFilter('Approved'); setStartDate(monthStartStr); setEndDate(monthEndStr); setStartsFrom(''); setStartsTo(''); setPage(1)}}
         />

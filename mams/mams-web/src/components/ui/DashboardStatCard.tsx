@@ -6,6 +6,7 @@ export function DashboardStatCard({
   selected,
   onClick,
   hint = 'Filters table + chart',
+  title,
 }: {
   label: string;
   value: string;
@@ -14,10 +15,12 @@ export function DashboardStatCard({
   selected: boolean;
   onClick: () => void;
   hint?: string;
+  title?: string;
 }) {
   return (
     <button
       type="button"
+      title={title}
       className={`dash-stat-card accent-${accent} text-left w-full ${selected ? 'selected' : ''}`}
       onClick={(e) => {
         onClick();

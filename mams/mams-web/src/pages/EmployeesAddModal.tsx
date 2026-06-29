@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EmployeeCreateBodySchema,
@@ -8,6 +8,7 @@ import {
   MAKSON_FACTORY_LOCATIONS,
   WeekdaySchema,
   type EmployeeMasked,
+  type EmployeeUnmasked,
 } from '@mams/types';
 import { employeesApi } from '../api/employees';
 import { ApiError } from '../api/client';
@@ -139,6 +140,30 @@ export function EmployeesAddModal({
   const [dupeWarning, setDupeWarning] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const canUnmask = isEdit && !isCompliant;
+
+  const { data: freshEmployee } = useQuery({
+    queryKey: ['employees', employee?.id, 'edit'],
+    queryFn: () => employeesApi.getOne(employee!.id),
+    enabled: canUnmask,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!freshEmployee || freshEmployee.isMasked) return;
+    setDraft((prev) => ({
+      ...prev,
+      pan: freshEmployee.pan,
+      aadhaar: freshEmployee.aadhaar,
+      bankAccountNumber: freshEmployee.bankAccountNumber,
+      ifsc: freshEmployee.ifsc,
+      bankName: freshEmployee.bankName,
+      accountHolderName: freshEmployee.accountHolderName,
+      accountType: freshEmployee.accountType,
+      pfNumber: freshEmployee.pfNumber,
+      esiNumber: freshEmployee.esiNumber,
+    }));
+  }, [freshEmployee]);
 
   const { data: nextCodeData, isLoading: nextCodeLoading } = useQuery({
     queryKey: ['employees', 'next-code'],
