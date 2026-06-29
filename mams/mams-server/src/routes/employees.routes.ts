@@ -80,7 +80,7 @@ router.get('/:id', async (req, res, next) => {
     }
     const doc = await EmployeeModel.findById(req.params.id);
     if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
-    const canUnmask = req.auth!.permissions.includes('unmask.sensitive');
+    const canUnmask = req.auth!.permissions.includes('unmask.sensitive') || req.auth!.permissions.includes('write.employee_change');
     const payload = canUnmask
       ? toUnmaskedEmployee(doc.toObject() as any, req.auth!.viewMode)
       : toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode);
