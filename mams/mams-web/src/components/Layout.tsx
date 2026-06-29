@@ -3,10 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { MobileBottomNav } from './MobileBottomNav';
 import { ToastContainer } from './ui/Toast';
 import { authApi } from '../api/auth';
 import { settingsApi } from '../api/settings';
 import { useAuth } from '../store/auth';
+import { hasMobileBottomNav } from '../lib/mobileBottomNav';
 import { TimeFormatProvider } from '../store/timeFormat';
 
 export function Layout() {
@@ -14,6 +16,7 @@ export function Layout() {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const accessToken = useAuth((s) => s.accessToken);
+  const user = useAuth((s) => s.user);
   const refreshToken = useAuth((s) => s.refreshToken);
   const setUser = useAuth((s) => s.setUser);
   const setAuth = useAuth((s) => s.setAuth);
@@ -62,9 +65,13 @@ export function Layout() {
     }
   }, [settings?.favicon]);
 
+  const showMobileBottomNav = hasMobileBottomNav(user?.role);
+
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
-      <div className="flex min-h-screen overflow-x-hidden bg-bg">
+      <div
+        className={`flex min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+      >
         <Sidebar open={sidebarOpen} onClose={closeSidebar} />
         {sidebarOpen && (
           <button
@@ -80,6 +87,7 @@ export function Layout() {
             <Outlet />
           </main>
         </div>
+        <MobileBottomNav />
         <ToastContainer />
       </div>
     </TimeFormatProvider>

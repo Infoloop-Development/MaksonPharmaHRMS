@@ -4,9 +4,11 @@ import { useAuth } from '../../store/auth';
 import { canAccessAdminConsole } from '@mams/types';
 import { AdminSidebar } from './AdminSidebar';
 import { TopBar } from '../TopBar';
+import { MobileBottomNav } from '../MobileBottomNav';
 import { ToastContainer } from '../ui/Toast';
 import { settingsApi } from '../../api/settings';
 import { TimeFormatProvider } from '../../store/timeFormat';
+import { hasMobileBottomNav } from '../../lib/mobileBottomNav';
 import { useState, useCallback, useEffect } from 'react';
 
 export function AdminLayout() {
@@ -41,9 +43,13 @@ export function AdminLayout() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const showMobileBottomNav = hasMobileBottomNav(user?.role);
+
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
-      <div className="flex min-h-screen overflow-x-hidden bg-bg">
+      <div
+        className={`flex min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+      >
         <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
         {sidebarOpen && (
           <button
@@ -59,6 +65,7 @@ export function AdminLayout() {
             <Outlet />
           </main>
         </div>
+        <MobileBottomNav />
         <ToastContainer />
       </div>
     </TimeFormatProvider>

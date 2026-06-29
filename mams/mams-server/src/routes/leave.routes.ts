@@ -46,6 +46,10 @@ import {
 } from '../services/leave/leaveQuota.service.js';
 import { getLeaveSummary } from '../services/leave/leaveSummary.service.js';
 import { notifyLeaveApplied } from '../services/leave/leaveNotification.service.js';
+import {
+  buildLeaveAppliedNotification,
+  notifyOrgAdmins,
+} from '../services/notification.service.js';
 import { eachDateInRange } from '../services/leave/leaveDate.util.js';
 import { z } from 'zod';
 
@@ -598,6 +602,15 @@ router.post('/applications', requireAnyPermission('write.leave', 'manage.leave')
         entityId: created._id,
         payload: { employeeId: body.employeeId, status, totalDays },
       }
+    );
+
+    await notifyOrgAdmins(
+      buildLeaveAppliedNotification({
+        employeeName: employee.name,
+        status,
+        totalDays,
+        entityId: created._id,
+      })
     );
 
     const populated = await LeaveApplicationModel.findById(created._id)

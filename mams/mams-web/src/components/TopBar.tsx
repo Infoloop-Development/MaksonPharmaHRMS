@@ -5,6 +5,7 @@ import { fmtIstHeaderDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { NotificationBell } from './notifications/NotificationBell';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 
 function pageTitle(pathname: string): string {
@@ -77,6 +78,7 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
       </div>
 
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
+        <NotificationBell />
         <ThemeToggle compact />
         <span
           title={badgeFull}
