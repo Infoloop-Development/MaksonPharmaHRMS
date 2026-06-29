@@ -58,8 +58,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const canViewComplianceActivity = user?.permissions.includes('read.compliance_activity') ?? false;
-  const canViewChangeRequests =
-    (user?.permissions.includes('approve.employee_change') || user?.permissions.includes('write.employee_change')) ?? false;
+  const canViewChangeRequests = user?.permissions.includes('approve.employee_change') ?? false;
   const location = useLocation();
   const { data: settings } = useQuery({
     queryKey: ['settings'],

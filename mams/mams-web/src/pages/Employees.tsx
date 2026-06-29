@@ -33,7 +33,7 @@ export function Employees() {
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteRequestEmployee, setDeleteRequestEmployee] = useState<EmployeeMasked | null>(null);
-  const pageSize = 50;
+  const pageSize = 20;
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
@@ -46,10 +46,10 @@ export function Employees() {
     queryFn: () => employeesApi.list({ search, page, pageSize }),
   });
 
-  const { data: pendingRequests } = useQuery({
-    queryKey: ['employee-change-requests', { status: 'Pending' }],
-    queryFn: () => employeeChangeRequestsApi.list({ status: 'Pending', pageSize: 200 }),
-    enabled: isCompliant,
+  const { data: flaggedRequests } = useQuery({
+    queryKey: ['employee-change-requests', { status: 'Flagged' }],
+    queryFn: () => employeeChangeRequestsApi.list({ status: 'Flagged', pageSize: 200 }),
+    enabled: !isCompliant && canManage,
   });
 
   const tour = usePageTourController('employees', employeesTourScript, {
@@ -93,7 +93,7 @@ export function Employees() {
         {canEdit && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-              {isCompliant ? 'Request new employee' : 'Add employee'}
+              Add employee
             </button>
             {canManage && (
               <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
@@ -111,10 +111,10 @@ export function Employees() {
         </div>
       )}
 
-      {isCompliant && pendingRequests && pendingRequests.counts.Pending > 0 && (
+      {!isCompliant && flaggedRequests && flaggedRequests.counts.Flagged > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
-          <span className="font-semibold">{pendingRequests.counts.Pending} change request{pendingRequests.counts.Pending !== 1 ? 's' : ''} pending HR review.</span>
-          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">View requests</RouterLink>
+          <span className="font-semibold">{flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''} need your review.</span>
+          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">Review now</RouterLink>
         </div>
       )}
 
@@ -205,10 +205,10 @@ export function Employees() {
       </div>
       </div>
 
-      {data && data.total > pageSize && (
+      {data && Math.ceil(data.total / pageSize) > 1 && (
         <div className="mt-4 flex items-center justify-between text-sm" data-tour-id="employees-pagination">
           <div className="text-text-muted">
-            Page {page} of {Math.ceil(data.total / pageSize)}
+            Page {page} of {Math.ceil(data.total / pageSize)} · {data.total.toLocaleString()} employees
           </div>
           <div className="flex gap-2">
             <button className="btn-outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
@@ -422,6 +422,7 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dupeWarning, setDupeWarning] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
 
@@ -430,15 +431,27 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
       setError('Reason must be at least 10 characters.');
       return;
     }
+    if (!dupeWarning) {
+      try {
+        const check = await employeeChangeRequestsApi.list({ status: 'Flagged', employeeId: employee.id, pageSize: 1 });
+        if (check.total > 0) {
+          setDupeWarning(true);
+          return;
+        }
+      } catch {
+        // fail-open: proceed if the check errors
+      }
+    }
     setBusy(true);
     setError(null);
     try {
       await employeeChangeRequestsApi.submit({ changeType: 'delete', employeeId: employee.id, reason: reason.trim() });
-      toast('Deletion request submitted for HR review', 'success');
+      toast('Employee deleted', 'success');
+      qc.invalidateQueries({ queryKey: ['employees'] });
       qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
       onClose();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not submit request.');
+      setError(e instanceof Error ? e.message : 'Could not delete employee.');
     } finally {
       setBusy(false);
     }
@@ -448,20 +461,25 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     <Modal
       open
       onClose={onClose}
-      title="Request employee deletion"
+      title="Delete employee"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
-            {busy ? 'Submitting…' : 'Submit request'}
+            {busy ? 'Deleting…' : dupeWarning ? 'Delete anyway' : 'Delete employee'}
           </button>
         </>
       }
     >
       <div className="space-y-4 text-sm">
         <p className="text-text-muted">
-          Request deletion of <strong className="text-text">{employee.name}</strong> ({employee.empCode}). HR must approve before the record is removed.
+          Delete <strong className="text-text">{employee.name}</strong> ({employee.empCode}). This will take effect immediately and HR will be notified to review.
         </p>
+        {dupeWarning && (
+          <div className="text-sm text-amber bg-amber-bg px-3 py-2 rounded" role="alert">
+            This employee already has a pending review. Are you sure you want to submit another change?
+          </div>
+        )}
         <div>
           <label className="label">Reason</label>
           <textarea

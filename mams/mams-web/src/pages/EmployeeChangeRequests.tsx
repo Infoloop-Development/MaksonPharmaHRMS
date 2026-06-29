@@ -16,12 +16,12 @@ type ChangeRequest = {
   proposedData: Record<string, unknown> | null;
   previousData: Record<string, unknown> | null;
   reason: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
+  status: 'Flagged' | 'Reviewed';
   initiatedBy: { _id: string; name: string; email: string };
   initiatedAt: string;
-  decidedBy: { _id: string; name: string } | null;
-  decidedAt: string | null;
-  approverNote: string | null;
+  reviewedBy: { _id: string; name: string } | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
 };
 
 const TYPE_TONE: Record<string, 'blue' | 'amber' | 'red'> = {
@@ -30,10 +30,9 @@ const TYPE_TONE: Record<string, 'blue' | 'amber' | 'red'> = {
   delete: 'red',
 };
 
-const STATUS_TONE: Record<string, 'amber' | 'green' | 'red'> = {
-  Pending: 'amber',
-  Approved: 'green',
-  Rejected: 'red',
+const STATUS_TONE: Record<string, 'amber' | 'green'> = {
+  Flagged: 'amber',
+  Reviewed: 'green',
 };
 
 function employeeDisplayName(req: ChangeRequest): string {
@@ -52,7 +51,7 @@ export function EmployeeChangeRequests() {
   const isCompliant = user?.viewMode === 'compliant';
   const canApprove = user?.permissions.includes('approve.employee_change') ?? false;
 
-  const [statusFilter, setStatusFilter] = useState<'Pending' | 'Approved' | 'Rejected' | ''>('Pending');
+  const [statusFilter, setStatusFilter] = useState<'Flagged' | 'Reviewed' | ''>('Flagged');
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const [reviewRequest, setReviewRequest] = useState<ChangeRequest | null>(null);
@@ -70,7 +69,7 @@ export function EmployeeChangeRequests() {
   });
 
   const items = (data?.items ?? []) as unknown as ChangeRequest[];
-  const counts = data?.counts ?? { Pending: 0, Approved: 0, Rejected: 0 };
+  const counts = data?.counts ?? { Flagged: 0, Reviewed: 0 };
 
   return (
     <div>
@@ -78,14 +77,14 @@ export function EmployeeChangeRequests() {
         <div>
           <h1 className="text-2xl font-bold">Employee Change Requests</h1>
           <p className="text-sm text-text-muted mt-0.5">
-            {isCompliant ? 'Your submitted change requests' : 'Compliance-submitted employee changes awaiting HR review'}
+            {isCompliant ? 'Employee changes you have made' : 'Compliance-initiated employee changes — review and correct if needed'}
           </p>
         </div>
       </div>
 
       {/* Stat tiles */}
       <div className="dash-stat-grid mb-6">
-        {(['Pending', 'Approved', 'Rejected'] as const).map((s) => (
+        {(['Flagged', 'Reviewed'] as const).map((s) => (
           <button
             key={s}
             type="button"
@@ -196,31 +195,39 @@ function ReviewModal({
   onDecided: () => void;
 }) {
   const [timeShift, setTimeShift] = useState<'Day' | 'Night'>('Day');
-  const [approverNote, setApproverNote] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const toast = useToast((s) => s.push);
 
-  const isPending = request.status === 'Pending';
+  const isFlagged = request.status === 'Flagged';
   const isCreate = request.changeType === 'create';
+  const isUpdate = request.changeType === 'update';
+  const isDelete = request.changeType === 'delete';
 
-  const decide = async (decision: 'approve' | 'reject') => {
+  const submit = async (action: 'keep' | 'remove' | 'revert' | 'reinstate') => {
     setBusy(true);
     setFormError(null);
-    try {
-      await employeeChangeRequestsApi.decide(request._id, {
-        decision,
-        approverNote: approverNote.trim() || undefined,
-        timeShift: decision === 'approve' && isCreate ? timeShift : undefined,
+    try{
+      await employeeChangeRequestsApi.review(request._id, {
+        action,
+        reviewNote: reviewNote.trim() || undefined,
+        timeShift: isCreate ? timeShift: undefined,
       });
-      toast(decision === 'approve' ? 'Request approved' : 'Request rejected', 'success');
+      const messages = {
+        keep: 'Change kept',
+        remove: 'Employee removed',
+        revert: 'Change reverted',
+        reinstate: 'Employee reinstated',
+      };
+      toast(messages[action],'success');
       onDecided();
-    } catch (e: unknown) {
-      setFormError(e instanceof ApiError ? e.message : 'Could not process decision.');
-    } finally {
+    } catch(e: unknown){
+      setFormError(e instanceof ApiError? e.message: 'Could not process review');
+    } finally{
       setBusy(false);
     }
-  };
+  }
 
   const proposed = request.proposedData ?? {};
   const previous = request.previousData ?? {};
@@ -261,57 +268,77 @@ function ReviewModal({
     <Modal
       open
       onClose={onClose}
-      title={`Review: ${request.changeType.charAt(0).toUpperCase() + request.changeType.slice(1)} request`}
+      title={`Review: ${request.changeType.charAt(0).toUpperCase() + request.changeType.slice(1)}`}
       size="xl"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Close</button>
-          {isPending && canApprove && (
+          {isFlagged && canApprove && (
             <>
-              <button type="button" className="btn-outline text-red" disabled={busy} onClick={() => decide('reject')}>
-                {busy ? 'Processing…' : 'Reject'}
-              </button>
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => decide('approve')}>
-                {busy ? 'Processing…' : 'Approve'}
-              </button>
+              {isCreate && (
+                <>
+                  <button type="button" className="btn-outline text-red" disabled={busy} onClick={() => submit('remove')}>
+                    {busy ? 'Processing…' : 'Remove employee'}
+                  </button>
+                  <button type="button" className="btn-primary" disabled={busy} onClick={() => submit('keep')}>
+                    {busy ? 'Processing…' : 'Keep employee'}
+                  </button>
+                </>
+              )}
+              {isUpdate && (
+                <>
+                  <button type="button" className="btn-outline text-red" disabled={busy} onClick={() => submit('revert')}>
+                    {busy ? 'Processing…' : 'Revert changes'}
+                  </button>
+                  <button type="button" className="btn-primary" disabled={busy} onClick={() => submit('keep')}>
+                    {busy ? 'Processing…' : 'Keep changes'}
+                  </button>
+                </>
+              )}
+              {isDelete && (
+                <>
+                  <button type="button" className="btn-outline" disabled={busy} onClick={() => submit('reinstate')}>
+                    {busy ? 'Processing…' : 'Reinstate employee'}
+                  </button>
+                  <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy} onClick={() => submit('keep')}>
+                    {busy ? 'Processing…' : 'Confirm deletion'}
+                  </button>
+                </>
+              )}
             </>
           )}
         </>
       }
     >
       <div className="space-y-5 text-sm">
-        {/* Summary */}
         <div className="flex flex-wrap gap-4 text-xs text-text-muted">
           <span><span className="font-semibold text-text">Employee:</span> {employeeDisplayName(request)} ({employeeDisplayCode(request)})</span>
           <span><span className="font-semibold text-text">Submitted by:</span> {request.initiatedBy?.name}</span>
           <span><span className="font-semibold text-text">Date:</span> {request.initiatedAt ? fmtDate(request.initiatedAt.slice(0, 10)) : '—'}</span>
         </div>
 
-        {/* Reason */}
         <div className="rounded-md border border-border bg-surface2/40 px-4 py-3">
           <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Reason</div>
           <p className="text-sm">{request.reason}</p>
         </div>
 
-        {/* Delete — just show what will be removed */}
-        {request.changeType === 'delete' && (
+        {isDelete && (
           <div className="rounded-md border border-red/30 bg-red-bg px-4 py-3 text-sm text-red">
-            This request will permanently remove <strong>{employeeDisplayName(request)}</strong> from the system when approved.
+            <strong>{employeeDisplayName(request)}</strong> has already been removed from the system. Confirm deletion or reinstate if it was a mistake.
           </div>
         )}
 
-        {/* Create / Update — field comparison table */}
-        {request.changeType !== 'delete' && (
+        {!isDelete && (
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
-              {request.changeType === 'update' ? 'Proposed changes (highlighted = changed)' : 'Proposed employee data'}
+              {isUpdate ? 'Proposed changes (highlighted = changed)' : 'New employee data'}
             </div>
             <div className="border border-border rounded overflow-auto max-h-64">
               <table className="w-full">
                 <thead className="bg-surface2 sticky top-0">
                   <tr className="text-left text-[10px] uppercase tracking-wider text-text-muted">
                     <th className="px-3 py-2 w-32">Field</th>
-                    {request.changeType === 'update' ? (
+                    {isUpdate ? (
                       <>
                         <th className="px-3 py-2">Before</th>
                         <th className="px-3 py-2">After</th>
@@ -323,12 +350,7 @@ function ReviewModal({
                 </thead>
                 <tbody className="divide-y divide-border">
                   {fields.map((f) => (
-                    <DataRow
-                      key={f.key}
-                      label={f.label}
-                      prev={previous[f.key]}
-                      next={proposed[f.key]}
-                    />
+                    <DataRow key={f.key} label={f.label} prev={previous[f.key]} next={proposed[f.key]} />
                   ))}
                 </tbody>
               </table>
@@ -336,12 +358,14 @@ function ReviewModal({
           </div>
         )}
 
-        {/* HR: assign timeShift on create approval */}
-        {isPending && canApprove && isCreate && (
+        {isFlagged && canApprove && isCreate && (
           <div className="rounded-md border border-primary/30 bg-primary-bg px-4 py-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
-              Assign real time shift (HR only — not visible to compliance)
+              Verify real time shift (HR only — not visible to compliance)
             </div>
+            <p className="text-xs text-text-muted mb-3">
+              Auto-assigned from compliance shift (A/B → Day, C → Night). Correct if this employee is cross-mapped.
+            </p>
             <SelectField id="review-shift" label="Time shift" value={timeShift} onChange={(v) => setTimeShift(v as 'Day' | 'Night')}>
               <option value="Day">Day (6 AM – 6 PM)</option>
               <option value="Night">Night (6 PM – 6 AM)</option>
@@ -349,26 +373,24 @@ function ReviewModal({
           </div>
         )}
 
-        {/* Approver note */}
-        {isPending && canApprove && (
+        {isFlagged && canApprove && (
           <div>
-            <label className="label">Approver note (optional)</label>
+            <label className="label">Review note (optional)</label>
             <textarea
               className="input w-full min-h-[60px] resize-y"
-              placeholder="Add a note for the compliance user…"
-              value={approverNote}
-              onChange={(e) => setApproverNote(e.target.value)}
+              placeholder="Add a note about this change…"
+              value={reviewNote}
+              onChange={(e) => setReviewNote(e.target.value)}
             />
           </div>
         )}
 
-        {/* Decided state */}
-        {!isPending && (
+        {!isFlagged && (
           <div className="rounded-md border border-border bg-surface2/40 px-4 py-3 text-xs text-text-muted space-y-1">
-            <div><span className="font-semibold">Decision:</span> <Badge tone={STATUS_TONE[request.status]}>{request.status}</Badge></div>
-            {request.decidedBy && <div><span className="font-semibold">Decided by:</span> {(request.decidedBy as { name?: string }).name ?? '—'}</div>}
-            {request.decidedAt && <div><span className="font-semibold">Decided on:</span> {fmtDate(request.decidedAt.slice(0, 10))}</div>}
-            {request.approverNote && <div><span className="font-semibold">Note:</span> {request.approverNote}</div>}
+            <div><span className="font-semibold">Status:</span> <Badge tone={STATUS_TONE[request.status]}>{request.status}</Badge></div>
+            {request.reviewedBy && <div><span className="font-semibold">Reviewed by:</span> {request.reviewedBy.name ?? '—'}</div>}
+            {request.reviewedAt && <div><span className="font-semibold">Reviewed on:</span> {fmtDate(request.reviewedAt.slice(0, 10))}</div>}
+            {request.reviewNote && <div><span className="font-semibold">Note:</span> {request.reviewNote}</div>}
           </div>
         )}
 

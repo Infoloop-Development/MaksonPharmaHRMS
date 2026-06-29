@@ -5,6 +5,7 @@ import {
   EmployeeCreateStep1Schema,
   EmployeePatchBodySchema,
   MAKSON_DEPARTMENTS,
+  MAKSON_FACTORY_LOCATIONS,
   WeekdaySchema,
   type EmployeeMasked,
 } from '@mams/types';
@@ -49,7 +50,7 @@ const emptyDraft = (): Draft => ({
   name: '',
   department: MAKSON_DEPARTMENTS[0] ?? 'Confectionery',
   designation: '',
-  location: '',
+  location: MAKSON_FACTORY_LOCATIONS[0] ?? '',
   timeShift: 'Day',
   alternateShift: 'A',
   weeklyOff: 'Sunday',
@@ -135,6 +136,7 @@ export function EmployeesAddModal({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dupeWarning, setDupeWarning] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
 
@@ -211,6 +213,17 @@ export function EmployeesAddModal({
     setFormError(null);
 
     if (isCompliant) {
+      if (isEdit && employee && !dupeWarning) {
+        try {
+          const check = await employeeChangeRequestsApi.list({ status: 'Flagged', employeeId: employee.id, pageSize: 1 });
+          if (check.total > 0) {
+            setDupeWarning(true);
+            return;
+          }
+        } catch {
+          // fail-open: proceed if the check errors
+        }
+      }
       setBusy(true);
       try {
         const proposedData = {
@@ -236,15 +249,17 @@ export function EmployeesAddModal({
         };
         if (isEdit && employee) {
           await employeeChangeRequestsApi.submit({ changeType: 'update', employeeId: employee.id, proposedData, reason });
-          toast('Update request submitted for HR review', 'success');
+          toast('Employee updated', 'success');
         } else {
           await employeeChangeRequestsApi.submit({ changeType: 'create', proposedData, reason });
-          toast('New employee request submitted for HR review', 'success');
+          toast('Employee added', 'success');
         }
+        qc.invalidateQueries({ queryKey: ['employees'] });
+        qc.invalidateQueries({ queryKey: ['employees', 'next-code'] });
         qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
         onClose();
       } catch (e: unknown) {
-        setFormError(e instanceof Error ? e.message : 'Could not submit change request.');
+        setFormError(e instanceof Error ? e.message : 'Could not save employee.');
       } finally {
         setBusy(false);
       }
@@ -375,7 +390,7 @@ export function EmployeesAddModal({
         </button>
       ) : (
         <button type="button" className="btn-primary" onClick={onSubmit} disabled={busy}>
-          {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Save employee'}
+          {busy ? 'Saving…' : isEdit ? (dupeWarning ? 'Submit anyway' : 'Save changes') : 'Save employee'}
         </button>
       )}
     </>
@@ -385,9 +400,7 @@ export function EmployeesAddModal({
     <Modal
       open
       onClose={onClose}
-      title={isEdit
-        ? (isCompliant ? 'Request employee update' : 'Edit employee')
-        : (isCompliant ? 'Request new employee' : 'Add employee')}
+      title={isEdit ? 'Edit employee' : 'Add employee'}
       size="xl"
       footer={footer}
     >
@@ -411,6 +424,11 @@ export function EmployeesAddModal({
           </div>
         </div>
 
+        {dupeWarning && isEdit && isCompliant && (
+          <div className="text-sm text-amber bg-amber-bg px-3 py-2 rounded" role="alert">
+            This employee already has a pending review. Are you sure you want to submit another change?
+          </div>
+        )}
         {formError && (
           <div className="text-sm text-red bg-red-bg px-3 py-2 rounded" role="alert">
             {formError}
@@ -470,11 +488,11 @@ export function EmployeesAddModal({
                   <input id="add-desig" className={`input ${err('designation') ? 'ring-1 ring-red' : ''}`} value={draft.designation} onChange={(e) => set('designation', e.target.value)} />
                   {err('designation') && <p className="mt-1 text-[11px] text-red">{err('designation')}</p>}
                 </div>
-                <div>
-                  <label htmlFor="add-loc" className="label">Location</label>
-                  <input id="add-loc" className={`input ${err('location') ? 'ring-1 ring-red' : ''}`} value={draft.location} onChange={(e) => set('location', e.target.value)} />
-                  {err('location') && <p className="mt-1 text-[11px] text-red">{err('location')}</p>}
-                </div>
+                <SelectField id="add-loc" label="Location" value={draft.location} onChange={(v) => set('location', v)} error={err('location')}>
+                  {MAKSON_FACTORY_LOCATIONS.map((l) => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </SelectField>
                 {!isCompliant && (
                   <SelectField id="add-shift" label="Time shift (real)" value={draft.timeShift} onChange={(v) => set('timeShift', v as Draft['timeShift'])} error={err('timeShift')}>
                     <option value="Day">Day</option>

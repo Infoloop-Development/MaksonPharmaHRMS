@@ -29,7 +29,7 @@ import { AdminFeatureFlags } from './pages/admin/AdminFeatureFlags';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
 import { ComplianceAttendanceLog } from './pages/ComplianceAttendanceLog';
-import { defaultHomePath } from '@mams/types';
+import { defaultHomePath, type Permission } from '@mams/types';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
@@ -44,6 +44,13 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function RequireAuthSession({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function RequirePermission({ permission, fallback, children }: { permission: Permission; fallback: string; children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.permissions.includes(permission)) return <Navigate to={fallback} replace />;
   return <>{children}</>;
 }
 
@@ -111,7 +118,14 @@ export function App() {
         <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />
         <Route path="compliance-activity" element={<ComplianceActivity/>} />
-        <Route path="employee-change-requests" element={<EmployeeChangeRequests />} />
+        <Route
+          path="employee-change-requests"
+          element={
+            <RequirePermission permission="approve.employee_change" fallback="/employees">
+              <EmployeeChangeRequests />
+            </RequirePermission>
+          }
+        />
         <Route path="settings" element={<SettingsGate />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />
