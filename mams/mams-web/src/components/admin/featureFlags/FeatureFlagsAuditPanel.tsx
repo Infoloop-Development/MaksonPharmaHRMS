@@ -4,6 +4,7 @@ import { activityApi, ORG_ACTIVITY_QUERY_PREFIX } from '../../../api/activity';
 import { AdminSectionCard } from '../../ui/AdminSectionCard';
 import { SortableTh } from '../../ui/SortableTh';
 import { useTableSort } from '../../../lib/tableSort';
+import { tableColumnTooltip } from '../../../lib/tooltips/tableColumnTooltips';
 
 type AuditRow = {
   id: string;
@@ -67,9 +68,9 @@ export function FeatureFlagsAuditPanel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Event" sortKey="event" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1" />
-                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1" />
-                <SortableTh label="When" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1 text-right" />
+                <SortableTh label="Event" sortKey="event" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1" tooltip={tableColumnTooltip('audit', 'event')} />
+                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1" tooltip={tableColumnTooltip('audit', 'user')} />
+                <SortableTh label="When" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2 px-1 text-right" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { ComplianceShiftSchema, SortDirSchema } from '@mams/types';
+import { ComplianceShiftSchema, CreateReportJobBodySchema, SortDirSchema } from '@mams/types';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import {
@@ -9,23 +9,15 @@ import {
   yesterdayIstDateString,
 } from '../services/complianceAutogen.service.js';
 import { listComplianceGeneratedAttendance } from '../services/complianceAttendanceList.service.js';
-import {
-  buildComplianceMonthlyReportXlsx,
-  complianceReportFilename,
-  REPORT_BUILD_MAX_MS,
-  resolveComplianceReportEmployees,
-} from '../services/complianceMonthlyReport.service.js';
-import {
-  buildFinancialReportRows,
-  buildFinancialReportXlsx,
-  financialReportFilename,
-} from '../services/complianceFinancialReport.service.js';
 import { sumComplianceHoursForMonth } from '../services/complianceHoursAggregate.service.js';
-import { XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
 import { updateComplianceGeneratedAttendance } from '../services/complianceAttendanceUpdate.service.js';
 import { ComplianceAttendanceUpdateSchema } from '@mams/types';
+import {
+  enqueueReportJob,
+  getReportJobDownload,
+  getReportJobForUser,
+} from '../services/reportJob.service.js';
 import { env } from '../config/env.js';
-import { logger } from '../utils/logger.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -62,88 +54,55 @@ router.get('/', requirePermission('read.compliant'), async (req, res, next) => {
   }
 });
 
-const ReportBodySchema = z.object({
-  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
-  overrides: z
-    .array(
-      z.object({
-        employeeId: z.string().min(1),
-        totalHours: z.number().min(0),
-      })
-    )
-    .max(500)
-    .default([]),
-});
+const REPORT_DEPRECATED_MESSAGE =
+  'Synchronous report download is deprecated. Use POST /compliance-attendance/report-jobs and poll for completion.';
 
-const REPORT_TOO_LARGE_EMPLOYEES = 3000;
-
-const REPORT_GENERATION_FAILED_MESSAGE =
-  'Report generation failed (likely timeout with large staff count). Try again off-peak or contact admin.';
-
-router.post('/report.xlsx', requirePermission('read.compliant'), async (req, res, next) => {
-  const startedAt = Date.now();
-  let employeeCount = 0;
-
+router.post('/report-jobs', requirePermission('read.compliant'), async (req, res, next) => {
   try {
-    const body = ReportBodySchema.parse(req.body);
-    const employees = await resolveComplianceReportEmployees(body.yearMonth, body.overrides);
-    employeeCount = employees.length;
-
-    if (employeeCount > REPORT_TOO_LARGE_EMPLOYEES) {
-      throw new ApiError(
-        503,
-        'report_too_large',
-        'Report too large for one download; contact admin or retry off-peak.'
-      );
+    const body = CreateReportJobBodySchema.parse(req.body);
+    if (body.type === 'financial' && req.auth!.role !== 'org.admin') {
+      throw new ApiError(403, 'forbidden', 'Org admin only');
     }
-
-    let buffer: Buffer;
-    try {
-      buffer = await buildComplianceMonthlyReportXlsx(
-        {
-          yearMonth: body.yearMonth,
-          employees,
-        },
-        { startedAt }
-      );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Report build failed';
-      const isTimeout =
-        message.includes('exceeded') ||
-        Date.now() - startedAt > REPORT_BUILD_MAX_MS - 5_000;
-      if (isTimeout || employeeCount > 500) {
-        throw new ApiError(503, 'report_generation_failed', REPORT_GENERATION_FAILED_MESSAGE);
-      }
-      throw new ApiError(400, 'report_build_failed', message);
-    }
-
-    logger.info('compliance_monthly_report_generated', {
-      yearMonth: body.yearMonth,
-      employeeCount,
-      elapsedMs: Date.now() - startedAt,
-    });
-    const filename = complianceReportFilename(body.yearMonth);
-    res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(buffer);
+    const result = await enqueueReportJob(req.auth!.sub, body);
+    res.status(202).json(result);
   } catch (err) {
-    if (!(err instanceof ApiError)) {
-      logger.error('compliance_monthly_report_failed', {
-        employeeCount,
-        elapsedMs: Date.now() - startedAt,
-        err: String(err),
-      });
-      if (employeeCount > 500 || Date.now() - startedAt > 20_000) {
-        next(new ApiError(503, 'report_generation_failed', REPORT_GENERATION_FAILED_MESSAGE));
-        return;
-      }
-    }
     next(err);
   }
 });
 
-const FinancialReportBodySchema = z.object({
-  yearMonth: z.string().regex(/^\d{4}-\d{2}$/),
+router.get('/report-jobs/:id', requirePermission('read.compliant'), async (req, res, next) => {
+  try {
+    const job = await getReportJobForUser(req.params.id!, req.auth!.sub, req.auth!.role);
+    res.json(job);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/report-jobs/:id/download', requirePermission('read.compliant'), async (req, res, next) => {
+  try {
+    const job = await getReportJobForUser(req.params.id!, req.auth!.sub, req.auth!.role);
+    if (job.type === 'financial' && req.auth!.role !== 'org.admin') {
+      throw new ApiError(403, 'forbidden', 'Org admin only');
+    }
+    const { buffer, filename, mimeType } = await getReportJobDownload(
+      req.params.id!,
+      req.auth!.sub,
+      req.auth!.role
+    );
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/report.xlsx', requirePermission('read.compliant'), (_req, res) => {
+  res.status(410).json({
+    error: 'deprecated',
+    message: REPORT_DEPRECATED_MESSAGE,
+  });
 });
 
 router.get(
@@ -169,18 +128,11 @@ router.post(
   '/financial-report.xlsx',
   requirePermission('read.compliant'),
   requireOrgAdmin,
-  async (req, res, next) => {
-    try {
-      const body = FinancialReportBodySchema.parse(req.body);
-      const rows = await buildFinancialReportRows(body.yearMonth);
-      const buffer = buildFinancialReportXlsx(rows);
-      const filename = financialReportFilename(body.yearMonth);
-      res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.send(buffer);
-    } catch (err) {
-      next(err);
-    }
+  (_req, res) => {
+    res.status(410).json({
+      error: 'deprecated',
+      message: REPORT_DEPRECATED_MESSAGE,
+    });
   }
 );
 

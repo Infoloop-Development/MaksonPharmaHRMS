@@ -216,7 +216,7 @@ function valuesEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
-/** Build audit diff for settings PATCH — only keys whose values actually changed. */
+/** Build audit diff for settings PATCH: only keys whose values actually changed. */
 export function diffSettingsValues(
   doc: Record<string, unknown>,
   patch: Record<string, unknown>
@@ -260,8 +260,10 @@ export function settingsSectionFromChangedFields(fields: string[]): string {
   const exportNaming = new Set(['exportNaming']);
   const brandAssets = new Set(['companyLogo', 'favicon', 'orgBranding']);
   const timeDisplay = new Set(['timeFormat']);
+  const orgNotifications = new Set(['orgNotificationAlerts']);
 
   if (fields.some((f) => brandAssets.has(f))) return 'brand_assets';
+  if (fields.some((f) => orgNotifications.has(f))) return 'org_notifications';
   if (fields.some((f) => timeDisplay.has(f))) return 'time_display';
   if (fields.some((f) => company.has(f))) return 'company';
   if (fields.some((f) => compliance.has(f))) return 'compliance';

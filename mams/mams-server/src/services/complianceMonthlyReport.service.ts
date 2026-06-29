@@ -120,7 +120,10 @@ function dailyRowsForEmployee(
 
 export async function buildComplianceMonthlyReportXlsx(
   input: ComplianceMonthlyReportInput,
-  options?: { startedAt?: number }
+  options?: {
+    startedAt?: number;
+    onProgress?: (processed: number, total: number) => void | Promise<void>;
+  }
 ): Promise<Buffer> {
   const buildStartedAt = options?.startedAt ?? Date.now();
 
@@ -203,9 +206,12 @@ export async function buildComplianceMonthlyReportXlsx(
 
     processed += 1;
     if (processed % REPORT_BUILD_YIELD_EVERY === 0) {
+      await options?.onProgress?.(processed, input.employees.length);
       await yieldToEventLoop();
     }
   }
+
+  await options?.onProgress?.(processed, input.employees.length);
 
   const wb = XLSX.utils.book_new();
   const summaryWs = XLSX.utils.aoa_to_sheet([summaryHeaders, ...summaryRows]);

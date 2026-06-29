@@ -72,6 +72,24 @@ export interface FinancialReportRequest {
   yearMonth: string;
 }
 
+export interface ReportJobCreated {
+  jobId: string;
+  status: 'queued';
+}
+
+export interface ReportJobStatus {
+  jobId: string;
+  type: 'compliance_monthly' | 'financial';
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  yearMonth: string;
+  filename?: string | null;
+  errorMessage?: string | null;
+  employeeCount?: number | null;
+  processedCount?: number | null;
+  createdAt?: string;
+  completedAt?: string | null;
+}
+
 export const complianceAttendanceApi = {
   list: (q: {
     date?: string;
@@ -96,6 +114,19 @@ export const complianceAttendanceApi = {
     api.post<ComplianceAutogenMonthResult>(
       `/compliance-attendance/generate-month?yearMonth=${encodeURIComponent(yearMonth)}`
     ),
+  createComplianceReportJob: (body: ComplianceReportRequest) =>
+    api.post<ReportJobCreated>('/compliance-attendance/report-jobs', {
+      type: 'compliance_monthly',
+      yearMonth: body.yearMonth,
+      overrides: body.overrides ?? [],
+    }),
+  createFinancialReportJob: (body: FinancialReportRequest) =>
+    api.post<ReportJobCreated>('/compliance-attendance/report-jobs', {
+      type: 'financial',
+      yearMonth: body.yearMonth,
+    }),
+  getReportJob: (jobId: string) =>
+    api.get<ReportJobStatus>(`/compliance-attendance/report-jobs/${jobId}`),
   downloadMonthlyReport: (body: ComplianceReportRequest) =>
     downloadAuthenticatedExportPost(
       '/compliance-attendance/report.xlsx',

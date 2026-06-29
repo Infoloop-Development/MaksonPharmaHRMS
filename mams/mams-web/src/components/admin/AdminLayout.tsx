@@ -4,9 +4,11 @@ import { useAuth } from '../../store/auth';
 import { canAccessAdminConsole } from '@mams/types';
 import { AdminSidebar } from './AdminSidebar';
 import { TopBar } from '../TopBar';
+import { MobileBottomNav } from '../MobileBottomNav';
 import { ToastContainer } from '../ui/Toast';
 import { settingsApi } from '../../api/settings';
 import { TimeFormatProvider } from '../../store/timeFormat';
+import { hasMobileBottomNav } from '../../lib/mobileBottomNav';
 import { useState, useCallback, useEffect } from 'react';
 
 export function AdminLayout() {
@@ -41,24 +43,35 @@ export function AdminLayout() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const showMobileBottomNav = hasMobileBottomNav(user?.role);
+
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
-      <div className="flex min-h-screen overflow-x-hidden bg-bg">
+      <div
+        className={`min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+      >
+        <TopBar
+          onOpenMenu={openSidebar}
+          companyName={settings?.companyName}
+          companyLogo={settings?.companyLogo}
+        />
         <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
         {sidebarOpen && (
           <button
             type="button"
-            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden app-sidebar-backdrop"
             aria-label="Close menu"
             onClick={closeSidebar}
           />
         )}
-        <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[250px]">
-          <TopBar onOpenMenu={openSidebar} title="Administration" />
-          <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
-            <Outlet />
-          </main>
-        </div>
+        <main
+          className={`app-shell-main app-shell-with-sidebar px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden${
+            showMobileBottomNav ? ' has-mobile-bottom-nav' : ''
+          }`}
+        >
+          <Outlet />
+        </main>
+        <MobileBottomNav />
         <ToastContainer />
       </div>
     </TimeFormatProvider>

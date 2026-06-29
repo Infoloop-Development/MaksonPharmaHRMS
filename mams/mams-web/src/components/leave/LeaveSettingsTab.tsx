@@ -8,6 +8,7 @@ import { LeaveTypeFormModal } from './LeaveTypeFormModal';
 import { LeaveTypeCardList } from './LeaveTypeCardList';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
   const toast = useToast((s) => s.push);
@@ -103,11 +104,11 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-                <SortableTh label="Paid" sortKey="paid" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-                <SortableTh label="Half day" sortKey="halfDayEligible" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-                <SortableTh label="Default quota" sortKey="annualQuotaDefault" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-                <SortableTh label="Active" sortKey="active" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'name')} />
+                <SortableTh label="Paid" sortKey="paid" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'paid')} />
+                <SortableTh label="Half day" sortKey="halfDayEligible" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'halfDayEligible')} />
+                <SortableTh label="Default quota" sortKey="annualQuotaDefault" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'annualQuotaDefault')} />
+                <SortableTh label="Active" sortKey="active" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'active')} />
                 {canConfigure && <th className="px-4 py-3" />}
               </tr>
             </thead>

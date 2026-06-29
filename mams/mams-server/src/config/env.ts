@@ -26,6 +26,10 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => v === 'true' || v === '1'),
   COMPLIANCE_AUTOGEN_CRON_SECRET: z.string().optional(),
+  REPORT_JOBS_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== 'false' && v !== '0'),
 });
 
 export const env = EnvSchema.parse(process.env);

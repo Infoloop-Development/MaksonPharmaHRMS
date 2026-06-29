@@ -1,8 +1,10 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Field, Input, Select } from '../components/ui/Field';
 import { Badge } from '../components/ui/Badge';
+import { EMPTY_CELL } from '../lib/format';
 import { SortableTh } from '../components/ui/SortableTh';
 import { useTableSort } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { ComplianceMonthCalendar } from '../components/autogen/ComplianceMonthCalendar';
 import { computeMonthlyPlan, formatCheckOutLabel, type MonthlyPlanDay } from '../lib/monthlyCompliancePlanner';
 import {
@@ -61,7 +63,7 @@ function statusLabel(status: string) {
     case 'weeklyOff':
       return 'Weekly Off';
     default:
-      return '—';
+      return EMPTY_CELL;
   }
 }
 
@@ -133,13 +135,13 @@ function ComplianceDayRow({ day }: { day: MonthlyPlanDay }) {
         <DayStatusBadge status={day.status} />
       </td>
       <td className="py-2.5 pr-4 text-sm text-text max-w-[120px] truncate" title={day.involvedPerson ?? undefined}>
-        {day.involvedPerson ?? '—'}
+        {day.involvedPerson ?? EMPTY_CELL}
       </td>
-      <td className="py-2.5 pr-4 font-mono text-xs text-text">{day.checkIn ?? '—'}</td>
+      <td className="py-2.5 pr-4 font-mono text-xs text-text">{day.checkIn ?? EMPTY_CELL}</td>
       <td className="py-2.5 pr-4 font-mono text-xs text-text">
-        {day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : '—'}
+        {day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : EMPTY_CELL}
       </td>
-      <td className="py-2.5 pr-4 font-mono text-xs text-primary-on-bg">{day.hoursWorkedFormatted ?? '—'}</td>
+      <td className="py-2.5 pr-4 font-mono text-xs text-primary-on-bg">{day.hoursWorkedFormatted ?? EMPTY_CELL}</td>
     </tr>
   );
 }
@@ -164,17 +166,17 @@ function ComplianceDayCard({ day }: { day: MonthlyPlanDay }) {
         <dl className="grid grid-cols-2 gap-2 text-xs font-mono">
           <div className="rounded bg-surface2 px-2 py-1.5">
             <dt className="text-text-subtle text-[10px] uppercase">Check in</dt>
-            <dd className="text-text mt-0.5">{day.checkIn ?? '—'}</dd>
+            <dd className="text-text mt-0.5">{day.checkIn ?? EMPTY_CELL}</dd>
           </div>
           <div className="rounded bg-surface2 px-2 py-1.5">
             <dt className="text-text-subtle text-[10px] uppercase">Check out</dt>
             <dd className="text-text mt-0.5">
-              {day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : '—'}
+              {day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : EMPTY_CELL}
             </dd>
           </div>
           <div className="col-span-2 rounded bg-primary-bg/50 px-2 py-1.5">
             <dt className="text-text-subtle text-[10px] uppercase">Hours worked</dt>
-            <dd className="text-primary-on-bg font-semibold mt-0.5">{day.hoursWorkedFormatted ?? '—'}</dd>
+            <dd className="text-primary-on-bg font-semibold mt-0.5">{day.hoursWorkedFormatted ?? EMPTY_CELL}</dd>
           </div>
         </dl>
       )}
@@ -320,7 +322,7 @@ export function AutogenerationDemo() {
           </Field>
           <Field
             label="Personnel involved"
-            hint="Comma-separated names — rotated across present days"
+            hint="Comma-separated names, rotated across present days"
           >
             <Input
               value={involvedPersonnel}
@@ -383,7 +385,7 @@ export function AutogenerationDemo() {
               </p>
             )}
 
-            <h3 className="font-semibold mb-3">Calendar — {yearMonth}</h3>
+            <h3 className="font-semibold mb-3">Calendar: {yearMonth}</h3>
             <ComplianceMonthCalendar weeks={monthlyPlan.calendarWeeks} />
 
             <h3 className="font-semibold mb-3 text-text">Daily attendance</h3>
@@ -402,10 +404,10 @@ export function AutogenerationDemo() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-text-muted uppercase border-b border-border">
-                    <SortableTh label="Date" sortKey="date" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
-                    <SortableTh label="Weekday" sortKey="weekday" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
-                    <SortableTh label="Status" sortKey="status" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
-                    <SortableTh label="Involved" sortKey="involved" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
+                    <SortableTh label="Date" sortKey="date" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" tooltip={tableColumnTooltip('reports', 'date') ?? 'Calendar date for this compliance day.'} />
+                    <SortableTh label="Weekday" sortKey="weekday" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" tooltip="Day of week for the scheduled shift." />
+                    <SortableTh label="Status" sortKey="status" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" tooltip={tableColumnTooltip('reports', 'status') ?? 'Whether this day counts as working, off, or holiday.'} />
+                    <SortableTh label="Involved" sortKey="involved" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" tooltip="Whether the employee is included in autogen for this day." />
                     <th className="py-2 pr-4">
                       Check in
                       <span className="block normal-case text-text-subtle font-normal">HH:mm:ss</span>
@@ -414,7 +416,7 @@ export function AutogenerationDemo() {
                       Check out
                       <span className="block normal-case text-text-subtle font-normal">HH:mm:ss</span>
                     </th>
-                    <SortableTh label="Hours" sortKey="hours" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" />
+                    <SortableTh label="Hours" sortKey="hours" activeCol={daySort.sortCol} sortArrow={daySort.sortArrow} onSort={daySort.toggleSort} className="py-2 pr-4" tooltip={tableColumnTooltip('reports', 'hours') ?? 'Computed compliant hours for the day.'} />
                   </tr>
                 </thead>
                 <tbody>
@@ -436,7 +438,7 @@ export function AutogenerationDemo() {
         <div className="mt-6 space-y-4">
 
       <div className="card p-4 md:p-6 mb-4 border-l-4 border-l-amber bg-amber-bg/40">
-        <h2 className="text-lg font-bold mb-3">How it works — leave, lateness, and the maths</h2>
+        <h2 className="text-lg font-bold mb-3">How it works: leave, lateness, and the maths</h2>
 
         <div className="space-y-4 text-sm text-text">
           <section>
@@ -447,13 +449,13 @@ export function AutogenerationDemo() {
             </p>
             <p className="text-text-muted leading-relaxed mt-2">
               The <strong>alternate (auto-generated) shift follows the same rule</strong>: there is no
-              alternate clock-in or clock-out to generate — that day is also <strong>leave on the alternate
+              alternate clock-in or clock-out to generate; that day is also <strong>leave on the alternate
               shift</strong>. You will not see generated alternate times below until valid main punches (X and Y)
               are entered.
             </p>
             <p className="text-text-muted leading-relaxed mt-2">
               If <strong>leave is already scheduled</strong> on the main shift (planned absence), that status is
-              <strong> mirrored on the alternate shift</strong> as well — both records stay in sync for
+              <strong> mirrored on the alternate shift</strong> as well; both records stay in sync for
               reporting.
             </p>
           </section>
@@ -463,24 +465,24 @@ export function AutogenerationDemo() {
             <p className="text-text-muted leading-relaxed mb-3">
               Think of two shifts on the same day: the <strong>real</strong> shift (what actually happened) and
               the <strong>alternate</strong> shift (times created for compliance reports). They should tell the
-              same story — especially <strong>how late</strong> someone was and <strong>how long</strong> they
+              same story, especially <strong>how late</strong> someone was and <strong>how long</strong> they
               worked.
             </p>
             <ul className="list-disc pl-5 space-y-2 text-text-muted leading-relaxed">
               <li>
-                <strong>X</strong> — real clock-in on the main shift (e.g. night shift).
+                <strong>X</strong>: real clock-in on the main shift (e.g. night shift).
               </li>
               <li>
-                <strong>Y</strong> — real clock-out on the main shift.
+                <strong>Y</strong>: real clock-out on the main shift.
               </li>
               <li>
-                <strong>A</strong> — earliest allowed alternate clock-in (start of the window).
+                <strong>A</strong>: earliest allowed alternate clock-in (start of the window).
               </li>
               <li>
-                <strong>B</strong> — last on-time alternate clock-in (end of the on-time window).
+                <strong>B</strong>: last on-time alternate clock-in (end of the on-time window).
               </li>
               <li>
-                <strong>Last on-time login (main)</strong> — if X is after this, the employee was late on the
+                <strong>Last on-time login (main)</strong>: if X is after this, the employee was late on the
                 main shift.
               </li>
             </ul>
@@ -515,7 +517,7 @@ export function AutogenerationDemo() {
                 <strong>How long did they work?</strong>
                 <br />
                 <span className="font-mono text-xs text-text">worked = Y − X</span> (overnight shifts are
-                handled — e.g. night in to morning out).
+                handled (e.g. night in to morning out).
               </li>
               <li>
                 <strong>Alternate clock-out</strong>
@@ -560,7 +562,7 @@ export function AutogenerationDemo() {
       </div>
 
       <div className="card p-4 md:p-6 mb-4">
-        <h2 className="text-lg font-bold mb-4">Main shift (real) — X and Y</h2>
+        <h2 className="text-lg font-bold mb-4">Main shift (real): X and Y</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <TimeField
@@ -595,7 +597,7 @@ export function AutogenerationDemo() {
           This span is added to alternate clock-in to get alternate clock-out.
         </p>
         <div className="font-mono text-xl font-semibold text-text">
-          {result.durationFormatted ?? '—'}
+          {result.durationFormatted ?? EMPTY_CELL}
         </div>
       </div>
 
@@ -611,13 +613,13 @@ export function AutogenerationDemo() {
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TimeField
-            label="A — alternate range start (on-time clock-in)"
+            label="A: alternate range start (on-time clock-in)"
             value={bufferStart}
             onChange={setBufferStart}
             error={result.errors.bufferStart}
           />
           <TimeField
-            label="B — last on-time alternate login (late anchor)"
+            label="B: last on-time alternate login (late anchor)"
             value={bufferEnd}
             onChange={setBufferEnd}
             error={result.errors.bufferEnd}
@@ -661,7 +663,7 @@ export function AutogenerationDemo() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-text-muted uppercase border-b border-border">
-                <SortableTh label="Employee" sortKey="employee" activeCol={batchSort.sortCol} sortArrow={batchSort.sortArrow} onSort={batchSort.toggleSort} className="py-2 pr-4" />
+                <SortableTh label="Employee" sortKey="employee" activeCol={batchSort.sortCol} sortArrow={batchSort.sortArrow} onSort={batchSort.toggleSort} className="py-2 pr-4" tooltip={tableColumnTooltip('leave', 'employee') ?? 'Employee identifier in the comparison table.'} />
                 <th className="py-2 pr-4">Main X</th>
                 <th className="py-2 pr-4">Main Y</th>
                 <th className="py-2 pr-4">Alternate in</th>
@@ -698,11 +700,11 @@ export function AutogenerationDemo() {
                       />
                     </td>
                     <td className="py-3 pr-4 font-mono text-xs">
-                      {g?.alternateClockIn ?? '—'}
+                      {g?.alternateClockIn ?? EMPTY_CELL}
                       <AlternateStatus late={g?.lateInLabel ?? null} onTime={g?.onTimeLabel ?? null} />
                     </td>
                     <td className="py-3 pr-4 font-mono text-xs">
-                      {g ? formatOutDisplay(g.alternateClockOut, g.alternateClockOutNextDay) : '—'}
+                      {g ? formatOutDisplay(g.alternateClockOut, g.alternateClockOutNextDay) : EMPTY_CELL}
                       <AlternateStatus late={g?.lateInLabel ?? null} onTime={g?.onTimeLabel ?? null} />
                     </td>
                   </tr>

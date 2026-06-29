@@ -110,6 +110,18 @@ const settingsSchema = new Schema(
         updatedBy: null,
       }),
     },
+    orgNotificationAlerts: {
+      type: {
+        visitorSubmitted: { type: Boolean, default: true },
+        leaveApplied: { type: Boolean, default: true },
+        deviceRegistered: { type: Boolean, default: true },
+      },
+      default: () => ({
+        visitorSubmitted: true,
+        leaveApplied: true,
+        deviceRegistered: true,
+      }),
+    },
   },
   { timestamps: true }
 );

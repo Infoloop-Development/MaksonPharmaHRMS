@@ -7,6 +7,7 @@ import { Modal } from '../ui/Modal';
 import { Field, Input, Select, Textarea } from '../ui/Field';
 import { TimeInput } from '../ui/TimeInput';
 import { useTimeDisplay } from '../../store/timeFormat';
+import { EMPTY_CELL } from '../../lib/format';
 import type { RegularizationType } from '@mams/types';
 import {
   regularizationTypeNeedsIn,
@@ -157,8 +158,8 @@ export function CreateRegularizationModal({ onClose }: { onClose: () => void }) 
                 <div>
                   <div className="text-xs text-text-muted">Current IN / OUT</div>
                   <div className="font-mono text-xs">
-                    {previewQ.data.derived?.realEntryAt ? fmtTime(previewQ.data.derived.realEntryAt) : '—'} /{' '}
-                    {previewQ.data.derived?.realExitAt ? fmtTime(previewQ.data.derived.realExitAt) : '—'}
+                    {previewQ.data.derived?.realEntryAt ? fmtTime(previewQ.data.derived.realEntryAt) : EMPTY_CELL} /{' '}
+                    {previewQ.data.derived?.realExitAt ? fmtTime(previewQ.data.derived.realExitAt) : EMPTY_CELL}
                   </div>
                 </div>
                 <div>

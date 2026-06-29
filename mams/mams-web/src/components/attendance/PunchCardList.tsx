@@ -1,4 +1,4 @@
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 
 export interface PunchRow {
@@ -15,7 +15,7 @@ export interface PunchRow {
 
 function OutsideShiftBadge({ punch }: { punch: PunchRow }) {
   if (punch.punchType !== 'IN') {
-    return <span className="text-text-muted">—</span>;
+    return <span className="text-text-muted">{EMPTY_CELL}</span>;
   }
   if (punch.outsideMainShift === true) {
     return (
@@ -31,7 +31,7 @@ function OutsideShiftBadge({ punch }: { punch: PunchRow }) {
       </span>
     );
   }
-  return <span className="text-text-muted">—</span>;
+  return <span className="text-text-muted">{EMPTY_CELL}</span>;
 }
 
 export function PunchCardList({
@@ -67,9 +67,9 @@ export function PunchCardList({
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="font-semibold text-text">{p.employeeId?.name ?? '—'}</div>
+              <div className="font-semibold text-text">{p.employeeId?.name ?? EMPTY_CELL}</div>
               <div className="font-mono text-xs text-text-muted">
-                {p.employeeId?.empCode ?? '—'} · Bio {p.biometricId}
+                {p.employeeId?.empCode ?? EMPTY_CELL} · Bio {p.biometricId}
               </div>
             </div>
             <span

@@ -10,6 +10,7 @@ import { HolidayFormModal, type HolidayRow } from './HolidayFormModal';
 import { LeaveHolidayCardList } from './LeaveHolidayCardList';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 function parseHolidayCsv(text: string): HolidayCreate[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
@@ -95,9 +96,9 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-              <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-              <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'name')} />
+              <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'date')} />
+              <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'type')} />
               <th className="px-4 py-3">Scope</th>
               {canConfigure && <th className="px-4 py-3" />}
             </tr>

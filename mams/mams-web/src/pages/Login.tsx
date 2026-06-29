@@ -76,11 +76,11 @@ export function Login() {
         <div className="mt-6 p-3 bg-surface2 rounded-md text-[11px] text-text-subtle leading-relaxed">
           <strong>Demo credentials</strong> (password <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">makson2026</code>):
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">org.admin@makson-group.com</code> — Admin Console
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">org.admin@makson-group.com</code>: Admin Console
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.admin@makson-group.com</code> — HR (real / 12-hour view)
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.admin@makson-group.com</code>: HR (real / 12-hour view)
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.compliance@makson-group.com</code> — Compliance (8-hour view)
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.compliance@makson-group.com</code>: Compliance (8-hour view)
           <br />
           <span className="text-text-muted">First time or login fails? From the <code className="bg-border px-1 rounded">mams</code> folder run: <code className="bg-border px-1 rounded">npm run seed:users</code></span>
         </div>

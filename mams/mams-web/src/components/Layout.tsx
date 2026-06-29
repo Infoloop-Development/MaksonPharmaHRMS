@@ -3,10 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { MobileBottomNav } from './MobileBottomNav';
 import { ToastContainer } from './ui/Toast';
 import { authApi } from '../api/auth';
 import { settingsApi } from '../api/settings';
 import { useAuth } from '../store/auth';
+import { hasMobileBottomNav } from '../lib/mobileBottomNav';
 import { TimeFormatProvider } from '../store/timeFormat';
 
 export function Layout() {
@@ -14,6 +16,7 @@ export function Layout() {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
   const accessToken = useAuth((s) => s.accessToken);
+  const user = useAuth((s) => s.user);
   const refreshToken = useAuth((s) => s.refreshToken);
   const setUser = useAuth((s) => s.setUser);
   const setAuth = useAuth((s) => s.setAuth);
@@ -22,11 +25,11 @@ export function Layout() {
     if (!accessToken) return;
     authApi
       .me()
-      .then(async ({ user }) => {
+      .then(async ({ user: me }) => {
         const prev = useAuth.getState().user;
-        setUser(user);
+        setUser(me);
         const prevPerms = prev?.permissions ?? [];
-        const newPerms = user.permissions ?? [];
+        const newPerms = me.permissions ?? [];
         const permsChanged =
           prevPerms.length !== newPerms.length || newPerms.some((p) => !prevPerms.includes(p));
         if (permsChanged && refreshToken) {
@@ -62,24 +65,35 @@ export function Layout() {
     }
   }, [settings?.favicon]);
 
+  const showMobileBottomNav = hasMobileBottomNav(user?.role);
+
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
-      <div className="flex min-h-screen overflow-x-hidden bg-bg">
+      <div
+        className={`min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+      >
+        <TopBar
+          onOpenMenu={openSidebar}
+          companyName={settings?.companyName}
+          companyLogo={settings?.companyLogo}
+        />
         <Sidebar open={sidebarOpen} onClose={closeSidebar} />
         {sidebarOpen && (
           <button
             type="button"
-            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-20 bg-black/40 lg:hidden app-sidebar-backdrop"
             aria-label="Close menu"
             onClick={closeSidebar}
           />
         )}
-        <div className="flex-1 flex flex-col min-w-0 ml-0 lg:ml-[250px]">
-          <TopBar onOpenMenu={openSidebar} />
-          <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
-            <Outlet />
-          </main>
-        </div>
+        <main
+          className={`app-shell-main app-shell-with-sidebar px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden${
+            showMobileBottomNav ? ' has-mobile-bottom-nav' : ''
+          }`}
+        >
+          <Outlet />
+        </main>
+        <MobileBottomNav />
         <ToastContainer />
       </div>
     </TimeFormatProvider>

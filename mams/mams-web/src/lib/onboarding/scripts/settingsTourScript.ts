@@ -16,7 +16,7 @@ export const settingsTourScript: TourScript = {
         {
           id: 'settings-leave-link',
           title: 'Leave configuration',
-          description: 'Leave types, holidays, and quotas are on the Leave page — use this shortcut to jump there.',
+          description: 'Leave types, holidays, and quotas are on the Leave page; use this shortcut to jump there.',
           side: 'bottom',
         },
       ],

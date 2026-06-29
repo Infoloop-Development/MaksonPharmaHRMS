@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, Link as RouterLink } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
+import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
 import { downloadEmployeeCsvTemplate, uploadEmployeeCsv, type CsvImportResult } from '../api/csvImport';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
-import { fmtDate } from '../lib/format';
+import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { EmployeeDeleteModal } from './EmployeeDeleteModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
@@ -21,9 +22,12 @@ import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import type { EmployeeMasked } from '@mams/types';
 import { SortableTh } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
-import { sortArrowFor, type SortDir } from '../lib/tableSort';
+import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+
+const EMPLOYEES_DEFAULT_SORT = { col: 'empCode' as const, dir: 'asc' as const };
 
 export function Employees() {
   const { logSearch } = useActivityLog();
@@ -35,9 +39,13 @@ export function Employees() {
   const [addOpen, setAddOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
+  const [deleteRequestEmployee, setDeleteRequestEmployee] = useState<EmployeeMasked | null>(null);
   const pageSize = 50;
   const user = useAuth((s) => s.user);
+  const isCompliant = user?.viewMode === 'compliant';
   const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
+  const canWriteChangeRequest = user?.permissions.includes('write.employee_change') ?? false;
+  const canEdit = canManage || canWriteChangeRequest;
   const pageApiRef = useRef<TourPageApi>({});
 
   const { data, isLoading, error } = useQuery({
@@ -46,19 +54,23 @@ export function Employees() {
   });
 
   const toggleSort = useCallback((col: string) => {
-    const key = col as typeof sortBy;
-    setSortBy((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return key;
-      }
-      setSortDir('asc');
-      return key;
-    });
+    const next = nextSortState(
+      col,
+      { col: sortBy, dir: sortDir },
+      EMPLOYEES_DEFAULT_SORT
+    );
+    setSortBy((next.col ?? EMPLOYEES_DEFAULT_SORT.col) as typeof sortBy);
+    setSortDir(next.dir);
     setPage(1);
-  }, []);
+  }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy, sortDir), [sortBy, sortDir]);
+
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['employee-change-requests', { status: 'Pending' }],
+    queryFn: () => employeeChangeRequestsApi.list({ status: 'Pending', pageSize: 200 }),
+    enabled: isCompliant,
+  });
 
   const tour = usePageTourController('employees', employeesTourScript, {
     pageApiRef,
@@ -79,12 +91,15 @@ export function Employees() {
       setAddOpen(false);
       setEditEmployee(null);
       setDeleteEmployee(null);
+      setDeleteRequestEmployee(null);
     },
   };
 
   useEffect(() => {
     logSearch('employees', 'search', { search: search.trim() });
   }, [search, logSearch]);
+
+  const tableColSpan = 8 + (isCompliant ? 0 : 1) + (canEdit ? 1 : 0);
 
   return (
     <div>
@@ -97,22 +112,35 @@ export function Employees() {
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0 page-toolbar">
           <GiveMeATourButton onClick={tour.onReplayTour} />
-        {canManage && (
+        {canEdit && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-              Add employee
+              {isCompliant ? 'Request new employee' : 'Add employee'}
             </button>
-            <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
-              Import CSV
-            </button>
+            {canManage && (
+              <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
+                Import CSV
+              </button>
+            )}
           </div>
         )}
         </div>
       </div>
 
-      {canManage && (
+      {canManage && !isCompliant && (
         <div data-tour-id="employees-biometric-banner">
           <BiometricIdBanner />
+        </div>
+      )}
+
+      {isCompliant && pendingRequests && pendingRequests.counts.Pending > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
+          <span className="font-semibold">
+            {pendingRequests.counts.Pending} change request{pendingRequests.counts.Pending !== 1 ? 's' : ''} pending HR review.
+          </span>
+          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">
+            View requests
+          </RouterLink>
         </div>
       )}
 
@@ -135,9 +163,9 @@ export function Employees() {
         items={data?.items}
         isLoading={isLoading}
         error={!!error}
-        canManage={canManage}
+        canManage={canEdit}
         onEdit={setEditEmployee}
-        onDelete={setDeleteEmployee}
+        onDelete={(e) => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
       />
 
       <div className="card overflow-hidden hidden md:block" data-tour-id="employees-table">
@@ -145,24 +173,24 @@ export function Employees() {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
                 <th className="px-4 py-3 font-semibold">Biometric ID</th>
-                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'department')} />
                 <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Shift</th>
-                <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>
-                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" />
-                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                {canManage && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
+                {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>}
+                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('employees', 'joinDate')} />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'status')} />
+                {canEdit && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={canManage ? 10 : 9} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {error && (
-                <tr><td colSpan={canManage ? 10 : 9} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
+                <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
@@ -173,19 +201,23 @@ export function Employees() {
                   </td>
                   <td className="px-4 py-3">{e.department}</td>
                   <td className="px-4 py-3 text-xs text-text-muted">{e.location}</td>
-                  <td className="px-4 py-3">{e.timeShift}</td>
-                  <td className="px-4 py-3 font-mono text-xs hidden xl:table-cell">{e.alternateShift}</td>
+                  <td className="px-4 py-3">{isCompliant ? e.alternateShift : e.timeShift}</td>
+                  {!isCompliant && <td className="px-4 py-3 font-mono text-xs hidden xl:table-cell">{e.alternateShift}</td>}
                   <td className="px-4 py-3 text-xs text-text-muted hidden xl:table-cell">{fmtDate(e.joinDate.slice(0, 10))}</td>
                   <td className="px-4 py-3">
                     <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
                   </td>
-                  {canManage && (
+                  {canEdit && (
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <button type="button" className="btn-outline btn-sm" onClick={() => setEditEmployee(e)}>
                           Edit
                         </button>
-                        <button type="button" className="btn-outline btn-sm text-red" onClick={() => setDeleteEmployee(e)}>
+                        <button
+                          type="button"
+                          className="btn-outline btn-sm text-red"
+                          onClick={() => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
+                        >
                           Delete
                         </button>
                       </div>
@@ -215,6 +247,9 @@ export function Employees() {
       )}
       {deleteEmployee && (
         <EmployeeDeleteModal employee={deleteEmployee} onClose={() => setDeleteEmployee(null)} />
+      )}
+      {deleteRequestEmployee && (
+        <EmployeeDeleteRequestModal employee={deleteRequestEmployee} onClose={() => setDeleteRequestEmployee(null)} />
       )}
     </div>
   );
@@ -283,7 +318,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
       {!result && (
         <div className="space-y-4">
           <div className="rounded-md border border-border bg-surface2/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1 — template</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1: template</div>
             <button
               type="button"
               className="btn-primary w-full sm:w-auto"
@@ -310,7 +345,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           <div className="p-4 bg-primary-bg rounded-md text-sm">
             <div className="font-semibold mb-1">Before you import</div>
             <ol className="list-decimal pl-5 space-y-1 text-xs">
-              <li>Do not change or reorder the header row — column names must match the template exactly.</li>
+              <li>Do not change or reorder the header row: column names must match the template exactly.</li>
               <li>
                 <span className="font-mono">empCode</span>: unique, format <span className="font-mono">MKS</span> + four digits (e.g. <span className="font-mono">MKS0042</span>).
               </li>
@@ -325,7 +360,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <span className="font-mono">biometricId</span> must be unique and must match the user ID enrolled on
-                each biometric device (exact string — e.g. device sends <span className="font-mono">42</span>, CSV must
+                each biometric device (exact string, e.g. device sends <span className="font-mono">42</span>, CSV must
                 be <span className="font-mono">42</span>, not <span className="font-mono">BIO042</span> unless the device
                 uses that).
               </li>
@@ -343,7 +378,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
-              Step 2 — choose CSV file
+              Step 2: choose CSV file
             </label>
             <input
               type="file"
@@ -359,7 +394,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="text-xs text-text-muted bg-amber-bg text-amber px-3 py-2 rounded">
-            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility — we do not silently fix.
+            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility; we do not silently fix.
           </div>
         </div>
       )}
@@ -391,7 +426,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
                     {result.errors.map((e, i) => (
                       <tr key={i}>
                         <td className="px-3 py-2 font-mono">{e.rowIndex}</td>
-                        <td className="px-3 py-2 font-mono">{e.empCode || '—'}</td>
+                        <td className="px-3 py-2 font-mono">{e.empCode || EMPTY_CELL}</td>
                         <td className="px-3 py-2 text-red">{e.reason}</td>
                       </tr>
                     ))}
@@ -402,6 +437,65 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       )}
+    </Modal>
+  );
+}
+
+function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeMasked; onClose: () => void }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+
+  const onConfirm = async () => {
+    if (reason.trim().length < 10) {
+      setError('Reason must be at least 10 characters.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await employeeChangeRequestsApi.submit({ changeType: 'delete', employeeId: employee.id, reason: reason.trim() });
+      toast('Deletion request submitted for HR review', 'success');
+      qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
+      onClose();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not submit request.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Request employee deletion"
+      footer={
+        <>
+          <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
+            {busy ? 'Submitting…' : 'Submit request'}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4 text-sm">
+        <p className="text-text-muted">
+          Request deletion of <strong className="text-text">{employee.name}</strong> ({employee.empCode}). HR must approve before the record is removed.
+        </p>
+        <div>
+          <label className="label">Reason</label>
+          <textarea
+            className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
+            placeholder="Describe why this employee should be removed (min 10 characters)…"
+            value={reason}
+            onChange={(e) => { setReason(e.target.value); setError(null); }}
+          />
+          {error && <p className="mt-1 text-[11px] text-red">{error}</p>}
+        </div>
+      </div>
     </Modal>
   );
 }

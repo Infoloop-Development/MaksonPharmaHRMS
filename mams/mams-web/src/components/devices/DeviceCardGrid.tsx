@@ -1,5 +1,6 @@
 import { Badge } from '../ui/Badge';
 import { useTimeDisplay } from '../../store/timeFormat';
+import { EMPTY_CELL } from '../../lib/format';
 import type { Device } from '../../api/devices';
 import {
   getDeviceConnectionState,
@@ -58,7 +59,7 @@ function DeviceCard({
         </div>
         <div>
           <dt className="text-text-subtle uppercase tracking-wider">Department</dt>
-          <dd>{d.department ?? '—'}</dd>
+          <dd>{d.department ?? EMPTY_CELL}</dd>
         </div>
         <div className="col-span-2">
           <dt className="text-text-subtle uppercase tracking-wider">Location</dt>
@@ -76,7 +77,7 @@ function DeviceCard({
         )}
         <div>
           <dt className="text-text-subtle uppercase tracking-wider">Last ping</dt>
-          <dd className="font-mono">{d.lastPingAt ? fmtTime(d.lastPingAt) : '—'}</dd>
+          <dd className="font-mono">{d.lastPingAt ? fmtTime(d.lastPingAt) : EMPTY_CELL}</dd>
         </div>
         <div>
           <dt className="text-text-subtle uppercase tracking-wider">24h punches</dt>

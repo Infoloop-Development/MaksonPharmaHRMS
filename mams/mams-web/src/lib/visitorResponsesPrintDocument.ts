@@ -2,7 +2,7 @@ import type { VisitorField } from '@mams/types';
 import type { VisitorFormItem, VisitorRequestListItem } from '../api/visitors';
 import { visitorsApi } from '../api/visitors';
 import type { CompanyBranding } from './companyBranding';
-import { fmtIstDate, fmtIstTime } from './format';
+import { EMPTY_CELL, fmtIstDate, fmtIstTime } from './format';
 import { openReportPrintWindow, type ReportPrintColumn } from './reportPrintDocument';
 import { formatVisitorResponse } from '../components/visitors/visitorsUtils';
 
@@ -35,7 +35,7 @@ export function buildVisitorResponsePrintRows(
     for (const field of sortedFields) {
       if (field.type === 'file') {
         const att = item.fileAttachments?.find((a) => a.fieldId === field.id);
-        row[field.id] = att?.filename ?? '—';
+        row[field.id] = att?.filename ?? EMPTY_CELL;
       } else {
         row[field.id] = formatVisitorResponse(item.responses[field.id]);
       }
@@ -100,7 +100,7 @@ export function openVisitorResponsesPrintWindow(options: {
 
   return openReportPrintWindow({
     branding: options.branding,
-    title: `${options.form.title} — Responses`,
+    title: `${options.form.title}: Responses`,
     subtitle,
     summaryLine: `${options.items.length} response(s)`,
     columns,

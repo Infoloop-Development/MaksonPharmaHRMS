@@ -3,7 +3,8 @@ import type {
   DashboardKpiMetricId,
 } from '@mams/types';
 import { ALL_DASHBOARD_KPI_METRICS } from '@mams/types';
-import { fmtNumber } from './format';
+import { fmtNumber, EMPTY_CELL } from './format';
+import { getDashboardKpiTooltip } from './tooltips/dashboardKpiTooltips';
 
 export type DashboardShiftFilter = 'All' | 'Day' | 'Night';
 export type BarMetric = 'present' | 'absent' | 'late';
@@ -86,7 +87,7 @@ export function getMetricValue(id: DashboardKpiMetricId, v: KpiDayValues): strin
     case 'night_shift':
       return fmtNumber(v.nightShiftPresent);
     default:
-      return '—';
+      return EMPTY_CELL;
   }
 }
 
@@ -115,6 +116,10 @@ export function getMetricSub(id: DashboardKpiMetricId, v: KpiDayValues): string 
     default:
       return '';
   }
+}
+
+export function getMetricTooltip(id: DashboardKpiMetricId): string {
+  return getDashboardKpiTooltip(id);
 }
 
 export function getMetricPickerLabel(id: DashboardKpiMetricId): string {

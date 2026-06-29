@@ -17,7 +17,7 @@ import { brandingFromSettings } from '../../lib/companyBranding';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
-import { fmtHours, fmtWeekdayShort } from '../../lib/format';
+import { EMPTY_CELL, fmtHours, fmtWeekdayShort } from '../../lib/format';
 import { useTableSort } from '../../lib/tableSort';
 import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
 import {
@@ -77,7 +77,7 @@ function renderAdminAttendanceCell(
     case 'status':
       return <AttendanceStatusPill status={row.displayStatus} />;
     default:
-      return '—';
+      return EMPTY_CELL;
   }
 }
 

@@ -3,6 +3,14 @@
  */
 const IST = 'Asia/Kolkata';
 
+/** Shown when a table cell or field has no value. */
+export const EMPTY_CELL = 'N/A';
+
+export function displayOrEmpty(value: unknown): string {
+  if (value == null || value === '') return EMPTY_CELL;
+  return String(value);
+}
+
 export function fmtIstDate(d: Date | string | null): string {
   if (!d) return '-';
   const date = typeof d === 'string' ? new Date(d) : d;
@@ -38,6 +46,16 @@ export function fmtIstHeaderDate(d: Date): string {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
+    year: 'numeric',
+  }).format(d);
+}
+
+/** Compact date for the app top bar (e.g. 29 Jun 2026). */
+export function fmtIstTopBarDate(d: Date): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    day: 'numeric',
+    month: 'short',
     year: 'numeric',
   }).format(d);
 }

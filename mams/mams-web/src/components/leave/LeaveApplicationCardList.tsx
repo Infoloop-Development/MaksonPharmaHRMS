@@ -1,6 +1,6 @@
 import { Badge } from '../ui/Badge';
 import type { LeaveApplicationItem } from '../../api/leave';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 
 export function LeaveApplicationCardList({
@@ -51,7 +51,7 @@ export function LeaveApplicationCardList({
                   {emp?.name ? employeeInitials(emp.name) : '?'}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-semibold truncate">{emp?.name ?? '—'}</div>
+                  <div className="font-semibold truncate">{emp?.name ?? EMPTY_CELL}</div>
                   <div className="font-mono text-xs text-text-muted">{emp?.empCode}</div>
                 </div>
               </div>
@@ -66,7 +66,7 @@ export function LeaveApplicationCardList({
                 <dt className="text-text-subtle uppercase tracking-wider">Dates</dt>
                 <dd>
                   {fmtDate(row.fromDate)}
-                  {row.fromDate !== row.toDate && <> — {fmtDate(row.toDate)}</>}
+                  {row.fromDate !== row.toDate && <> to {fmtDate(row.toDate)}</>}
                 </dd>
               </div>
               <div>

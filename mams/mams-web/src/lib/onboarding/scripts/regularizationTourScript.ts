@@ -55,7 +55,7 @@ export const regularizationTourScript: TourScript = {
           id: 'regularization-create-modal',
           title: 'Request form',
           description:
-            'Pick employee, date, punch type, and requested time. Provide a clear reason — approvers see this in the audit log.',
+            'Pick employee, date, punch type, and requested time. Provide a clear reason; approvers see this in the audit log.',
           side: 'left',
           when: () => tourElementExists('regularization-create-modal'),
         },

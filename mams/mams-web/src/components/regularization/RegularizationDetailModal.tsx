@@ -5,7 +5,7 @@ import { useToast } from '../ui/Toast';
 import { Modal } from '../ui/Modal';
 import { Field, Textarea } from '../ui/Field';
 import { Badge } from '../ui/Badge';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import {
   formatRequestedTimes,
@@ -34,7 +34,7 @@ export function RegularizationDetailModal({
   const approveMutation = useMutation({
     mutationFn: () => regularizationApi.approve(item._id, { approverNote: approverNote || undefined }),
     onSuccess: () => {
-      toast('Regularization approved — raw punches inserted', 'success');
+      toast('Regularization approved: raw punches inserted', 'success');
       qc.invalidateQueries({ queryKey: ['regularization'] });
       onClose();
     },
@@ -93,9 +93,9 @@ export function RegularizationDetailModal({
           <Badge tone={statusTone(item.status)}>{item.status}</Badge>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <DetailRow label="Employee" value={`${emp?.name ?? '—'} (${emp?.empCode ?? '—'})`} />
-          <DetailRow label="Department" value={emp?.department ?? '—'} />
-          <DetailRow label="Location" value={emp?.location ?? '—'} />
+          <DetailRow label="Employee" value={`${emp?.name ?? EMPTY_CELL} (${emp?.empCode ?? EMPTY_CELL})`} />
+          <DetailRow label="Department" value={emp?.department ?? EMPTY_CELL} />
+          <DetailRow label="Location" value={emp?.location ?? EMPTY_CELL} />
           <DetailRow label="Date" value={fmtDate(item.date)} />
           <DetailRow label="Type" value={REGULARIZATION_TYPE_LABELS[item.type]} />
           <DetailRow
@@ -114,7 +114,7 @@ export function RegularizationDetailModal({
         <div className="pt-3 border-t border-border">
           <div className="text-[10px] uppercase tracking-wider text-text-subtle mb-1">Audit trail</div>
           <div className="text-xs text-text-muted">
-            Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> ({initiator?.email ?? '—'}) at{' '}
+            Initiated by <span className="font-semibold">{initiator?.name ?? EMPTY_CELL}</span> ({initiator?.email ?? EMPTY_CELL}) at{' '}
             {fmtTime(item.initiatedAt)}
           </div>
           {decider && (

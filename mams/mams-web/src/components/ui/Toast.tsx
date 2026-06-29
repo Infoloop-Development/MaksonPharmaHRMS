@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { useEffect } from 'react';
+import { useAuth } from '../../store/auth';
+import { hasMobileBottomNav } from '../../lib/mobileBottomNav';
 
 interface ToastState {
   toasts: Array<{ id: number; message: string; tone: 'success' | 'error' | 'info' }>;
@@ -25,8 +27,17 @@ const TONE_STYLES = {
 
 export function ToastContainer() {
   const toasts = useToast((s) => s.toasts);
+  const user = useAuth((s) => s.user);
+  const aboveBottomNav = hasMobileBottomNav(user?.role);
+
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-[100] flex flex-col gap-2 items-stretch sm:items-end">
+    <div
+      className={`fixed left-4 right-4 sm:left-auto sm:right-4 z-[100] flex flex-col gap-2 items-stretch sm:items-end ${
+        aboveBottomNav
+          ? 'bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:bottom-4'
+          : 'bottom-4'
+      }`}
+    >
       {toasts.map((t) => (
         <div
           key={t.id}

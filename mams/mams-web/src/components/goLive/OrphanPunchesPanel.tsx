@@ -2,10 +2,11 @@ import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { goLiveApi } from '../../api/goLive';
-import { fmtIstDate } from '../../lib/format';
+import { EMPTY_CELL, fmtIstDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 export function OrphanPunchesPanel() {
   const { fmtTime } = useTimeDisplay();
@@ -32,7 +33,7 @@ export function OrphanPunchesPanel() {
         <div>
           <h2 className="text-sm font-bold">Unmapped punches</h2>
           <p className="text-xs text-text-muted mt-1 max-w-xl">
-            Device sent a user ID with no matching employee Biometric ID. These events are audit-logged only — they do
+            Device sent a user ID with no matching employee Biometric ID. These events are audit-logged only; they do
             not appear in Attendance Log. Add or fix the employee, then have them punch again.
           </p>
         </div>
@@ -72,7 +73,7 @@ export function OrphanPunchesPanel() {
                 </div>
                 <div>
                   <span className="text-text-subtle uppercase tracking-wider">Device </span>
-                  <span className="font-mono">{row.deviceSerial ?? '—'}</span>
+                  <span className="font-mono">{row.deviceSerial ?? EMPTY_CELL}</span>
                   {row.deviceCode && <span className="text-text-muted"> ({row.deviceCode})</span>}
                 </div>
                 <div>
@@ -93,8 +94,8 @@ export function OrphanPunchesPanel() {
             <table className="w-full text-xs">
               <thead className="bg-surface2">
                 <tr className="text-left text-text-muted uppercase tracking-wider">
-                  <SortableTh label="When" sortKey="when" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" />
-                  <SortableTh label="Device" sortKey="device" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" />
+                  <SortableTh label="When" sortKey="when" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" tooltip={tableColumnTooltip('attendance', 'when')} />
+                  <SortableTh label="Device" sortKey="device" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" tooltip={tableColumnTooltip('attendance', 'device')} />
                   <th className="px-3 py-2">Unknown IDs</th>
                   <th className="px-3 py-2">Source IP</th>
                 </tr>
@@ -106,7 +107,7 @@ export function OrphanPunchesPanel() {
                       {fmtIstDate(row.occurredAt)} {fmtTime(row.occurredAt)}
                     </td>
                     <td className="px-3 py-2">
-                      <div className="font-mono">{row.deviceSerial ?? '—'}</div>
+                      <div className="font-mono">{row.deviceSerial ?? EMPTY_CELL}</div>
                       <div className="text-text-subtle">{row.deviceCode ?? ''}</div>
                     </td>
                     <td className="px-3 py-2">
@@ -119,7 +120,7 @@ export function OrphanPunchesPanel() {
                         </span>
                       ))}
                     </td>
-                    <td className="px-3 py-2 font-mono text-text-muted">{row.sourceIp ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-text-muted">{row.sourceIp ?? EMPTY_CELL}</td>
                   </tr>
                 ))}
               </tbody>
@@ -127,7 +128,7 @@ export function OrphanPunchesPanel() {
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-text-muted">
             <span>
-              {data.total} event{data.total === 1 ? '' : 's'} — search{' '}
+              {data.total} event{data.total === 1 ? '' : 's'}; search{' '}
               <Link to="/employees" className="text-link hover:underline">
                 Employees
               </Link>{' '}

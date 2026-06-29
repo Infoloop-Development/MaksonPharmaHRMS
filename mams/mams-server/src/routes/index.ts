@@ -4,6 +4,7 @@ import employeesRoutes from './employees.routes.js';
 import attendanceRoutes from './attendance.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import adjustmentsRoutes from './adjustments.routes.js';
+import employeeChangeRequestsRoutes from './employeeChangeRequests.routes.js';
 import devicesRoutes from './devices.routes.js';
 import settingsRoutes from './settings.routes.js';
 import reportsRoutes from './reports.routes.js';
@@ -17,6 +18,7 @@ import visitorsRoutes from './visitors.routes.js';
 import adminRoutes from './admin.routes.js';
 import adminOverviewRoutes from './adminOverview.routes.js';
 import complianceAttendanceRoutes from './complianceAttendance.routes.js';
+import notificationsRoutes from './notifications.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
@@ -26,6 +28,7 @@ apiRouter.use('/attendance', attendanceRoutes);
 apiRouter.use('/compliance-attendance', complianceAttendanceRoutes);
 apiRouter.use('/dashboard', dashboardRoutes);
 apiRouter.use('/adjustments', adjustmentsRoutes);
+apiRouter.use('/employee-change-requests', employeeChangeRequestsRoutes);
 apiRouter.use('/devices', devicesRoutes);
 apiRouter.use('/settings', settingsRoutes);
 apiRouter.use('/reports', reportsRoutes);
@@ -37,6 +40,7 @@ apiRouter.use('/regularization', regularizationRoutes);
 apiRouter.use('/visitors', visitorsRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/admin/overview', adminOverviewRoutes);
+apiRouter.use('/notifications', notificationsRoutes);
 
 apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
