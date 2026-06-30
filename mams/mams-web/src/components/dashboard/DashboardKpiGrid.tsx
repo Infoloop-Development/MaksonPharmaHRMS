@@ -27,6 +27,7 @@ import {
   getMetricAccent,
   getMetricLabel,
   getMetricSub,
+  getMetricTooltip,
   getMetricValue,
   isMetricSelected,
 } from '../../lib/dashboardKpiRegistry';
@@ -98,7 +99,11 @@ function SortableKpiSlot({
         accent={getMetricAccent(metricId)}
         selected={isMetricSelected(metricId, filterState)}
         onClick={isEditing ? onPickMetric : onCardClick}
-        hint={isEditing ? 'Tap to change metric' : 'Filters table + chart'}
+        tooltip={
+          isEditing
+            ? 'Tap to choose a different metric for this slot.'
+            : getMetricTooltip(metricId)
+        }
       />
     </div>
   );

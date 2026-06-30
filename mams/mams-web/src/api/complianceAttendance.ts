@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { ComplianceAttendanceUpdate, ComplianceShift } from '@mams/types';
+import type { ComplianceAttendanceUpdate, ComplianceShift, ReportJobStatusResponse } from '@mams/types';
 import { downloadAuthenticatedExportPost } from '../lib/downloadExport';
 
 export interface ComplianceAttendanceRow {
@@ -114,4 +114,6 @@ export const complianceAttendanceApi = {
       body,
       `financial-report-${body.yearMonth}.xlsx`
     ),
+  getReportJob: (jobId: string) =>
+    api.get<ReportJobStatusResponse>(`/compliance-attendance/report-jobs/${jobId}`),
 };

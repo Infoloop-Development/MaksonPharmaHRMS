@@ -9,7 +9,7 @@ import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Link as RouterLink } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
-import { fmtDate } from '../lib/format';
+import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { EmployeeDeleteModal } from './EmployeeDeleteModal';
 import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
@@ -23,7 +23,8 @@ import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import type { EmployeeMasked } from '@mams/types';
 import { SortableTh } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
-import { sortArrowFor, type SortDir } from '../lib/tableSort';
+import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
@@ -38,7 +39,7 @@ export function Employees() {
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteRequestEmployee, setDeleteRequestEmployee] = useState<EmployeeMasked | null>(null);
-  const pageSize = 20;
+  const pageSize = 50;
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const canManage = user?.permissions.includes('manage.employees') || user?.permissions.includes('manage.users') || false;
@@ -58,17 +59,11 @@ export function Employees() {
   });
 
   const toggleSort = useCallback((col: string) => {
-    const key = col as typeof sortBy;
-    setSortBy((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return key;
-      }
-      setSortDir('asc');
-      return key;
-    });
+    const next = nextSortState(col, { col: sortBy, dir: sortDir }, { col: 'empCode', dir: 'asc' });
+    setSortBy((next.col ?? 'empCode') as typeof sortBy);
+    setSortDir(next.dir);
     setPage(1);
-  }, []);
+  }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy, sortDir), [sortBy, sortDir]);
 
@@ -167,15 +162,15 @@ export function Employees() {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
                 <th className="px-4 py-3 font-semibold">Biometric ID</th>
-                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'department')} />
                 <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Shift</th>
                 {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>}
-                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" />
-                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('employees', 'joinDate')} />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'status')} />
                 {canEdit && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
               </tr>
             </thead>
@@ -423,7 +418,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
                     {result.errors.map((e, i) => (
                       <tr key={i}>
                         <td className="px-3 py-2 font-mono">{e.rowIndex}</td>
-                        <td className="px-3 py-2 font-mono">{e.empCode || '—'}</td>
+                        <td className="px-3 py-2 font-mono">{e.empCode || EMPTY_CELL}</td>
                         <td className="px-3 py-2 text-red">{e.reason}</td>
                       </tr>
                     ))}

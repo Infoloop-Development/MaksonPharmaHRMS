@@ -101,7 +101,7 @@ describe('openVisitorResponsesPrintWindow', () => {
     ];
     const html = buildReportPrintHtml({
       branding,
-      title: 'Sample — Responses',
+      title: 'Sample: Responses',
       columns,
       rows,
     });

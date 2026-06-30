@@ -9,6 +9,10 @@ import { VisitorRequestModel } from '../models/VisitorRequest.js';
 import { VisitorFileModel } from '../models/VisitorFile.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
+import {
+  buildVisitorSubmittedNotification,
+  notifyOrgAdmins,
+} from '../services/notification.service.js';
 import { findFormBySlug, serializeFormForPublic } from '../services/visitor/visitorForm.service.js';
 import { introUsesStorageKey } from '../services/visitor/visitorIntroMedia.service.js';
 
@@ -243,6 +247,14 @@ router.post('/:slug/submit', submitLimiter, async (req, res, next) => {
         entityId: created._id,
         payload: { formId: String(result.form._id), publicSlug: slug },
       }
+    );
+
+    await notifyOrgAdmins(
+      buildVisitorSubmittedNotification({
+        formTitle: result.form.title,
+        publicSlug: slug,
+        entityId: created._id,
+      })
     );
 
     res.status(201).json({ ok: true, message: 'Your visitor request has been submitted successfully and is awaiting review.' });

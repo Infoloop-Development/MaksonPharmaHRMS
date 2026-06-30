@@ -39,7 +39,7 @@ export function AdminOverviewTableEditBar({
           Choose columns
         </button>
         <p className="text-xs text-text-muted sm:ml-auto sm:max-w-xs">
-          Changes preview below — click <strong>Save table</strong> in the toolbar when done.
+          Changes preview below; click <strong>Save table</strong> in the toolbar when done.
         </p>
       </div>
     </div>

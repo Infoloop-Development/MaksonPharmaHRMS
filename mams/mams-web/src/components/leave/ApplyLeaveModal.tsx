@@ -25,7 +25,7 @@ function getApplyValidationErrors(params: {
     );
   }
   if (!params.leaveTypeId) {
-    errors.push(params.typesCount === 0 ? 'No leave types — seed defaults in Leave Settings first' : 'Select a leave type');
+    errors.push(params.typesCount === 0 ? 'No leave types: seed defaults in Leave Settings first' : 'Select a leave type');
   }
   if (!params.fromDate) errors.push('Choose a start date');
   if (!params.effectiveTo) errors.push('Choose an end date');
@@ -259,7 +259,7 @@ export function ApplyLeaveModal({
         {quotaPreview && employeeId && (
           <div className={`text-sm p-3 rounded-md ${quotaWarn ? 'bg-amber-bg border border-amber/30' : 'bg-surface2 border border-border'}`}>
             Remaining <strong>{quotaPreview.leaveTypeName}</strong> quota: <strong>{quotaPreview.remaining}</strong> days
-            {quotaPreview.paid === false && <span className="text-text-muted"> (unpaid — not deducted)</span>}
+            {quotaPreview.paid === false && <span className="text-text-muted"> (unpaid, not deducted)</span>}
             {quotaWarn && <div className="text-amber mt-1">Warning: requested days may exceed remaining quota.</div>}
           </div>
         )}

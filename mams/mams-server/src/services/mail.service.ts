@@ -34,14 +34,14 @@ function buildWelcomeBodies(params: WelcomeEmailParams & { loginUrl: string }) {
     '',
     `Sign in at: ${params.loginUrl}`,
     '',
-    'First-time login — change your password:',
+    'First-time login: change your password:',
     '  1. Open the sign-in URL above and log in with the credentials provided.',
     '  2. You will be prompted to set a new password before you can use the system.',
     '  3. Choose a strong password (at least 10 characters; include at least 3 of: uppercase, lowercase, number, symbol).',
     '',
     'Security: Do not share these credentials. If you did not expect this account, contact your HR or IT administrator immediately.',
     '',
-    '— Makson Attendance Management System',
+    '- Makson Attendance Management System',
   ].join('\n');
 
   const html = `
@@ -57,7 +57,7 @@ function buildWelcomeBodies(params: WelcomeEmailParams & { loginUrl: string }) {
     <tr><td style="padding: 4px 12px 4px 0; color: #64748b;">Password</td><td style="font-family: monospace;">${escapeHtml(params.password)}</td></tr>
   </table>
   <p style="margin-top: 16px;"><a href="${escapeHtml(params.loginUrl)}" style="color: #1D5DBF;">Sign in to MAMS</a></p>
-  <h3 style="font-size: 14px; margin-bottom: 8px;">First-time login — change your password</h3>
+  <h3 style="font-size: 14px; margin-bottom: 8px;">First-time login: change your password</h3>
   <ol style="padding-left: 20px; font-size: 14px;">
     <li>Open the sign-in link above and log in with the credentials provided.</li>
     <li>You will be prompted to set a new password before you can use the system.</li>
@@ -66,7 +66,7 @@ function buildWelcomeBodies(params: WelcomeEmailParams & { loginUrl: string }) {
   <p style="font-size: 12px; color: #64748b; margin-top: 24px;">
     <strong>Security:</strong> Do not share these credentials. If you did not expect this account, contact your HR or IT administrator immediately.
   </p>
-  <p style="font-size: 12px; color: #94a3b8;">— Makson Attendance Management System</p>
+  <p style="font-size: 12px; color: #94a3b8;">- Makson Attendance Management System</p>
 </body>
 </html>`.trim();
 
@@ -95,7 +95,7 @@ export async function sendWelcomeUserEmail(params: WelcomeEmailParams): Promise<
     await getTransport().sendMail({
       from: getSmtpFrom(),
       to: params.to,
-      subject: 'Your MAMS account — sign-in and first-time password change',
+      subject: 'Your MAMS account: sign-in and first-time password change',
       text,
       html,
     });

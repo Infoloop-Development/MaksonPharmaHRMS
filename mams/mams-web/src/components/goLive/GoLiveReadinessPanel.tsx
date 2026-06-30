@@ -19,7 +19,7 @@ export function GoLiveReadinessPanel() {
         <div>
           <h2 className="text-sm font-bold">Go-live readiness</h2>
           <p className="text-xs text-text-muted mt-1">
-            Active employees with no ingested punch in the selected window — may need device enrollment or Biometric ID
+            Active employees with no ingested punch in the selected window; may need device enrollment or Biometric ID
             alignment.
           </p>
         </div>

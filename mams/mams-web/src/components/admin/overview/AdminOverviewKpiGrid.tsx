@@ -26,6 +26,7 @@ import {
   getAdminMetricAccent,
   getAdminMetricLabel,
   getAdminMetricSub,
+  getAdminMetricTooltip,
   getAdminMetricValue,
   isAdminMetricSelected,
 } from '../../../lib/adminOverviewKpiRegistry';
@@ -88,7 +89,11 @@ function SortableKpiSlot({
         accent={getAdminMetricAccent(metricId)}
         selected={isAdminMetricSelected(metricId, filterState)}
         onClick={isEditing ? onPickMetric : onCardClick}
-        hint={isEditing ? 'Tap to change metric' : 'Filters chart'}
+        tooltip={
+          isEditing
+            ? 'Tap to choose a different metric for this slot.'
+            : getAdminMetricTooltip(metricId)
+        }
       />
     </div>
   );

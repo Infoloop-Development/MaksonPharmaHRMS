@@ -24,7 +24,7 @@ export function MobileFilterBar({
 }: {
   activeCount?: number;
   onClear?: () => void;
-  /** Always visible on mobile — never placed inside the filter sheet */
+  /** Always visible on mobile: never placed inside the filter sheet */
   search?: React.ReactNode;
   children?: React.ReactNode;
   /** Buttons shown beside filter trigger on mobile (e.g. Export, Add) */

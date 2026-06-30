@@ -69,6 +69,8 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
     staleTime: 60_000,
   });
 
+  const companyInitial = (settings?.companyName ?? 'Makson Group').charAt(0).toUpperCase();
+
   useEffect(() => {
     onClose();
   }, [location.pathname, onClose]);
@@ -81,22 +83,38 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
     >
       <div className="px-4 lg:px-6 py-4 lg:py-5 border-b sidebar-divider flex items-start justify-between gap-2">
         <div className={collapsed ? 'lg:hidden' : ''}>
-          {settings?.companyLogo && (
+          {settings?.companyLogo ? (
             <img
               src={settings.companyLogo}
               alt="Company logo"
               className="w-9 h-9 rounded-md object-contain sidebar-logo-bg p-0.5 mb-2"
             />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-md sidebar-logo-bg flex items-center justify-center font-bold text-sm mb-2 select-none"
+              aria-hidden
+            >
+              {companyInitial}
+            </div>
           )}
           <div className="text-[10px] tracking-[2px] uppercase sidebar-muted mb-1">Attendance System</div>
           <h1 className="text-base font-bold">{settings?.companyName ?? 'Makson Group'}</h1>
         </div>
-        {collapsed && settings?.companyLogo && (
-          <img
-            src={settings.companyLogo}
-            alt="Company logo"
-            className="hidden lg:block w-9 h-9 rounded-md object-contain sidebar-logo-bg p-0.5 mx-auto"
-          />
+        {collapsed && (
+          settings?.companyLogo ? (
+            <img
+              src={settings.companyLogo}
+              alt="Company logo"
+              className="hidden lg:block w-9 h-9 rounded-md object-contain sidebar-logo-bg p-0.5 mx-auto"
+            />
+          ) : (
+            <div
+              className="hidden lg:flex w-9 h-9 rounded-md sidebar-logo-bg items-center justify-center font-bold text-sm mx-auto select-none"
+              aria-hidden
+            >
+              {companyInitial}
+            </div>
+          )
         )}
         <button
           type="button"

@@ -37,7 +37,7 @@ function pageTitle(pathname: string): string {
   return 'MAMS';
 }
 
-export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () => void; title?: string }) {
+export function TopBar({ onOpenMenu, title: titleOverride, companyLogo }: { onOpenMenu: () => void; title?: string; companyName?: string | null; companyLogo?: string | null }) {
   const user = useAuth((s) => s.user);
   const location = useLocation();
   const isOnline = useOnlineStatus();
@@ -95,6 +95,13 @@ export function TopBar({ onOpenMenu, title: titleOverride }: { onOpenMenu: () =>
           <span className="block w-5 h-0.5 bg-text rounded" />
           <span className="block w-5 h-0.5 bg-text rounded" />
         </button>
+        {companyLogo && (
+          <img
+            src={companyLogo}
+            alt="Company logo"
+            className="w-8 h-8 rounded-md object-contain shrink-0"
+          />
+        )}
         <div className="min-w-0">
           <h1 className="text-base md:text-lg font-bold truncate">{title}</h1>
         </div>

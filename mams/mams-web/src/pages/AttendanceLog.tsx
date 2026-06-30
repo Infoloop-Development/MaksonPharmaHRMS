@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { AttendanceRawStats } from '@mams/types';
 import { attendanceApi } from '../api/attendance';
-import { fmtDate, fmtNumber } from '../lib/format';
+import { EMPTY_CELL, fmtDate, fmtNumber } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { PunchCardList } from '../components/attendance/PunchCardList';
 import { DashboardStatCard } from '../components/ui/DashboardStatCard';
@@ -15,7 +15,9 @@ import { attendanceTourScript } from '../lib/onboarding/scripts/attendanceTourSc
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import { SortableTh } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
-import { sortArrowFor, useTableSort, type SortDir } from '../lib/tableSort';
+import { nextSortState, sortArrowFor, useTableSort, type SortDir } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
+import { STAT_CARD_TOOLTIPS } from '../lib/tooltips/statCardTooltips';
 import type { RawPunchRow } from '../api/attendance';
 
 type PunchTypeFilter = 'all' | 'IN' | 'OUT' | 'OTHER';
@@ -140,17 +142,12 @@ export function AttendanceLog() {
         liveSort.toggleSort(col);
         return;
       }
-      setSortBy((prev) => {
-        if (prev === col) {
-          setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-          return col;
-        }
-        setSortDir('asc');
-        return col;
-      });
+      const next = nextSortState(col, { col: sortBy ?? null, dir: sortDir });
+      setSortBy(next.col ?? undefined);
+      setSortDir(next.dir);
       setPage(1);
     },
-    [isLiveMode, liveSort]
+    [isLiveMode, liveSort, sortBy, sortDir]
   );
 
   const activeSortCol = isLiveMode ? liveSort.sortCol : sortBy ?? null;
@@ -262,39 +259,39 @@ export function AttendanceLog() {
       <div className="dash-stat-grid" data-tour-id="attendance-stats">
         <DashboardStatCard
           label="Total Punches"
-          value={stats ? fmtNumber(stats.total) : '—'}
+          value={stats ? fmtNumber(stats.total) : EMPTY_CELL}
           sub={totalSub}
           accent="primary"
           selected={activeTile === 'all'}
           onClick={() => clickTile('all')}
-          hint="Filters punch list"
+          tooltip={STAT_CARD_TOOLTIPS.attendanceLog.total}
         />
         <DashboardStatCard
           label="IN Punches"
-          value={stats ? fmtNumber(stats.in) : '—'}
+          value={stats ? fmtNumber(stats.in) : EMPTY_CELL}
           sub="recorded"
           accent="green"
           selected={activeTile === 'in'}
           onClick={() => clickTile('in')}
-          hint="Filters punch list"
+          tooltip={STAT_CARD_TOOLTIPS.attendanceLog.in}
         />
         <DashboardStatCard
           label="OUT Punches"
-          value={stats ? fmtNumber(stats.out) : '—'}
+          value={stats ? fmtNumber(stats.out) : EMPTY_CELL}
           sub="recorded"
           accent="amber"
           selected={activeTile === 'out'}
           onClick={() => clickTile('out')}
-          hint="Filters punch list"
+          tooltip={STAT_CARD_TOOLTIPS.attendanceLog.out}
         />
         <DashboardStatCard
           label="OTHER Punches"
-          value={stats ? fmtNumber(stats.other) : '—'}
+          value={stats ? fmtNumber(stats.other) : EMPTY_CELL}
           sub="non IN/OUT"
           accent="red"
           selected={activeTile === 'other'}
           onClick={() => clickTile('other')}
-          hint="Filters punch list"
+          tooltip={STAT_CARD_TOOLTIPS.attendanceLog.other}
         />
       </div>
 
@@ -408,12 +405,12 @@ export function AttendanceLog() {
           <table className="w-full text-sm">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Time" sortKey="rawTimestamp" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Employee" sortKey="name" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Code" sortKey="empCode" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Time" sortKey="rawTimestamp" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('attendance', 'rawTimestamp')} />
+                <SortableTh label="Employee" sortKey="name" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('attendance', 'name')} />
+                <SortableTh label="Code" sortKey="empCode" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('attendance', 'empCode')} />
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Department</th>
                 <th className="px-4 py-3 font-semibold">Bio ID</th>
-                <SortableTh label="Type" sortKey="punchType" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                <SortableTh label="Type" sortKey="punchType" activeCol={activeSortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('attendance', 'punchType')} />
                 <th className="px-4 py-3 font-semibold hidden lg:table-cell">Shift</th>
                 <th className="px-4 py-3 font-semibold">Outside shift</th>
                 <th className="px-4 py-3 font-semibold">Date</th>
@@ -446,7 +443,7 @@ export function AttendanceLog() {
                     }`}>{p.punchType}</span>
                   </td>
                   <td className="px-4 py-2.5 text-xs text-text-muted hidden lg:table-cell">
-                    {p.shiftWindowLabel ?? (p.assignedShift ? p.assignedShift : '—')}
+                    {p.shiftWindowLabel ?? (p.assignedShift ? p.assignedShift : EMPTY_CELL)}
                   </td>
                   <td className="px-4 py-2.5">
                     {p.punchType === 'IN' && p.outsideMainShift === true && (
@@ -460,7 +457,7 @@ export function AttendanceLog() {
                       </span>
                     )}
                     {(p.punchType !== 'IN' || p.outsideMainShift == null) && (
-                      <span className="text-text-muted">—</span>
+                      <span className="text-text-muted">{EMPTY_CELL}</span>
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-text-muted">{fmtDate(p.rawDate)}</td>

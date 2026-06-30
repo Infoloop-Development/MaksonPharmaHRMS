@@ -20,7 +20,7 @@ export const dashboardTourScript: TourScript = {
           id: 'dashboard-header',
           title: 'Dashboard overview',
           description:
-            'Your attendance command centre. The date shown is the active day — KPIs, charts, and the table below all reflect this date.',
+            'Your attendance command centre. The date shown is the active day; KPIs, charts, and the table below all reflect this date.',
           side: 'bottom',
         },
         {
@@ -53,7 +53,7 @@ export const dashboardTourScript: TourScript = {
           id: 'dashboard-filter-bar',
           title: 'Active filters and reset',
           description:
-            'This bar shows your active filters — date, status, and shift. Use Reset to Default View to clear filters and return to today’s full dashboard.',
+            'This bar shows your active filters: date, status, and shift. Use Reset to Default View to clear filters and return to today’s full dashboard.',
           side: 'bottom',
           when: () => tourElementExists('dashboard-filter-bar'),
         },

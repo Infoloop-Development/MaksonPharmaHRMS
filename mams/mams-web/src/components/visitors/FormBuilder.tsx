@@ -132,7 +132,7 @@ export function FormBuilder({
           slugRegenerated: result.slugRegenerated,
         });
       } else {
-        toast('Form updated — existing link and QR code unchanged', 'success');
+        toast('Form updated; existing link and QR code unchanged', 'success');
         onClose();
       }
     },

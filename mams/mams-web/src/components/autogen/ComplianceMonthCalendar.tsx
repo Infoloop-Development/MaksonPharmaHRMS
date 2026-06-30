@@ -1,6 +1,7 @@
 import type { MonthlyPlanDay } from '../../lib/monthlyCompliancePlanner';
 import { formatCheckOutLabel } from '../../lib/monthlyCompliancePlanner';
 import { Badge } from '../ui/Badge';
+import { EMPTY_CELL } from '../../lib/format';
 
 const STATUS_STYLES: Record<
   MonthlyPlanDay['status'],
@@ -32,7 +33,7 @@ const STATUS_LABELS: Record<MonthlyPlanDay['status'], string> = {
   present: 'Present',
   leave: 'Leave',
   weeklyOff: 'Weekly Off',
-  unassigned: '—',
+  unassigned: EMPTY_CELL,
   empty: '',
 };
 

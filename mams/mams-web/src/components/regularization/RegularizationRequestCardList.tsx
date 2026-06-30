@@ -1,5 +1,5 @@
 import { Badge } from '../ui/Badge';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import type { RegularizationListItem } from '../../api/regularization';
 import {
@@ -66,7 +66,7 @@ function RegularizationRequestCard({
         </div>
       </div>
       <div className="mt-3 text-xs text-text-muted">
-        Initiated by <span className="font-semibold">{initiator?.name ?? '—'}</span> at {fmtTime(item.initiatedAt)}
+        Initiated by <span className="font-semibold">{initiator?.name ?? EMPTY_CELL}</span> at {fmtTime(item.initiatedAt)}
         {decider && (
           <>
             {' · '}

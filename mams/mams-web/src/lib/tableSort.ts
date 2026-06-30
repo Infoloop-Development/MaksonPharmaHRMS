@@ -1,6 +1,23 @@
 import { useMemo, useState, useCallback } from 'react';
 
 export type SortDir = 'asc' | 'desc';
+
+export type SortState = {
+  col: string | null;
+  dir: SortDir;
+};
+
+export const DEFAULT_SORT_STATE: SortState = { col: null, dir: 'asc' };
+
+export function nextSortState(
+  col: string,
+  current: SortState,
+  defaultState: SortState = DEFAULT_SORT_STATE
+): SortState {
+  if (current.col !== col) return { col, dir: 'asc' };
+  if (current.dir === 'asc') return { col, dir: 'desc' };
+  return { ...defaultState };
+}
 export type SortColumnType = 'string' | 'number' | 'date';
 
 export function compareValues(

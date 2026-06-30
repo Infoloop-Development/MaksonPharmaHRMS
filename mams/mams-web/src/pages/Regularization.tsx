@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { regularizationApi, type RegularizationListItem } from '../api/regularization';
 import { useAuth } from '../store/auth';
 import { DashboardStatCard } from '../components/ui/DashboardStatCard';
+import { STAT_CARD_TOOLTIPS } from '../lib/tooltips/statCardTooltips';
 import { RegularizationPageHeader } from '../components/regularization/RegularizationPageHeader';
 import { RegularizationRequestCardList } from '../components/regularization/RegularizationRequestCardList';
 import { CreateRegularizationModal } from '../components/regularization/CreateRegularizationModal';
@@ -98,6 +99,7 @@ export function Regularization() {
           accent="amber"
           selected={statusFilter === 'Pending'}
           onClick={() => setStatusFilter('Pending')}
+          tooltip={STAT_CARD_TOOLTIPS.regularization.pending}
         />
         <DashboardStatCard
           label="Approved"
@@ -106,6 +108,7 @@ export function Regularization() {
           accent="green"
           selected={statusFilter === 'Approved'}
           onClick={() => setStatusFilter('Approved')}
+          tooltip={STAT_CARD_TOOLTIPS.regularization.approved}
         />
         <DashboardStatCard
           label="Rejected"
@@ -114,6 +117,7 @@ export function Regularization() {
           accent="red"
           selected={statusFilter === 'Rejected'}
           onClick={() => setStatusFilter('Rejected')}
+          tooltip={STAT_CARD_TOOLTIPS.regularization.rejected}
         />
         <DashboardStatCard
           label="All"
@@ -122,6 +126,7 @@ export function Regularization() {
           accent="primary"
           selected={statusFilter === 'All'}
           onClick={() => setStatusFilter('All')}
+          tooltip={STAT_CARD_TOOLTIPS.regularization.total}
         />
       </div>
 

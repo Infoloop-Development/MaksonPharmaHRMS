@@ -1,4 +1,5 @@
-import type { ExportNamingSettings, OrgBranding, TimeFormat } from '@mams/types';
+import type { ExportNamingSettings, OrgBranding, OrgNotificationAlerts, TimeFormat } from '@mams/types';
+import { resolveOrgNotificationAlerts } from '@mams/types';
 import { api } from './client';
 
 export interface ShiftWindow {
@@ -31,6 +32,11 @@ export interface Settings {
   companyLogo: string | null;
   favicon: string | null;
   orgBranding?: OrgBranding & { updatedAt?: string | null; updatedBy?: string | null };
+  orgNotificationAlerts?: OrgNotificationAlerts;
+}
+
+export function settingsOrgNotificationAlerts(settings: Settings): OrgNotificationAlerts {
+  return resolveOrgNotificationAlerts(settings.orgNotificationAlerts);
 }
 
 export const settingsApi = {

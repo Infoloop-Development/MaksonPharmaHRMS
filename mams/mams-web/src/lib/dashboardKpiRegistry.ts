@@ -4,6 +4,7 @@ import type {
 } from '@mams/types';
 import { ALL_DASHBOARD_KPI_METRICS } from '@mams/types';
 import { fmtNumber } from './format';
+import { getDashboardKpiTooltip } from './tooltips/dashboardKpiTooltips';
 
 export type DashboardShiftFilter = 'All' | 'Day' | 'Night';
 export type BarMetric = 'present' | 'absent' | 'late';
@@ -117,6 +118,10 @@ export function getMetricSub(id: DashboardKpiMetricId, v: KpiDayValues): string 
     default:
       return '';
   }
+}
+
+export function getMetricTooltip(id: DashboardKpiMetricId): string {
+  return getDashboardKpiTooltip(id);
 }
 
 export function getMetricPickerLabel(id: DashboardKpiMetricId, isCompliant = false): string {

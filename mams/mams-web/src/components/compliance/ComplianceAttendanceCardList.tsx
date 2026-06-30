@@ -1,5 +1,5 @@
 import type { ComplianceAttendanceRow } from '../../api/complianceAttendance';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { AttendanceStatusPill, ComplianceShiftPill } from './complianceAttendanceUi';
 
@@ -31,9 +31,9 @@ export function ComplianceAttendanceCardList({
         <div key={row._id} className="card p-4">
           <div className="flex items-start justify-between gap-2 mb-2">
             <div>
-              <div className="font-semibold text-text">{row.employeeId?.name ?? '—'}</div>
+              <div className="font-semibold text-text">{row.employeeId?.name ?? EMPTY_CELL}</div>
               <div className="font-mono text-xs text-text-muted">
-                {row.employeeId?.empCode ?? '—'}
+                {row.employeeId?.empCode ?? EMPTY_CELL}
                 {row.employeeId?.department ? ` · ${row.employeeId.department}` : ''}
               </div>
             </div>

@@ -10,6 +10,7 @@ const SECTION_LABELS: Record<string, string> = {
   export_naming: 'Export filename formats',
   brand_assets: 'Brand Assets',
   time_display: 'Time display',
+  org_notifications: 'Admin notifications',
   settings: 'Settings',
 };
 
@@ -27,7 +28,7 @@ const SETTINGS_FIELD_LABELS: Record<string, string> = {
   realShifts: 'Real shifts',
   complianceShifts: 'Compliance shifts',
   smartAnchorEnabled: 'Smart Anchor',
-  confidentialityNoticeEnabled: 'Confidentiality notice',
+  orgNotificationAlerts: 'Admin notification alerts',
   confidentialityNoticeText: 'Confidentiality notice text',
   exportNaming: 'Export filename formats',
   companyLogo: 'Company logo',
@@ -138,7 +139,7 @@ function unmaskEmployeeRef(p: Record<string, unknown>): string {
 
 function unmaskReasonSuffix(p: Record<string, unknown>): string {
   const reason = typeof p.reason === 'string' && p.reason.trim() ? p.reason.trim() : '';
-  return reason ? ` — reason: “${reason}”` : '';
+  return reason ? `, reason: "${reason}"` : '';
 }
 
 /** Green dot = succeeded, red dot = failed; null = not an unmask event. */
@@ -330,7 +331,7 @@ export function formatActivityDescription(item: ActivityListItem): string {
     case 'regularization_created':
       return `Created regularization request (${p.type ?? 'unknown'}, ${p.date ?? ''})`;
     case 'regularization_approved':
-      return 'Approved regularization request — raw punches inserted';
+      return 'Approved regularization request: raw punches inserted';
     case 'regularization_rejected':
       return `Rejected regularization request${p.note ? `: “${truncatePreview(p.note)}”` : ''}`;
     case 'compliance_record_adjusted': {
@@ -381,10 +382,10 @@ export function formatActivityDescription(item: ActivityListItem): string {
       const who = unmaskEmployeeRef(p);
       const suffix = unmaskReasonSuffix(p);
       if (p.failureReason === 'password_failed') {
-        return `Unmask failed — password failed: ${label} for ${who}${suffix}`;
+        return `Unmask failed, password failed: ${label} for ${who}${suffix}`;
       }
       if (p.failureReason === 'forbidden') {
-        return `Unmask failed — not permitted: ${label} for ${who}${suffix}`;
+        return `Unmask failed, not permitted: ${label} for ${who}${suffix}`;
       }
       return `Unmask failed: ${label} for ${who}${suffix}`;
     }

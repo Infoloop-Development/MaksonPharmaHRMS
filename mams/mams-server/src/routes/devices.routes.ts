@@ -12,6 +12,10 @@ import { AttendanceRawModel } from '../models/AttendanceRaw.js';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
+import {
+  buildDeviceRegisteredNotification,
+  notifyOrgAdmins,
+} from '../services/notification.service.js';
 import { syncDevice, testDeviceConnectivity } from '../services/deviceSync.service.js';
 
 const router = Router();
@@ -117,6 +121,15 @@ router.post('/', requirePermission('manage.devices'), async (req, res, next) => 
         entityId: created._id,
         payload: { serialNumber: body.serialNumber, model: body.model, vendor: body.vendor },
       }
+    );
+    await notifyOrgAdmins(
+      buildDeviceRegisteredNotification({
+        name: body.name,
+        serialNumber: body.serialNumber,
+        model: body.model,
+        vendor: body.vendor,
+        entityId: created._id,
+      })
     );
     res.status(201).json(created);
   } catch (err) {

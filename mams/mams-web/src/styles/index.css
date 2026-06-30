@@ -28,6 +28,9 @@
   --color-brand-primary-light: #2e3f99;
   --color-brand-primary-light-rgb: 46 63 153;
   --color-brand-primary-text: #ffffff;
+  --app-topbar-height: 3.5rem;
+  --app-main-top-gap: 0.75rem;
+  --app-sidebar-width: 13rem;
   --color-brand-secondary: #e82c2c;
   --color-brand-secondary-rgb: 232 44 44;
   --sidebar-text: #ffffff;
@@ -149,7 +152,7 @@ input, select, textarea {
     text-decoration: underline;
   }
 
-  /* Dashboard attendance table — aligned with mockup/index.html table-card */
+  /* Dashboard attendance table: aligned with mockup/index.html table-card */
   .dash-table-card {
     @apply bg-surface rounded-[10px] shadow-card border border-border overflow-hidden mt-6;
   }
@@ -265,7 +268,7 @@ input, select, textarea {
     animation: none;
   }
 
-  /* Dashboard KPI stat cards — mockup stat-card */
+  /* Dashboard KPI stat cards: mockup stat-card */
   .dash-stat-grid {
     @apply grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4;
   }
@@ -337,6 +340,22 @@ input, select, textarea {
   }
   .dash-stat-card:hover .dash-stat-hint {
     @apply opacity-100;
+  }
+  .ui-tooltip {
+    @apply fixed z-[100] px-2.5 py-1.5 rounded-md border border-border bg-surface text-xs text-text leading-snug shadow-floating pointer-events-none;
+  }
+  .info-tip {
+    @apply inline-flex items-center justify-center w-4 h-4 min-w-4 min-h-4 rounded-full border border-border bg-surface2 text-[10px] font-bold text-text-muted leading-none shrink-0 cursor-help transition-colors;
+  }
+  .info-tip:hover,
+  .info-tip:focus-visible {
+    @apply border-primary text-primary-on-bg bg-primary-bg outline-none;
+  }
+  .dash-stat-card .info-tip {
+    @apply absolute top-2 right-2.5 z-[1];
+  }
+  .sortable-th .info-tip {
+    @apply ml-1 align-middle;
   }
   .dash-donut-legend-item {
     @apply flex items-center gap-2 text-xs text-text-muted cursor-pointer py-1 px-2 rounded-md transition-colors;
@@ -430,7 +449,7 @@ input, select, textarea {
     @apply text-xs text-amber bg-amber-bg border border-amber/30 rounded-lg px-3 py-2 mb-3;
   }
 
-  /* Settings — compact cards pair on md+; wide sections span full row */
+  /* Settings: compact cards pair on md+; wide sections span full row */
   .settings-layout {
     @apply grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch;
   }
@@ -477,11 +496,11 @@ input, select, textarea {
   .filter-sheet-body > .hidden {
     display: none !important;
   }
-  /* Wrapped fields (Reports, etc.) — full width stack */
+  /* Wrapped fields (Reports, etc.): full width stack */
   .filter-sheet-body > div:not(.hidden) {
     @apply col-span-2 min-w-0;
   }
-  /* Bare inputs/selects — equal-width pairs; lone last odd field spans full row */
+  /* Bare inputs/selects: equal-width pairs; lone last odd field spans full row */
   .filter-sheet-body > input,
   .filter-sheet-body > select {
     @apply w-full max-w-none min-h-[44px] min-w-0;
@@ -576,21 +595,24 @@ input, select, textarea {
 
 /* Sidebar navigation icons */
 .sidebar-nav-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 .sidebar-nav-link {
   position: relative;
 }
+.sidebar-nav-link span {
+  @apply truncate min-w-0;
+}
 .sidebar-nav-link--active::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: -2px;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 24px;
+  height: 22px;
   border-radius: 0 3px 3px 0;
   background: var(--color-brand-secondary, var(--color-red));
 }
@@ -643,7 +665,7 @@ input, select, textarea {
   background: rgba(255, 255, 255, 0.38);
 }
 
-/* Add/Edit user — permissions & unmask grids */
+/* Add/Edit user: permissions & unmask grids */
 .user-perm-grid,
 .user-unmask-grid {
   display: grid;
@@ -689,7 +711,7 @@ input, select, textarea {
   background: var(--color-surface);
 }
 
-/* Visitor form builder — insert dividers & drag */
+/* Visitor form builder: insert dividers & drag */
 .form-field-insert-divider {
   @apply relative flex flex-wrap items-center justify-center gap-2 py-3 my-1;
 }
@@ -808,5 +830,127 @@ input, select, textarea {
   }
   .driver-popover-footer {
     gap: 0.5rem;
+  }
+}
+
+/* Full-width app command bar (Outlook-style) */
+.app-topbar {
+  height: var(--app-topbar-height);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+.app-topbar-inner {
+  @apply flex items-center justify-between gap-3 h-full w-full px-3 md:px-6;
+}
+.app-topbar-brand {
+  @apply flex items-center gap-2 md:gap-3 min-w-0 flex-1;
+}
+.app-topbar-title {
+  @apply text-sm md:text-base font-bold text-text min-w-0;
+  max-width: min(100%, 42vw);
+}
+@media (min-width: 768px) {
+  .app-topbar-title {
+    max-width: none;
+  }
+}
+.app-topbar-menu-btn {
+  @apply w-9 h-9 rounded-md border border-border bg-surface2 hover:bg-surface flex flex-col items-center justify-center gap-1 transition-colors;
+}
+.app-topbar-actions {
+  @apply flex items-center gap-2 md:gap-2.5 shrink-0;
+}
+.app-topbar-view-badge {
+  @apply shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap;
+}
+.app-topbar-view-badge.is-real {
+  @apply bg-primary-bg text-primary-on-bg;
+}
+.app-topbar-view-badge.is-compliant {
+  @apply bg-amber-bg text-amber;
+}
+.app-topbar-view-badge--mobile {
+  @apply md:hidden;
+}
+.app-topbar-view-badge--desktop {
+  @apply hidden md:inline;
+}
+.app-topbar-clock {
+  @apply text-right leading-tight shrink-0 hidden sm:block;
+}
+.app-topbar-clock-date {
+  @apply text-[10px] text-text-subtle whitespace-nowrap;
+}
+.app-topbar-clock-time {
+  @apply font-mono text-xs font-semibold tracking-wide text-text whitespace-nowrap;
+}
+.app-topbar-bell {
+  @apply flex items-center shrink-0 pl-2 md:pl-2.5 ml-0.5 border-l border-border;
+}
+.app-topbar-bell button {
+  @apply w-9 h-9 min-w-9 min-h-9 max-w-9 max-h-9 shrink-0 rounded-md border border-border bg-surface2 hover:bg-surface flex items-center justify-center transition-colors text-text;
+}
+.app-topbar-logo {
+  border: 1px solid var(--color-border);
+}
+.app-shell-main {
+  padding-top: calc(var(--app-topbar-height) + var(--app-main-top-gap));
+}
+.app-sidebar {
+  top: var(--app-topbar-height);
+  width: min(85vw, 16rem);
+  height: calc(100dvh - var(--app-topbar-height));
+}
+.app-sidebar-backdrop {
+  top: var(--app-topbar-height);
+}
+.app-shell-with-sidebar {
+  @apply min-w-0;
+}
+@media (min-width: 1024px) {
+  :root {
+    --app-main-top-gap: 1rem;
+  }
+  .app-shell-with-sidebar {
+    margin-left: var(--app-sidebar-width);
+  }
+  .app-sidebar {
+    width: var(--app-sidebar-width);
+    max-width: var(--app-sidebar-width);
+  }
+}
+
+/* Mobile bottom nav (org.admin) */
+.mobile-bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t border-border bg-surface;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-bottom-nav-inner {
+  @apply flex items-stretch justify-around max-w-lg mx-auto h-[4.5rem];
+}
+
+.mobile-bottom-nav-link {
+  @apply flex flex-1 flex-col items-center justify-center gap-0.5 text-text-muted text-[10px] font-medium min-w-0 px-1;
+}
+
+.mobile-bottom-nav-link--active {
+  @apply text-primary;
+}
+
+.mobile-bottom-nav-link--center {
+  @apply relative;
+}
+
+.mobile-bottom-nav-label {
+  @apply truncate max-w-full;
+}
+
+.has-mobile-bottom-nav main {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .has-mobile-bottom-nav main {
+    padding-bottom: inherit;
   }
 }

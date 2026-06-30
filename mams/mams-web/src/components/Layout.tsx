@@ -86,7 +86,7 @@ export function Layout() {
             sidebarCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[250px]'
           }`}
         >
-          <TopBar onOpenMenu={openSidebar} />
+          <TopBar onOpenMenu={openSidebar} companyName={settings?.companyName} companyLogo={settings?.companyLogo} />
           <main className="p-4 md:p-6 flex-1 overflow-x-hidden min-w-0">
             <Outlet />
           </main>

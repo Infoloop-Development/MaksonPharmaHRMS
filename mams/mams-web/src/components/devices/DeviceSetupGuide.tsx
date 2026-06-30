@@ -9,7 +9,7 @@ export function DeviceSetupGuide() {
     <div className="rounded-md border border-border bg-surface2/40 p-4 text-sm space-y-3" data-tour-id="devices-setup-guide">
       <div className="font-semibold text-text">Integration setup</div>
       <p className="text-text-muted text-xs">
-        Register each device here before connecting hardware. Saving the form only registers the device in MAMS —
+        Register each device here before connecting hardware. Saving the form only registers the device in MAMS;
         configure the physical unit on your network to start receiving punches.
       </p>
       <ol className="list-decimal list-inside space-y-2 text-xs text-text-muted">
@@ -21,7 +21,7 @@ export function DeviceSetupGuide() {
           with Biometric ID matching device enrollment (before or after device setup).
         </li>
         <li>
-          <span className="font-medium text-text">IT — enroll on hardware:</span> Fingerprint/face enrollment uses vendor
+          <span className="font-medium text-text">IT: enroll on hardware:</span> Fingerprint/face enrollment uses vendor
           software; use the same user ID as MAMS Biometric ID.
         </li>
         <li>
@@ -50,7 +50,7 @@ export function DeviceSetupGuide() {
       <div className="rounded-md border border-border bg-surface2/50 p-3 text-xs text-text-muted">
         <strong className="text-text">Employee biometric IDs:</strong> When someone scans, the device sends a user ID.
         MAMS matches <code className="font-mono">Employee.biometricId</code> to that value. If no employee matches, the
-        punch is <strong>not stored</strong> in attendance — only logged under <strong>Unmapped punches</strong> for HR
+        punch is <strong>not stored</strong> in attendance; only logged under <strong>Unmapped punches</strong> for HR
         to fix the Biometric ID and re-punch.
       </div>
       <p className="text-[11px] text-text-subtle">

@@ -120,7 +120,7 @@ export function VisitorIntroEditor({
           order: sharedOrder,
         });
       }
-      toast('Intro media uploaded — drag it in the list below to choose placement', 'success');
+      toast('Intro media uploaded; drag it in the list below to choose placement', 'success');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Upload failed', 'error');
     } finally {
@@ -284,7 +284,7 @@ export function VisitorIntroEditor({
                     Intro video ({VISITOR_FORM_LOCALE_LABELS[locale]})
                     {locale !== 'en' && (
                       <span className="text-xs text-text-muted font-normal ml-2">
-                        Optional — falls back to English
+                        Optional, falls back to English
                       </span>
                     )}
                   </p>

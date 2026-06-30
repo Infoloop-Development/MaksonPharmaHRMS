@@ -62,7 +62,7 @@ export function kindLabel(kind: AdminOverviewTableKind): string {
 export const TABLE_KIND_HINTS: Record<AdminOverviewTableKind, string> = {
   attendance: 'Click employee name to view full profile and attendance history',
   users: 'Org user accounts with role and login activity',
-  audit: 'Platform audit events — filter by event type or role',
+  audit: 'Platform audit events: filter by event type or role',
   devices: 'Biometric devices and connection status',
   employees: 'Employee directory with status and shift',
 };

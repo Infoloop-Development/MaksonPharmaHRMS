@@ -1,3 +1,5 @@
+import { InfoTip } from './Tooltip';
+
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -5,7 +7,7 @@ interface StatCardProps {
   accent?: 'primary' | 'green' | 'red' | 'amber';
   selected?: boolean;
   onClick?: () => void;
-  title?: string;
+  tooltip?: string;
 }
 
 const ACCENT_BORDER = {
@@ -22,19 +24,19 @@ const ACCENT_SELECTED_BG = {
   amber: 'bg-amber-bg',
 };
 
-export function StatCard({ label, value, sub, accent = 'primary', selected, onClick, title }: StatCardProps) {
+export function StatCard({ label, value, sub, accent = 'primary', selected, onClick, tooltip }: StatCardProps) {
   const clickable = onClick !== undefined;
   return (
     <button
       type="button"
-      title={title}
       onClick={onClick}
       disabled={!clickable}
-      className={`card p-3 md:p-5 border-l-4 ${ACCENT_BORDER[accent]} text-left w-full transition ${
+      className={`card p-3 md:p-5 border-l-4 ${ACCENT_BORDER[accent]} text-left w-full transition relative ${
         clickable ? 'hover:shadow-floating hover:-translate-y-0.5 cursor-pointer' : 'cursor-default'
       } ${selected ? `shadow-floating ${ACCENT_SELECTED_BG[accent]}` : ''}`}
     >
-      <div className="text-[10px] md:text-[11px] text-text-subtle font-semibold uppercase tracking-wider">{label}</div>
+      {tooltip ? <InfoTip content={tooltip} label={`About ${label}`} className="!absolute top-2 right-2.5" /> : null}
+      <div className="text-[10px] md:text-[11px] text-text-subtle font-semibold uppercase tracking-wider pr-5">{label}</div>
       <div className="text-2xl md:text-3xl font-bold my-1 md:my-1.5 leading-none">{value}</div>
       {sub && <div className="text-[10px] md:text-xs text-text-muted line-clamp-2">{sub}</div>}
     </button>

@@ -17,7 +17,7 @@ function DragHandle() {
   );
 }
 
-/** Compact card used in DragOverlay — no sortable hooks. */
+/** Compact card used in DragOverlay: no sortable hooks. */
 export function FormFieldDragGhost({ field }: { field: VisitorField }) {
   return (
     <div className="form-field-drag-overlay card p-3 border-2 border-primary shadow-floating">

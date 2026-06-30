@@ -16,7 +16,7 @@ import {
   resolveGenericTableColumns,
   type GenericTableFilterDefaults,
 } from './adminOverviewTableUtils';
-import { fmtHours, fmtIstTime } from './format';
+import { EMPTY_CELL, fmtHours, fmtIstTime } from './format';
 import { openReportPrintWindow, type ReportPrintColumn } from './reportPrintDocument';
 
 const PAGE_SIZE = 100;
@@ -43,7 +43,7 @@ function genericCellExportValue(col: string, row: Record<string, unknown>): stri
   if (col === 'role' && row.role) return ROLE_LABELS[row.role as Role] ?? String(row.role);
   if (col === 'active' || col === 'online') return row[col] ? 'Yes' : 'No';
   const val = row[col];
-  if (val == null || val === '') return '—';
+  if (val == null || val === '') return EMPTY_CELL;
   return String(val);
 }
 
@@ -233,19 +233,19 @@ export function buildAttendancePrintRows(
           out[col] = row.timeShift;
           break;
         case 'entry':
-          out[col] = row.entryStamp ? fmtIstTime(row.entryStamp) : '—';
+          out[col] = row.entryStamp ? fmtIstTime(row.entryStamp) : EMPTY_CELL;
           break;
         case 'exit':
-          out[col] = row.exitStamp ? fmtIstTime(row.exitStamp) : '—';
+          out[col] = row.exitStamp ? fmtIstTime(row.exitStamp) : EMPTY_CELL;
           break;
         case 'hours':
-          out[col] = row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '—';
+          out[col] = row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : EMPTY_CELL;
           break;
         case 'status':
           out[col] = row.displayStatus;
           break;
         default:
-          out[col] = '—';
+          out[col] = EMPTY_CELL;
       }
     }
     return out;
@@ -290,8 +290,8 @@ export function openAttendanceTablePrintWindow(options: {
   const rows = buildAttendancePrintRows(options.items, columnIds);
   const subtitle = buildAttendanceFilterSubtitle(options.filters);
   const title = options.titleSuffix
-    ? `Attendance — ${options.titleSuffix}`
-    : `Attendance — ${options.date}`;
+    ? `Attendance: ${options.titleSuffix}`
+    : `Attendance: ${options.date}`;
 
   return openReportPrintWindow({
     branding: options.branding,

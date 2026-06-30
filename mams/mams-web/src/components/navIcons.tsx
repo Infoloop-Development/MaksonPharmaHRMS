@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 export const NAV_ICON_NAMES = [
   'dashboard',
   'employees',
+  'compliance',
   'attendance',
   'reports',
   'adjustments',
@@ -55,6 +56,12 @@ const ICON_PATHS: Record<NavIconName, ReactNode> = {
     <>
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
+    </>
+  ),
+  compliance: (
+    <>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
     </>
   ),
   reports: (
@@ -144,4 +151,13 @@ const ICON_PATHS: Record<NavIconName, ReactNode> = {
 
 export function NavIcon({ name }: { name: NavIconName }) {
   return <IconSvg>{ICON_PATHS[name]}</IconSvg>;
+}
+
+export function CloseIcon() {
+  return (
+    <IconSvg>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </IconSvg>
+  );
 }

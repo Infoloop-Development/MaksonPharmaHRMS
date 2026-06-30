@@ -7,9 +7,10 @@ import { Badge } from '../ui/Badge';
 import { Input, Select } from '../ui/Field';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { formatVisitorResponse, visitorStatusTone } from './visitorsUtils';
+import { STAT_CARD_TOOLTIPS } from '../../lib/tooltips/statCardTooltips';
 
 export function VisitorRequestsTab({
   onView,
@@ -131,7 +132,7 @@ export function VisitorRequestsTab({
     if (!first) return item.formTitle;
     const val = item.responses[first.id];
     const text = formatVisitorResponse(val);
-    return text !== '—' ? `${first.label}: ${text}` : item.formTitle;
+    return text !== EMPTY_CELL ? `${first.label}: ${text}` : item.formTitle;
   };
 
   return (
@@ -146,6 +147,7 @@ export function VisitorRequestsTab({
             setStatusFilter('Pending');
             setPage(1);
           }}
+          tooltip={STAT_CARD_TOOLTIPS.visitors.pending}
         />
         <StatCard
           label="Approved"
@@ -156,6 +158,7 @@ export function VisitorRequestsTab({
             setStatusFilter('Approved');
             setPage(1);
           }}
+          tooltip={STAT_CARD_TOOLTIPS.visitors.approved}
         />
         <StatCard
           label="Rejected"
@@ -166,6 +169,7 @@ export function VisitorRequestsTab({
             setStatusFilter('Rejected');
             setPage(1);
           }}
+          tooltip={STAT_CARD_TOOLTIPS.visitors.rejected}
         />
         <StatCard
           label="All"
@@ -176,6 +180,7 @@ export function VisitorRequestsTab({
             setStatusFilter('All');
             setPage(1);
           }}
+          tooltip={STAT_CARD_TOOLTIPS.visitors.total}
         />
       </div>
 

@@ -13,7 +13,7 @@ import { Field, Input, Select } from '../components/ui/Field';
 import { DailyReportCardList } from '../components/reports/DailyReportCardList';
 import { MonthlyReportCardList } from '../components/reports/MonthlyReportCardList';
 import { DepartmentReportCardList } from '../components/reports/DepartmentReportCardList';
-import { fmtDate, fmtHours, fmtNumber } from '../lib/format';
+import { EMPTY_CELL, fmtDate, fmtHours, fmtNumber } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { countActiveFilters } from '../lib/countActiveFilters';
@@ -22,6 +22,7 @@ import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { reportsTourScript } from '../lib/onboarding/scripts/reportsTourScript';
 import { SortableTh } from '../components/ui/SortableTh';
 import { useTableSort } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 type Tab = 'daily' | 'monthly' | 'department' | 'location';
 
@@ -40,6 +41,9 @@ export function Reports() {
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Reports</h1>
+          <div className="text-sm text-text-muted">
+            View mode: <Badge tone={isCompliant ? 'amber' : 'blue'}>{isCompliant ? 'COMPLIANT (8-hour)' : 'REAL (12-hour)'}</Badge>
+          </div>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
@@ -165,16 +169,16 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
         const hrs = isCompliant ? r.compliantHours : r.realNetHours;
         const row: Record<string, string | number> = {
           date: fmtDate(r.date),
-          code: emp?.empCode ?? '—',
-          name: emp?.name ?? '—',
-          department: emp?.department ?? '—',
-          location: emp?.location ?? '—',
-          entry: entry ? fmtTime(entry) : '—',
-          exit: exit ? fmtTime(exit) : '—',
-          hours: typeof hrs === 'number' ? fmtHours(hrs) : '—',
-          status: r.status ?? '—',
+          code: emp?.empCode ?? EMPTY_CELL,
+          name: emp?.name ?? EMPTY_CELL,
+          department: emp?.department ?? EMPTY_CELL,
+          location: emp?.location ?? EMPTY_CELL,
+          entry: entry ? fmtTime(entry) : EMPTY_CELL,
+          exit: exit ? fmtTime(exit) : EMPTY_CELL,
+          hours: typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL,
+          status: r.status ?? EMPTY_CELL,
         };
-        if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : '—';
+        if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : EMPTY_CELL;
         return row;
       }),
     });
@@ -259,11 +263,11 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Code" sortKey="code" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
-                <SortableTh label="Dept" sortKey="department" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" />
-                <SortableTh label="Location" sortKey="location" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" />
+                <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('reports', 'date')} />
+                <SortableTh label="Code" sortKey="code" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('reports', 'code')} />
+                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('reports', 'name')} />
+                <SortableTh label="Dept" sortKey="department" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" tooltip={tableColumnTooltip('reports', 'department')} />
+                <SortableTh label="Location" sortKey="location" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('reports', 'location')} />
                 <th className="px-4 py-3 font-semibold">Entry</th>
                 <th className="px-4 py-3 font-semibold">Exit</th>
                 <SortableTh label={isCompliant ? 'Hours' : 'Net Hrs'} sortKey="hours" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
@@ -286,14 +290,14 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
                 return (
                   <tr key={i} className="hover:bg-surface2/50">
                     <td className="px-4 py-2.5 font-mono text-xs">{fmtDate(r.date)}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{emp?.empCode ?? '—'}</td>
-                    <td className="px-4 py-2.5 font-medium">{emp?.name ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-xs hidden lg:table-cell">{emp?.department ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-xs text-text-muted hidden xl:table-cell">{emp?.location ?? '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{entry ? fmtTime(entry) : '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{exit ? fmtTime(exit) : '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs">{typeof hrs === 'number' ? fmtHours(hrs) : '—'}</td>
-                    {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs hidden lg:table-cell">{r.otHours ? fmtHours(r.otHours) : '—'}</td>}
+                    <td className="px-4 py-2.5 font-mono text-xs">{emp?.empCode ?? EMPTY_CELL}</td>
+                    <td className="px-4 py-2.5 font-medium">{emp?.name ?? EMPTY_CELL}</td>
+                    <td className="px-4 py-2.5 text-xs hidden lg:table-cell">{emp?.department ?? EMPTY_CELL}</td>
+                    <td className="px-4 py-2.5 text-xs text-text-muted hidden xl:table-cell">{emp?.location ?? EMPTY_CELL}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{entry ? fmtTime(entry) : EMPTY_CELL}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{exit ? fmtTime(exit) : EMPTY_CELL}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs">{typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL}</td>
+                    {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs hidden lg:table-cell">{r.otHours ? fmtHours(r.otHours) : EMPTY_CELL}</td>}
                     <td className="px-4 py-2.5">
                       <Badge tone={r.status === 'Present' ? 'green' : r.status === 'Absent' ? 'red' : 'gray'}>{r.status}</Badge>
                     </td>

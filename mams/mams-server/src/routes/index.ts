@@ -18,6 +18,7 @@ import visitorsRoutes from './visitors.routes.js';
 import adminRoutes from './admin.routes.js';
 import adminOverviewRoutes from './adminOverview.routes.js';
 import complianceAttendanceRoutes from './complianceAttendance.routes.js';
+import notificationsRoutes from './notifications.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
@@ -39,6 +40,7 @@ apiRouter.use('/regularization', regularizationRoutes);
 apiRouter.use('/visitors', visitorsRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/admin/overview', adminOverviewRoutes);
+apiRouter.use('/notifications', notificationsRoutes);
 
 apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });

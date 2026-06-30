@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { settingsApi, type Settings as SettingsT } from '../api/settings';
+import { settingsApi, settingsOrgNotificationAlerts, type Settings as SettingsT } from '../api/settings';
 import { ApiError } from '../api/client';
 import { usersApi, type UserSummary } from '../api/users';
 import { useAuth } from '../store/auth';
@@ -10,7 +10,8 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
-import type { ExportNamingSettings, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
+import type { ExportNamingSettings, OrgNotificationAlerts, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { TIME_FORMAT_LABELS } from '../lib/timeFormat';
 import { useTimeDisplay } from '../store/timeFormat';
 import {
@@ -77,8 +78,8 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'read.visitors': 'View visitor requests',
   'approve.visitors': 'Approve/reject visitor requests',
   'manage.visitors': 'Manage visitor forms, links, and QR codes',
-  'read.compliance_activity': 'View compliance login activity log',
-  'write.employee_change': 'Submit employee change requests (pending HR approval)',
+  'read.compliance_activity': 'View compliance activity log',
+  'write.employee_change': 'Submit employee add/edit/delete change requests',
   'approve.employee_change': 'Approve/reject employee change requests',
 };
 
@@ -89,7 +90,8 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
   { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
-  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices', 'read.compliance_activity', 'write.employee_change', 'approve.employee_change'] },
+  { label: 'HR operations', permissions: ['manage.employees', 'manage.devices', 'write.employee_change', 'approve.employee_change'] },
+  { label: 'Compliance', permissions: ['read.compliance_activity'] },
   {
     label: 'Organization admin',
     permissions: [
@@ -172,7 +174,7 @@ export function Settings() {
         <div>
           <h2 className="font-semibold text-sm">Leave management</h2>
           <p className="text-sm text-text-muted mt-1">
-            National holidays, leave types, quotas, and leave requests are configured on the Leave page — not here.
+            National holidays, leave types, quotas, and leave requests are configured on the Leave page, not here.
           </p>
         </div>
         <Link to="/leave" className="btn-primary btn-sm shrink-0 self-start sm:self-center">
@@ -225,6 +227,9 @@ export function OrganizationSettingsPanel() {
       </SettingsLayoutCell>
       <SettingsLayoutCell full>
         <TimeDisplayCard settings={data} canManage={canManage} />
+      </SettingsLayoutCell>
+      <SettingsLayoutCell full>
+        <OrgNotificationAlertsCard settings={data} canManage={canManage} />
       </SettingsLayoutCell>
       <SettingsLayoutCell full>
         <BrandAssetsCard
@@ -322,6 +327,91 @@ function pickChanged<T extends object>(initial: T, draft: T): Partial<T> {
     }
   }
   return out;
+}
+
+function OrgNotificationAlertsCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
+  const initial = { orgNotificationAlerts: settingsOrgNotificationAlerts(settings) };
+  const [draft, set, reset, dirty] = useDirtyForm(initial);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => settingsApi.patch(pickChanged(initial, draft)),
+    onSuccess: () => {
+      toast('Notification settings saved', 'success');
+      qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
+    },
+    onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
+  });
+
+  const rows: { key: keyof OrgNotificationAlerts; label: string; description: string }[] = [
+    {
+      key: 'visitorSubmitted',
+      label: 'Visitor form submissions',
+      description: 'Notify org admins when a visitor completes a public form.',
+    },
+    {
+      key: 'leaveApplied',
+      label: 'New leave applications',
+      description: 'Notify org admins when leave is submitted or recorded.',
+    },
+    {
+      key: 'deviceRegistered',
+      label: 'New biometric / device registrations',
+      description: 'Notify org admins when a new attendance device is registered.',
+    },
+  ];
+
+  const setAlert = (key: keyof OrgNotificationAlerts, value: boolean) => {
+    set({ orgNotificationAlerts: { ...draft.orgNotificationAlerts, [key]: value } });
+  };
+
+  return (
+    <SectionCard
+      title="Admin notifications"
+      footer={
+        canManage &&
+        dirty && (
+          <>
+            <button type="button" className="btn-outline" onClick={reset}>
+              Discard
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? 'Saving...' : 'Save notification settings'}
+            </button>
+          </>
+        )
+      }
+    >
+      <p className="text-sm text-text-muted mb-4">
+        Control which events appear in the org admin notification bell. All alerts are on by default; turn off any you
+        do not need. Changes apply after you save.
+      </p>
+      <div className="space-y-3">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-border bg-surface2/40 px-3 py-3"
+          >
+            <div className="min-w-0">
+              <div className="text-sm font-medium">{row.label}</div>
+              <div className="text-xs text-text-muted mt-0.5">{row.description}</div>
+            </div>
+            <Toggle
+              checked={draft.orgNotificationAlerts[row.key]}
+              onChange={(v) => setAlert(row.key, v)}
+              disabled={!canManage}
+            />
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
 }
 
 function TimeDisplayCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
@@ -1146,10 +1236,10 @@ export function UsersManagementPanel() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
-              <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
-              <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
-              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" />
+              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'name')} />
+              <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'email')} />
+              <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'role')} />
+              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'status')} />
               <th className="py-2 text-right">Actions</th>
             </tr>
           </thead>

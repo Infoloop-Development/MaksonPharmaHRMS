@@ -1,6 +1,7 @@
 import type { AdminOverviewBarMetric, AdminOverviewDonutMetric, AdminOverviewKpiMetricId, AdminOverviewTableKind, Permission } from '@mams/types';
 import { ALL_ADMIN_OVERVIEW_KPI_METRICS } from '@mams/types';
-import { fmtNumber } from './format';
+import { fmtNumber, EMPTY_CELL } from './format';
+import { getAdminOverviewKpiTooltip } from './tooltips/adminOverviewKpiTooltips';
 
 export type AdminBarMetric = AdminOverviewBarMetric;
 
@@ -184,8 +185,12 @@ export function getAdminMetricValue(id: AdminOverviewKpiMetricId, v: AdminKpiVal
     case 'pending_adjustments':
       return fmtNumber(v.hr.pendingAdjustments);
     default:
-      return '—';
+      return EMPTY_CELL;
   }
+}
+
+export function getAdminMetricTooltip(id: AdminOverviewKpiMetricId): string {
+  return getAdminOverviewKpiTooltip(id);
 }
 
 export function getAdminMetricSub(id: AdminOverviewKpiMetricId, v: AdminKpiValues): string {

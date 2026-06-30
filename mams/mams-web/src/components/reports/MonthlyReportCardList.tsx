@@ -1,5 +1,5 @@
 import type { MonthlyReport } from '../../api/reports';
-import { fmtHours } from '../../lib/format';
+import { EMPTY_CELL, fmtHours } from '../../lib/format';
 
 export function MonthlyReportCardList({
   rows,
@@ -61,7 +61,7 @@ export function MonthlyReportCardList({
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-text-muted">Equiv. days</div>
-              <div className="font-mono text-xs">{r.equivalentDays?.toFixed(1) ?? '—'}</div>
+              <div className="font-mono text-xs">{r.equivalentDays?.toFixed(1) ?? EMPTY_CELL}</div>
             </div>
           </div>
         </div>
