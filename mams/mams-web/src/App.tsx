@@ -29,7 +29,7 @@ import { AdminFeatureFlags } from './pages/admin/AdminFeatureFlags';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
 import { ComplianceAttendanceLog } from './pages/ComplianceAttendanceLog';
-import { defaultHomePath } from '@mams/types';
+import { defaultHomePath, type Permission } from '@mams/types';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
@@ -47,7 +47,21 @@ function RequireAuthSession({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function SettingsGate() {
+function RequirePermission({ permission, fallback, children }: { permission: Permission; fallback: string; children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.permissions.includes(permission)) return <Navigate to={fallback} replace />;
+  return <>{children}</>;
+}
+
+function RequireAnyPermission({ permissions, fallback, children }: { permissions: Permission[]; fallback: string; children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  if (!permissions.some((p) => user.permissions.includes(p))) return <Navigate to={fallback} replace />;
+  return <>{children}</>;
+}
+
+function SettingsGate(){
   const viewMode = useAuth((s) => s.user?.viewMode);
   return viewMode === 'compliant' ? <ComplianceSettings /> : <Settings />;
 }
@@ -110,8 +124,15 @@ export function App() {
         <Route path="leave" element={<Leave />} />
         <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />
-        <Route path="compliance-activity" element={<ComplianceActivity />} />
-        <Route path="employee-change-requests" element={<EmployeeChangeRequests />} />
+        <Route path="compliance-activity" element={<ComplianceActivity/>} />
+        <Route
+          path="employee-change-requests"
+          element={
+            <RequireAnyPermission permissions={['approve.employee_change', 'write.employee_change']} fallback="/employees">
+              <EmployeeChangeRequests />
+            </RequireAnyPermission>
+          }
+        />
         <Route path="settings" element={<SettingsGate />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />

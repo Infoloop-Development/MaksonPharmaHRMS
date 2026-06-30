@@ -7,22 +7,22 @@ const employeeChangeRequestSchema = new Schema(
         proposedData: { type: Schema.Types.Mixed, default: null},
         previousData: { type: Schema.Types.Mixed, default: null},
         reason: { type: String, required: true, minLength: 10},
-        status: { type: String, enum: ['Pending','Approved','Rejected'], default: 'Pending', index: true},
+        status: { type: String, enum: ['Flagged','Reviewed'], default: 'Flagged', index: true},
         initiatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true},
         initiatedAt: { type: Date, default: () => new Date()},
         initiatedFromIp: { type: String, default: null},
-        decidedBy: {type: Schema.Types.ObjectId, ref: 'User', default: null},
-        decidedAt: { type: Date, default: null},
-        decidedFromIp: { type: String, default: null },
-        approverNote: {type: String, default: null},
+        reviewedBy: {type: Schema.Types.ObjectId, ref: 'User', default: null},
+        reviewedAt: { type: Date, default: null},
+        reviewedFromIp: { type: String, default: null },
+        reviewNote: {type: String, default: null},
     },
     { timestamps: {createdAt: true, updatedAt: false}}
 );
 
-employeeChangeRequestSchema.index({status: 1,changeType: 1});
+employeeChangeRequestSchema.index({status: 1, changeType: 1});
 employeeChangeRequestSchema.index({initiatedBy: 1, status: 1});
 
-export type EmployeeChanfeRequestDoc = InferSchemaType<typeof employeeChangeRequestSchema> & {
+export type EmployeeChangeRequestDoc = InferSchemaType<typeof employeeChangeRequestSchema> & {
     _id: mongoose.Types.ObjectId;
 }
 

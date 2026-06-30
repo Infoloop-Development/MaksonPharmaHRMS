@@ -29,20 +29,18 @@ import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.s
 const router = Router();
 router.use(requireAuth);
 
-router.get('/stats', async (_req, res, next) => {
+router.get('/stats', async (req, res, next) => {
   try {
+    const isCompliant = req.auth!.viewMode === 'compliant';
     const today = utcToIstDateString(new Date());
     const [activeEmps, totalEmps, todayPresent, todayAbsent, devices, devicesOnline, pendingAdj] = await Promise.all([
       EmployeeModel.countDocuments({ status: 'Active', isDeleted: { $ne: true } }),
       EmployeeModel.countDocuments({ isDeleted: { $ne: true } }),
       AttendanceDerivedModel.countDocuments({ date: today, status: 'Present' }),
       AttendanceDerivedModel.countDocuments({ date: today, status: 'Absent' }),
-      DeviceModel.countDocuments({ isActive: true }),
-      DeviceModel.countDocuments({
-        isActive: true,
-        lastPingAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
-      }),
-      AdjustmentModel.countDocuments({ status: 'Pending' }),
+      isCompliant ? Promise.resolve(0) : DeviceModel.countDocuments({ isActive: true }),
+      isCompliant ? Promise.resolve(0) : DeviceModel.countDocuments({isActive: true, lastPingAt: { $gte: new Date(Date.now()- 5 * 60 * 1000)}}),
+      isCompliant ? Promise.resolve(0) : AdjustmentModel.countDocuments({status: 'Pending'}),
     ]);
 
     res.json({
@@ -135,7 +133,7 @@ router.put('/kpi', async (req, res, next) => {
 router.get('/charts', async (req, res, next) => {
   try {
     const date = typeof req.query.date === 'string' ? req.query.date : undefined;
-    res.json(await getDashboardCharts(date));
+    res.json(await getDashboardCharts(date,req.auth!.viewMode));
   } catch (err) {
     next(err);
   }

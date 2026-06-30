@@ -3,7 +3,7 @@ import type {
   DashboardKpiMetricId,
 } from '@mams/types';
 import { ALL_DASHBOARD_KPI_METRICS } from '@mams/types';
-import { fmtNumber, EMPTY_CELL } from './format';
+import { fmtNumber } from './format';
 import { getDashboardKpiTooltip } from './tooltips/dashboardKpiTooltips';
 
 export type DashboardShiftFilter = 'All' | 'Day' | 'Night';
@@ -56,7 +56,9 @@ const METRIC_ACCENTS: Record<DashboardKpiMetricId, Accent> = {
   night_shift: 'primary',
 };
 
-export function getMetricLabel(id: DashboardKpiMetricId, values: KpiDayValues): string {
+export function getMetricLabel(id: DashboardKpiMetricId, values: KpiDayValues, isCompliant = false): string {
+  if (isCompliant && id === 'day_shift') return 'Shift A';
+  if (isCompliant && id === 'night_shift') return 'Shift B+C';
   return METRIC_LABELS[id](values);
 }
 
@@ -87,7 +89,7 @@ export function getMetricValue(id: DashboardKpiMetricId, v: KpiDayValues): strin
     case 'night_shift':
       return fmtNumber(v.nightShiftPresent);
     default:
-      return EMPTY_CELL;
+      return '—';
   }
 }
 
@@ -122,7 +124,9 @@ export function getMetricTooltip(id: DashboardKpiMetricId): string {
   return getDashboardKpiTooltip(id);
 }
 
-export function getMetricPickerLabel(id: DashboardKpiMetricId): string {
+export function getMetricPickerLabel(id: DashboardKpiMetricId, isCompliant = false): string {
+  if (isCompliant && id === 'day_shift') return 'Shift A';
+  if (isCompliant && id === 'night_shift') return 'Shift B+C';
   return METRIC_LABELS[id]({ weekday: '', total: 0, present: 0, absent: 0, late: 0, onTime: 0, weeklyOff: 0, halfDay: 0, dayShiftPresent: 0, nightShiftPresent: 0 });
 }
 

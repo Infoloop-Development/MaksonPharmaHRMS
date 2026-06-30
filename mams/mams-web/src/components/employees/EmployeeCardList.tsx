@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '../ui/Badge';
 import type { EmployeeMasked } from '@mams/types';
+import { useAuth } from '../../store/auth';
 
 export function EmployeeCardList({
   items,
@@ -17,6 +18,8 @@ export function EmployeeCardList({
   onEdit?: (employee: EmployeeMasked) => void;
   onDelete?: (employee: EmployeeMasked) => void;
 }) {
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
+
   if (isLoading) {
     return <div className="card p-6 text-center text-text-muted text-sm md:hidden">Loading...</div>;
   }
@@ -49,7 +52,7 @@ export function EmployeeCardList({
             </div>
             <div>
               <dt className="text-text-subtle uppercase tracking-wider">Shift</dt>
-              <dd>{e.timeShift}</dd>
+              <dd>{isCompliant ? e.alternateShift : e.timeShift}</dd>
             </div>
             <div className="col-span-2">
               <dt className="text-text-subtle uppercase tracking-wider">Location</dt>

@@ -24,15 +24,7 @@ const ACCENT_SELECTED_BG = {
   amber: 'bg-amber-bg',
 };
 
-export function StatCard({
-  label,
-  value,
-  sub,
-  accent = 'primary',
-  selected,
-  onClick,
-  tooltip,
-}: StatCardProps) {
+export function StatCard({ label, value, sub, accent = 'primary', selected, onClick, tooltip }: StatCardProps) {
   const clickable = onClick !== undefined;
   return (
     <button

@@ -1,5 +1,6 @@
 import type { DashboardKpiMetricId } from '@mams/types';
 import { ALL_DASHBOARD_KPI_METRICS, getMetricPickerLabel } from '../../lib/dashboardKpiRegistry';
+import { useAuth } from '../../store/auth';
 
 export function DashboardKpiMetricPicker({
   slotIndex,
@@ -12,6 +13,7 @@ export function DashboardKpiMetricPicker({
   onSelect: (metric: DashboardKpiMetricId) => void;
   onClose: () => void;
 }) {
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const usedElsewhere = new Set(
     currentSlots.filter((_, i) => i !== slotIndex)
   );
@@ -53,7 +55,7 @@ export function DashboardKpiMetricPicker({
                     }
                   }}
                 >
-                  {getMetricPickerLabel(id)}
+                  {getMetricPickerLabel(id, isCompliant)}
                 </button>
               </li>
             );

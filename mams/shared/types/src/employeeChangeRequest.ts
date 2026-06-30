@@ -1,6 +1,6 @@
 import { z } from'zod';
 
-export const EmployeeChangeRequestStatusSchema = z.enum(['Pending','Approved','Rejected']);
+export const EmployeeChangeRequestStatusSchema = z.enum(['Flagged','Reviewed']);
 export type EmployeeChangeRequestStatus = z.infer<typeof EmployeeChangeRequestStatusSchema>;
 
 export const EmployeeChangeRequestTypeSchema = z.enum(['create','update','delete']);
@@ -51,13 +51,13 @@ export const EmployeeChangeRequestBodySchema = z.discriminatedUnion('changeType'
 
 export type EmployeeChangeRequestBody = z.infer<typeof EmployeeChangeRequestBodySchema>;
 
-export const EmployeeChangeRequestDecisionSchema = z.object({
-    decision: z.enum(['approve','reject']),
-    approverNote: z.string().max(2000).optional(),
+export const EmployeeChangeRequestReviewSchema = z.object({
+    action: z.enum(['keep', 'remove','revert','reinstate']),
     timeShift: z.enum(['Day','Night']).optional(),
+    reviewNote: z.string().max(2000).optional(),
 });
 
-export type EmployeeChangeRequestDecision = z.infer<typeof EmployeeChangeRequestDecisionSchema>;
+export type EmployeeChangeRequestReview = z.infer<typeof EmployeeChangeRequestReviewSchema>;
 
 export const EmployeeChangeRequestPublicSchema = z.object({
   id: z.string(),
@@ -72,10 +72,10 @@ export const EmployeeChangeRequestPublicSchema = z.object({
   initiatedBy: z.string(),
   initiatedByName: z.string(),
   initiatedAt: z.string().datetime(),
-  decidedBy: z.string().nullable(),
-  decidedByName: z.string().nullable(),
-  decidedAt: z.string().datetime().nullable(),
-  approverNote: z.string().nullable(),
+  reviewedBy: z.string().nullable(),
+  reviewedByName: z.string().nullable(),
+  reviewedAt: z.string().datetime().nullable(),
+  reviewNote: z.string().nullable(),
 });
 export type EmployeeChangeRequestPublic = z.infer<typeof EmployeeChangeRequestPublicSchema>;
 
@@ -87,4 +87,3 @@ export const EmployeeChangeRequestListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type EmployeeChangeRequestListQuery = z.infer<typeof EmployeeChangeRequestListQuerySchema>;
-

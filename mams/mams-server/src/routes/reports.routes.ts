@@ -558,26 +558,25 @@ router.get('/monthly.csv', async (req, res, next) => {
       'Present',
       'Absent',
       'Weekly Off',
-      'Total Hrs',
-      'OT Hrs',
+      isCompliant ? 'Compliant Hrs' : 'Net Hrs',
+      ...(isCompliant ? [] : ['OT Hrs']),
       'Equiv. Days',
     ];
     const dataLines = [header.join(',')];
     for (const r of rows) {
-      dataLines.push(
-        [
-          r.empCode ?? '',
-          csvEscape(r.name ?? ''),
-          csvEscape(r.department ?? ''),
-          csvEscape(r.location ?? ''),
-          r.presentDays ?? 0,
-          r.absentDays ?? 0,
-          r.weeklyOffDays ?? 0,
-          isCompliant ? r.totalCompliantHours ?? '' : r.totalRealNetHours ?? '',
-          r.totalOtHours ?? '',
-          typeof r.equivalentDays === 'number' ? r.equivalentDays.toFixed(1) : '',
-        ].join(',')
-      );
+      const row = [
+        r.empCode ?? '',
+        csvEscape(r.name ?? ''),
+        csvEscape(r.department ?? ''),
+        csvEscape(r.location ?? ''),
+        r.presentDays ?? 0,
+        r.absentDays ?? 0,
+        r.weeklyOffDays ?? 0,
+        isCompliant ? r.totalCompliantHours ?? '' : r.totalRealNetHours ?? '',
+        ...(isCompliant ? [] : [r.totalOtHours ?? '']),
+        typeof r.equivalentDays === 'number' ? r.equivalentDays.toFixed(1) : '',
+      ];
+      dataLines.push(row.join(','));
     }
 
     const settingsDoc = await SettingsModel.findOne().lean();
@@ -738,30 +737,30 @@ router.get('/department.csv', async (req, res, next) => {
       { $sort: { department: 1 } },
     ]);
 
+    const isDeptCompliant = req.auth!.viewMode === 'compliant';
     const header = [
       'Department',
       'Employees',
       'Present',
       'Absent',
       'Weekly Off',
-      'Compliant Hrs',
-      'OT Hrs',
+      isDeptCompliant ? 'Compliant Hrs' : 'Net Hrs',
+      ...(isDeptCompliant ? [] : ['OT Hrs']),
       'Attendance Rate %',
     ];
     const dataLines = [header.join(',')];
     for (const r of rows) {
-      dataLines.push(
-        [
-          csvEscape(r.department ?? ''),
-          r.employeeCount ?? 0,
-          r.presentDays ?? 0,
-          r.absentDays ?? 0,
-          r.weeklyOffDays ?? 0,
-          r.totalCompliantHours ?? '',
-          r.totalOtHours ?? '',
-          typeof r.attendanceRate === 'number' ? r.attendanceRate.toFixed(0) : '',
-        ].join(',')
-      );
+      const row = [
+        csvEscape(r.department ?? ''),
+        r.employeeCount ?? 0,
+        r.presentDays ?? 0,
+        r.absentDays ?? 0,
+        r.weeklyOffDays ?? 0,
+        isDeptCompliant ? r.totalCompliantHours ?? '' : r.totalRealNetHours ?? r.totalCompliantHours ?? '',
+        ...(isDeptCompliant ? [] : [r.totalOtHours ?? '']),
+        typeof r.attendanceRate === 'number' ? r.attendanceRate.toFixed(0) : '',
+      ];
+      dataLines.push(row.join(','));
     }
 
     const settingsDoc = await SettingsModel.findOne().lean();
@@ -910,28 +909,28 @@ router.get('/location.csv', async (req, res, next) => {
       { $sort: { location: 1 } },
     ]);
 
+    const isLocCompliant = req.auth!.viewMode === 'compliant';
     const header = [
       'Location',
       'Employees',
       'Present',
       'Absent',
-      'Compliant Hrs',
-      'OT Hrs',
+      isLocCompliant ? 'Compliant Hrs' : 'Net Hrs',
+      ...(isLocCompliant ? [] : ['OT Hrs']),
       'Attendance Rate %',
     ];
     const dataLines = [header.join(',')];
     for (const r of rows) {
-      dataLines.push(
-        [
-          csvEscape(r.location ?? ''),
-          r.employeeCount ?? 0,
-          r.presentDays ?? 0,
-          r.absentDays ?? 0,
-          r.totalCompliantHours ?? '',
-          r.totalOtHours ?? '',
-          typeof r.attendanceRate === 'number' ? r.attendanceRate.toFixed(0) : '',
-        ].join(',')
-      );
+      const row = [
+        csvEscape(r.location ?? ''),
+        r.employeeCount ?? 0,
+        r.presentDays ?? 0,
+        r.absentDays ?? 0,
+        r.totalCompliantHours ?? '',
+        ...(isLocCompliant ? [] : [r.totalOtHours ?? '']),
+        typeof r.attendanceRate === 'number' ? r.attendanceRate.toFixed(0) : '',
+      ];
+      dataLines.push(row.join(','));
     }
 
     const settingsDoc = await SettingsModel.findOne().lean();

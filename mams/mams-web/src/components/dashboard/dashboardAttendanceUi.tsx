@@ -7,10 +7,10 @@ export function AttendanceStatusPill({ status }: { status: string }) {
   return <span className="dash-pill bg-surface2 text-text-muted">{status}</span>;
 }
 
-export function AttendanceShiftPill({ shift }: { shift: 'Day' | 'Night' }) {
-  return (
-    <span className={shift === 'Day' ? 'dash-pill-blue' : 'dash-pill-amber'}>{shift}</span>
-  );
+export function AttendanceShiftPill({ shift }: { shift: string }) {
+  if (shift === 'Day') return <span className="dash-pill-blue">Day</span>;
+  if (shift === 'Night') return <span className="dash-pill-amber">Night</span>;
+  return <span className="dash-pill-blue">Shift {shift}</span>;
 }
 
 export function useDisplayAttendanceCell() {

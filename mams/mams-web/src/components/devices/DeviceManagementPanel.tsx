@@ -22,7 +22,6 @@ import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
 import { CardSortSelect } from '../ui/CardSortSelect';
-import { STAT_CARD_TOOLTIPS } from '../../lib/tooltips/statCardTooltips';
 
 export function DeviceManagementPanel({
   canManage,
@@ -208,10 +207,10 @@ export function DeviceManagementPanel({
 
       {showStats && (
         <div className="dash-stat-grid mb-0" data-tour-id="devices-stats">
-          <DashboardStatCard label="Total" value={String(allDevices.length)} sub="" accent="primary" selected={false} onClick={() => {}} tooltip={STAT_CARD_TOOLTIPS.devices.total} />
-          <DashboardStatCard label="Online" value={String(online)} sub="" accent="green" selected={false} onClick={() => {}} tooltip={STAT_CARD_TOOLTIPS.devices.online} />
-          <DashboardStatCard label="Offline" value={String(allDevices.length - online)} sub="" accent="red" selected={false} onClick={() => {}} tooltip={STAT_CARD_TOOLTIPS.devices.offline} />
-          <DashboardStatCard label="Punches (24h)" value={recentPunches.toLocaleString()} sub="" accent="amber" selected={false} onClick={() => {}} tooltip={STAT_CARD_TOOLTIPS.devices.punches24h} />
+          <DashboardStatCard label="Total" value={String(allDevices.length)} sub="" accent="primary" selected={false} onClick={() => {}} hint="" />
+          <DashboardStatCard label="Online" value={String(online)} sub="" accent="green" selected={false} onClick={() => {}} hint="" />
+          <DashboardStatCard label="Offline" value={String(allDevices.length - online)} sub="" accent="red" selected={false} onClick={() => {}} hint="" />
+          <DashboardStatCard label="Punches (24h)" value={recentPunches.toLocaleString()} sub="" accent="amber" selected={false} onClick={() => {}} hint="" />
         </div>
       )}
 

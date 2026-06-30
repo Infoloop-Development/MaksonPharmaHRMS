@@ -24,6 +24,13 @@ import { utcToIstTimeString } from '../utils/time.js';
 const router = Router();
 router.use(requireAuth);
 
+router.use((req,res,next) => {
+  if (req.auth?.viewMode === 'compliant'){
+    return res.status(403).json({ code: 'forbidden', message: 'Not available in compliance view'})
+  }
+  next();
+});
+
 router.get('/', async (req, res, next) => {
   try {
     const q = RegularizationListQuerySchema.parse(req.query);

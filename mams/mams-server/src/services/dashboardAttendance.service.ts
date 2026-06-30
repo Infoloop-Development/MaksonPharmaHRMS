@@ -8,7 +8,7 @@ import type {
 export type DashboardAttendanceFilterQuery = Omit<DashboardAttendanceQuery, 'page' | 'pageSize'>;
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel } from '../models/Employee.js';
-import { isLateEntry } from './dashboard.service.js';
+import { isLateEntry, isCompliantLateEntry } from './dashboard.service.js';
 import { utcToIstTimeHmsMsString } from '../utils/time.js';
 
 const EXPORT_CAP = 10_000;
@@ -19,6 +19,7 @@ type PopulatedEmployee = {
   empCode: string;
   department: string;
   timeShift: 'Day' | 'Night';
+  alternateShift?: string;
   status: string;
 };
 
@@ -48,13 +49,20 @@ function formatStamp(d: Date | null | undefined): string {
 function computeDisplayStatus(
   dbStatus: string,
   entryAt: Date | null | undefined,
-  timeShift: 'Day' | 'Night'
+  timeShift: 'Day' | 'Night',
+  viewMode: ViewMode = 'real',
+  alternateShift?: string
 ): DashboardAttendanceDisplayStatus {
   if (dbStatus === 'Weekly Off') return 'Weekly Off';
   if (dbStatus === 'Half Day') return 'Half Day';
   if (dbStatus === 'Absent') return 'Absent';
   if (dbStatus === 'Present') {
-    if (entryAt && isLateEntry(entryAt, timeShift)) return 'Late';
+    if (entryAt) {
+      const isLate = viewMode === 'compliant' && alternateShift
+        ? isCompliantLateEntry(entryAt, alternateShift as 'A' | 'B' | 'C')
+        : isLateEntry(entryAt, timeShift);
+      if (isLate) return 'Late';
+    }
     return 'Present';
   }
   return 'Absent';
@@ -71,14 +79,14 @@ function rowFromDerived(doc: DerivedLean, viewMode: ViewMode): DashboardAttendan
       ? (doc.compliantHours ?? null)
       : (doc.realNetHours ?? null);
 
-  const displayStatus = computeDisplayStatus(doc.status, entryAt ?? null, emp.timeShift);
+  const displayStatus = computeDisplayStatus(doc.status, entryAt ?? null, emp.timeShift, viewMode, emp.alternateShift);
 
   return {
     employeeId: emp._id.toString(),
     employeeName: emp.name,
     empCode: emp.empCode,
     department: emp.department,
-    timeShift: emp.timeShift,
+    timeShift: viewMode === 'compliant' ? (emp.alternateShift ?? emp.timeShift) : emp.timeShift,
     entryStamp: doc.status === 'Present' || doc.status === 'Half Day' ? formatStamp(entryAt) : '-',
     exitStamp: doc.status === 'Present' || doc.status === 'Half Day' ? formatStamp(exitAt) : '-',
     totalHoursWorked: doc.status === 'Present' || doc.status === 'Half Day' ? hours : null,
@@ -124,7 +132,7 @@ function applyFilters(
 
 async function fetchRowsForDate(date: string, viewMode: ViewMode): Promise<DashboardAttendanceRow[]> {
   const docs = await AttendanceDerivedModel.find({ date }, projectionFor(viewMode))
-    .populate('employeeId', 'name empCode department timeShift status')
+    .populate('employeeId', 'name empCode department timeShift alternateShift status')
     .lean();
 
   const rows: DashboardAttendanceRow[] = [];
@@ -174,6 +182,11 @@ export async function listDashboardAttendanceForExport(
   return filtered.slice(0, EXPORT_CAP);
 }
 
-export function shiftLabel(timeShift: 'Day' | 'Night'): string {
-  return timeShift === 'Day' ? 'Day Shift' : 'Night Shift';
+export function shiftLabel(timeShift: string): string {
+  if (timeShift === 'Day') return 'Day Shift';
+  if (timeShift === 'Night') return 'Night Shift';
+  if (timeShift === 'A') return 'Shift A';
+  if (timeShift === 'B') return 'Shift B';
+  if (timeShift === 'C') return 'Shift C';
+  return timeShift;
 }

@@ -17,9 +17,9 @@ describe('PERMISSIONS_BY_ROLE regularization', () => {
     expect(perms).toContain('approve.regularization');
   });
 
-  it('hr.compliance includes approve regularization only', () => {
+  it('hr.compliance is fully locked out of regularization', () => {
     const perms = PERMISSIONS_BY_ROLE['hr.compliance'];
     expect(perms).not.toContain('write.regularization');
-    expect(perms).toContain('approve.regularization');
+    expect(perms).not.toContain('approve.regularization');
   });
 });

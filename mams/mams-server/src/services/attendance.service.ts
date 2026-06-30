@@ -2,6 +2,7 @@ import type { Types } from 'mongoose';
 import { AttendanceRawModel } from '../models/AttendanceRaw.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel, type EmployeeDoc } from '../models/Employee.js';
+import { SettingsModel } from '../models/Settings.js';
 import { decomposeHours, smartAnchorV2 } from './smartAnchor.js';
 import type { ComplianceShift } from '@mams/types';
 
@@ -52,14 +53,18 @@ export async function recomputeDerived(
   const realEntryAt = raws[0]!.rawTimestamp as Date;
   const realExitAt = raws[raws.length - 1]!.rawTimestamp as Date;
   const decomp = decomposeHours(realEntryAt, realExitAt);
+  const settings = await SettingsModel.findOne().select('smartAnchorEnabled').lean();
+  const smartAnchorOn = settings?.smartAnchorEnabled !== false;
 
-  const sa = smartAnchorV2({
-    employeeId: String(employeeId),
-    date,
-    alternateShift: employee.alternateShift as ComplianceShift,
-    realEntryAt,
-    realExitAt,
-  });
+  const sa = smartAnchorOn
+    ? smartAnchorV2({
+        employeeId: String(employeeId),
+        date,
+        alternateShift: employee.alternateShift as ComplianceShift,
+        realEntryAt,
+        realExitAt,
+      })
+    : { compliantEntryAt: null, compliantExitAt : null, smartAnchorVersion: 'disabled'};
 
   await upsertDerived(employeeId, date, {
     realEntryAt,

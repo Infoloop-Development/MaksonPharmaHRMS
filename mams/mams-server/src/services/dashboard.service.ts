@@ -51,11 +51,37 @@ export function isLateEntry(realEntryAt: Date, timeShift: 'Day' | 'Night'): bool
   return minutes >= NIGHT_LATE_FROM_MINUTES;
 }
 
-async function getDayPunctuality(date: string, totalActive: number) {
+const COMPLIANT_LATE_AFTER: Record<'A' | 'B' | 'C', number> = {
+  A: 6 * 60 + 15,   // 06:15 IST
+  B: 14 * 60 + 15,  // 14:15 IST
+  C: 22 * 60 + 15,  // 22:15 IST
+};
+
+export function isCompliantLateEntry(compliantEntryAt: Date, alternateShift: 'A' | 'B' | 'C'): boolean {
+  return istMinutesFromMidnight(compliantEntryAt) > COMPLIANT_LATE_AFTER[alternateShift];
+}
+
+async function getDayPunctuality(date: string, totalActive: number, viewMode: 'real' | 'compliant' = 'real') {
   const onLeave = await AttendanceDerivedModel.countDocuments({
     date,
     status: { $in: ['Absent', 'Weekly Off', 'Half Day'] },
   });
+
+  if (viewMode === 'compliant') {
+    const presentRows = await AttendanceDerivedModel.aggregate([
+      { $match: { date, status: 'Present' } },
+      { $lookup: { from: 'employees', localField: 'employeeId', foreignField: '_id', as: 'emp' } },
+      { $unwind: '$emp' },
+      { $project: { compliantEntryAt: 1, alternateShift: '$emp.alternateShift' } },
+    ]);
+    let delay = 0;
+    for (const row of presentRows) {
+      if (row.compliantEntryAt && isCompliantLateEntry(row.compliantEntryAt as Date, row.alternateShift as 'A' | 'B' | 'C')) {
+        delay += 1;
+      }
+    }
+    return { date, onTime: Math.max(0, totalActive - onLeave - delay), delay, onLeave, totalActive };
+  }
 
   const presentDay = await AttendanceDerivedModel.aggregate([
     { $match: { date, status: 'Present' } },
@@ -116,7 +142,32 @@ async function countPresentByShift(dates: string[], shift: 'Day' | 'Night'): Pro
   return dates.map((d) => byDate.get(d) ?? 0);
 }
 
-export async function getDashboardCharts(punctualityDate?: string): Promise<DashboardChartsPayload> {
+async function countPresentByAlternateShift(dates: string[], shift: 'A' | 'B' | 'C'): Promise<number[]> {
+  const rows = await AttendanceDerivedModel.aggregate([
+    { $match: { date: { $in: dates }, status: 'Present' } },
+    { $lookup: { from: 'employees', localField: 'employeeId', foreignField: '_id', as: 'emp' } },
+    { $unwind: '$emp' },
+    { $match: { 'emp.alternateShift': shift } },
+    { $group: { _id: '$date', count: { $sum: 1 } } },
+  ]);
+  const byDate = new Map(rows.map((r) => [r._id as string, r.count as number]));
+  return dates.map((d) => byDate.get(d) ?? 0);
+}
+
+async function countPresentByAlternateShiftMultiple(dates: string[], shifts: ('A' | 'B' | 'C')[]): Promise<number[]> {
+  const rows = await AttendanceDerivedModel.aggregate([
+    { $match: { date: { $in: dates }, status: 'Present' } },
+    { $lookup: { from: 'employees', localField: 'employeeId', foreignField: '_id', as: 'emp' } },
+    { $unwind: '$emp' },
+    { $match: { 'emp.alternateShift': { $in: shifts } } },
+    { $group: { _id: '$date', count: { $sum: 1 } } },
+  ]);
+  const byDate = new Map(rows.map((r) => [r._id as string, r.count as number]));
+  return dates.map((d) => byDate.get(d) ?? 0);
+}
+
+
+export async function getDashboardCharts(punctualityDate?: string, viewMode: 'real' | 'compliant' = 'real'): Promise<DashboardChartsPayload> {
   const asOfDate = utcToIstDateString(new Date());
   const dates = lastNIstDates(7);
   const punctualityFor = punctualityDate && dates.includes(punctualityDate)
@@ -142,44 +193,36 @@ export async function getDashboardCharts(punctualityDate?: string): Promise<Dash
   const absentByDate = new Map(absentRows.map((r) => [r._id as string, r.count as number]));
   const absent = dates.map((d) => absentByDate.get(d) ?? 0);
 
+const late = await (async () => {
   const presentForLate = await AttendanceDerivedModel.aggregate([
     { $match: { date: { $in: dates }, status: 'Present' } },
-    {
-      $lookup: {
-        from: 'employees',
-        localField: 'employeeId',
-        foreignField: '_id',
-        as: 'emp',
-      },
-    },
+    { $lookup: { from: 'employees', localField: 'employeeId', foreignField: '_id', as: 'emp' } },
     { $unwind: '$emp' },
-    {
-      $project: {
-        date: 1,
-        realEntryAt: 1,
-        timeShift: '$emp.timeShift',
-      },
-    },
+    { $project: { date: 1, realEntryAt: 1, compliantEntryAt: 1, timeShift: '$emp.timeShift', alternateShift: '$emp.alternateShift' } },
   ]);
   const lateByDate = new Map(dates.map((d) => [d, 0]));
   for (const row of presentForLate) {
-    const date = row.date as string;
-    const entry = row.realEntryAt as Date | null;
-    const shift = row.timeShift as 'Day' | 'Night';
-    if (entry && isLateEntry(entry, shift)) {
-      lateByDate.set(date, (lateByDate.get(date) ?? 0) + 1);
+    const isLate = viewMode === 'compliant'
+      ? (row.compliantEntryAt && isCompliantLateEntry(row.compliantEntryAt as Date, row.alternateShift as 'A' | 'B' | 'C'))
+      : (row.realEntryAt && isLateEntry(row.realEntryAt as Date, row.timeShift as 'Day' | 'Night'));
+    if (isLate) {
+      lateByDate.set(row.date as string, (lateByDate.get(row.date as string) ?? 0) + 1);
     }
   }
-  const late = dates.map((d) => lateByDate.get(d) ?? 0);
+  return dates.map((d) => lateByDate.get(d) ?? 0);
+})();
+
 
   const [weeklyOff, halfDay, dayShiftPresent, nightShiftPresent] = await Promise.all([
     countStatusByDate(dates, 'Weekly Off'),
     countStatusByDate(dates, 'Half Day'),
-    countPresentByShift(dates, 'Day'),
-    countPresentByShift(dates, 'Night'),
+    viewMode === 'compliant' 
+    ? countPresentByAlternateShift(dates,'A') : countPresentByShift(dates,'Day'),
+    viewMode === 'compliant' 
+    ? countPresentByAlternateShiftMultiple(dates,['B','C']) : countPresentByShift(dates,'Night'),
   ]);
 
-  const weekPunctuality = await getDayPunctuality(punctualityFor, totalActive);
+  const weekPunctuality = await getDayPunctuality(punctualityFor, totalActive, viewMode);
 
   return {
     asOfDate,

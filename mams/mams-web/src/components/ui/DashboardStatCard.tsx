@@ -18,6 +18,7 @@ export function DashboardStatCard({
   onClick: () => void;
   hint?: string;
   tooltip?: string;
+  title?: string;
 }) {
   const tip = tooltip ?? hint;
 

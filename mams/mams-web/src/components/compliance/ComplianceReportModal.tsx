@@ -10,8 +10,6 @@ import { Modal } from '../ui/Modal';
 import { Field, Input } from '../ui/Field';
 import { useToast } from '../ui/Toast';
 import { BASELINE_HOURS } from '@mams/types';
-import { EMPTY_CELL } from '../../lib/format';
-import { useReportJob } from '../../hooks/useReportJob';
 
 interface OverrideRow extends ComplianceReportOverride {
   key: string;
@@ -33,12 +31,11 @@ export function ComplianceReportModal({
   initialYearMonth?: string;
 }) {
   const toast = useToast((s) => s.push);
-  const { job, isPolling, error: jobError, statusLabel, startJob } = useReportJob();
   const [yearMonth, setYearMonth] = useState(initialYearMonth ?? defaultYearMonth());
   const [empSearch, setEmpSearch] = useState('');
   const [overrides, setOverrides] = useState<OverrideRow[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const submitting = isPolling;
 
   const { data: empResults } = useQuery({
     queryKey: ['employees', 'compliance-report', empSearch],
@@ -98,23 +95,21 @@ export function ComplianceReportModal({
       toast(validationErrors[0]!, 'error');
       return;
     }
+    setSubmitting(true);
     try {
-      const fallback = `compliance-attendance-${yearMonth}.xlsx`;
-      await startJob(
-        () =>
-          complianceAttendanceApi.createComplianceReportJob({
-            yearMonth,
-            overrides: overrides.map(({ employeeId, totalHours }) => ({
-              employeeId,
-              totalHours,
-            })),
-          }),
-        fallback
-      );
-      toast('Report ready — download started', 'success');
+      await complianceAttendanceApi.downloadMonthlyReport({
+        yearMonth,
+        overrides: overrides.map(({ employeeId, totalHours }) => ({
+          employeeId,
+          totalHours,
+        })),
+      });
+      toast('Report download started', 'success');
       onClose();
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -130,7 +125,7 @@ export function ComplianceReportModal({
             Cancel
           </button>
           <button type="button" className="btn-primary" disabled={submitting} onClick={() => void onSubmit()}>
-            {submitting ? statusLabel || 'Generating…' : 'Generate report'}
+            {submitting ? 'Generating…' : 'Download report'}
           </button>
         </>
       }
@@ -199,7 +194,7 @@ export function ComplianceReportModal({
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-text truncate">{row.name}</div>
                     <div className="text-xs font-mono text-text-muted">
-                      {row.empCode} · {row.department || EMPTY_CELL}
+                      {row.empCode} · {row.department || '—'}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -236,18 +231,6 @@ export function ComplianceReportModal({
         {submitAttempted && validationErrors.length > 0 && (
           <div className="p-3 rounded-md bg-red/10 border border-red/30 text-sm text-red">
             {validationErrors[0]}
-          </div>
-        )}
-
-        {(submitting || jobError) && (
-          <div
-            className={`p-3 rounded-md text-sm border ${
-              jobError
-                ? 'bg-red/10 border-red/30 text-red'
-                : 'bg-primary-bg border-primary/30 text-primary-on-bg'
-            }`}
-          >
-            {jobError ?? statusLabel ?? 'Starting report job…'}
           </div>
         )}
       </div>

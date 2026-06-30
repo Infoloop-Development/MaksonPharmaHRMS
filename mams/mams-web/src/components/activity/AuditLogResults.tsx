@@ -1,12 +1,11 @@
 import type { ActivityListItem, AuditLogCategory } from '@mams/types';
 import { AUDIT_LOG_CATEGORIES, ROLE_LABELS, type Role } from '@mams/types';
 import { useCallback } from 'react';
-import { EMPTY_CELL, fmtIstDateTimeMs } from '../../lib/format';
+import { useTimeDisplay } from '../../store/timeFormat';
 import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityDescription } from './ActivityDescription';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
-import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 type ActiveFilters = {
   category: AuditLogCategory;
@@ -71,6 +70,8 @@ export function AuditLogResults({
   items: ActivityListItem[] | undefined;
   isLoading: boolean;
 }) {
+  const { fmtDateTimeMs } = useTimeDisplay();
+
   const getSortValue = useCallback((row: ActivityListItem, col: string) => {
     if (col === 'occurredAt') return row.occurredAt;
     if (col === 'user') return row.userName ?? '';
@@ -98,7 +99,7 @@ export function AuditLogResults({
         {sortedRows.map((row) => (
           <div key={row.id} className="border border-border rounded-lg p-3 text-sm">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="text-xs text-text-muted">{fmtIstDateTimeMs(row.occurredAt)}</span>
+              <span className="text-xs text-text-muted">{fmtDateTimeMs(row.occurredAt)}</span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded bg-surface2">
                 {activityPageBadge(row.eventType, row.payload)}
               </span>
@@ -117,16 +118,16 @@ export function AuditLogResults({
         <table className="w-full text-sm">
           <thead className="bg-surface2 sticky top-0">
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <SortableTh label="Time" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[200px]" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
-              <SortableTh label="Area" sortKey="eventType" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" tooltip={tableColumnTooltip('audit', 'eventType')} />
-              <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[180px]" tooltip={tableColumnTooltip('audit', 'user')} />
+              <SortableTh label="Time" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[200px]" />
+              <SortableTh label="Area" sortKey="eventType" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" />
+              <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[180px]" />
               <th className="px-3 py-2 font-semibold">Activity</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {sortedRows.map((row) => (
               <tr key={row.id} className="hover:bg-surface2/40 align-top">
-                <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtIstDateTimeMs(row.occurredAt)}</td>
+                <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
                 <td className="px-3 py-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
                     {activityPageBadge(row.eventType, row.payload)}
@@ -139,7 +140,7 @@ export function AuditLogResults({
                       <div>{row.userRole}</div>
                     </>
                   ) : (
-                    EMPTY_CELL
+                    '—'
                   )}
                 </td>
                 <td className="px-3 py-2 text-text">

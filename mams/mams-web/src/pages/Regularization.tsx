@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { regularizationApi, type RegularizationListItem } from '../api/regularization';
 import { useAuth } from '../store/auth';
 import { DashboardStatCard } from '../components/ui/DashboardStatCard';
+import { STAT_CARD_TOOLTIPS } from '../lib/tooltips/statCardTooltips';
 import { RegularizationPageHeader } from '../components/regularization/RegularizationPageHeader';
 import { RegularizationRequestCardList } from '../components/regularization/RegularizationRequestCardList';
 import { CreateRegularizationModal } from '../components/regularization/CreateRegularizationModal';
@@ -15,7 +16,6 @@ import {
 } from '../lib/onboarding/scripts/regularizationTourScript';
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import { CardSortSelect } from '../components/ui/CardSortSelect';
-import { STAT_CARD_TOOLTIPS } from '../lib/tooltips/statCardTooltips';
 
 type StatusFilter = 'All' | 'Pending' | 'Approved' | 'Rejected';
 

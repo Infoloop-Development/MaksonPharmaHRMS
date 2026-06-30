@@ -120,7 +120,7 @@ export function ComplianceOverrideModal({
           </Select>
         </Field>
 
-        <Field label="Adjustment note" required hint="Min 5 characters, recorded in audit log">
+        <Field label="Adjustment note" required hint="Min 5 characters — recorded in audit log">
           <Textarea
             rows={3}
             value={adjustmentNote}

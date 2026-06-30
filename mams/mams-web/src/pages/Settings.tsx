@@ -11,6 +11,7 @@ import { Badge } from '../components/ui/Badge';
 import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
 import type { ExportNamingSettings, OrgNotificationAlerts, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { TIME_FORMAT_LABELS } from '../lib/timeFormat';
 import { useTimeDisplay } from '../store/timeFormat';
 import {
@@ -37,7 +38,6 @@ import { AdminSectionCard } from '../components/ui/AdminSectionCard';
 import { SortableTh } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
 import { useTableSort } from '../lib/tableSort';
-import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { settingsTourScript } from '../lib/onboarding/scripts/settingsTourScript';
 import { AppearanceSection } from '../components/ui/ThemeToggle';
 
@@ -469,7 +469,7 @@ function TimeDisplayCard({ settings, canManage }: { settings: SettingsT; canMana
       }
     >
       <p className="text-sm text-text-muted">
-        Applies to all HR and manager users across the app: how times are shown and entered (clocks, attendance, reports, regularization).
+        Applies to all HR and manager users across the app — how times are shown and entered (clocks, attendance, reports, regularization).
       </p>
       <div className="space-y-2 pt-1">
         {options.map((opt) => (
@@ -660,42 +660,189 @@ function ComplianceCard({ settings, canManage }: { settings: SettingsT; canManag
 
 function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
   const { fmtHhmm } = useTimeDisplay();
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+
+  type ShiftRow = SettingsT['realShifts'][number];
+  type EditingShift = { type: 'real' | 'compliance'; id: string; label: string; start: string; end: string };
+  const [editingShift, setEditingShift] = useState<EditingShift | null>(null);
+  const [weeklyOffDraft, setWeeklyOffDraft] = useState<string[] | null>(null);
+
+  const shiftMutation = useMutation({
+    mutationFn: (patch: { realShifts?: ShiftRow[]; complianceShifts?: ShiftRow[] }) =>
+      settingsApi.patch(patch),
+    onSuccess: () => {
+      toast('Shift updated', 'success');
+      qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
+      setEditingShift(null);
+    },
+    onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
+  });
+
+  const weeklyOffMutation = useMutation({
+    mutationFn: (days: string[]) => settingsApi.patch({ weeklyOffDefault: days }),
+    onSuccess: () => {
+      toast('Weekly off updated', 'success');
+      qc.invalidateQueries({ queryKey: ['settings'] });
+      invalidateActivity(qc);
+      setWeeklyOffDraft(null);
+    },
+    onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
+  });
+
+  function saveShift() {
+    if (!editingShift) return;
+    const updated = (editingShift.type === 'real' ? settings.realShifts : settings.complianceShifts).map((s) =>
+      s.id === editingShift.id
+        ? { ...s, label: editingShift.label, start: editingShift.start, end: editingShift.end }
+        : s
+    );
+    shiftMutation.mutate(
+      editingShift.type === 'real' ? { realShifts: updated } : { complianceShifts: updated }
+    );
+  }
+
+  function renderShiftRow(s: ShiftRow, type: 'real' | 'compliance') {
+    const isEditing = editingShift?.id === s.id && editingShift?.type === type;
+    if (isEditing && editingShift) {
+      return (
+        <div key={s.id} className="py-2 border-b border-border last:border-0">
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              className="input text-sm"
+              value={editingShift.label}
+              onChange={(e) => setEditingShift({ ...editingShift, label: e.target.value })}
+              placeholder="Label"
+            />
+            <div className="flex gap-2 items-center">
+              <input
+                type="time"
+                className="input text-sm font-mono"
+                value={editingShift.start}
+                onChange={(e) => setEditingShift({ ...editingShift, start: e.target.value })}
+              />
+              <span className="text-text-muted">–</span>
+              <input
+                type="time"
+                className="input text-sm font-mono"
+                value={editingShift.end}
+                onChange={(e) => setEditingShift({ ...editingShift, end: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-primary btn-sm"
+                onClick={saveShift}
+                disabled={shiftMutation.isPending}
+              >
+                {shiftMutation.isPending ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                type="button"
+                className="btn-outline btn-sm"
+                onClick={() => setEditingShift(null)}
+                disabled={shiftMutation.isPending}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+        <span className="font-medium">{s.label}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm">{fmtHhmm(s.start)} – {fmtHhmm(s.end)}</span>
+          {canManage && (
+            <button
+              type="button"
+              className="shrink-0 inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 sm:p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-surface2 touch-target-sm"
+              onClick={() => setEditingShift({ type, id: s.id, label: s.label, start: s.start, end: s.end })}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const isEditingWeeklyOff = weeklyOffDraft !== null;
+  const effectiveWeeklyOff = weeklyOffDraft ?? settings.weeklyOffDefault;
 
   return (
     <SectionCard title="Time Shifts">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
-          {settings.realShifts.map((s) => (
-            <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
-            </div>
-          ))}
+          {settings.realShifts.map((s) => renderShiftRow(s, 'real'))}
         </div>
         <div className="min-w-0 md:border-l md:border-border md:pl-4">
           <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
-          {settings.complianceShifts.map((s) => (
-            <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
-            </div>
-          ))}
+          {settings.complianceShifts.map((s) => renderShiftRow(s, 'compliance'))}
         </div>
       </div>
       <div className="pt-3 border-t border-border">
-        <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs uppercase tracking-wider text-text-subtle">Weekly off default</div>
+          {canManage && !isEditingWeeklyOff && (
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setWeeklyOffDraft([...settings.weeklyOffDefault])}
+            >
+              Edit
+            </button>
+          )}
+        </div>
         <div className="flex gap-2 flex-wrap">
           {WEEKDAYS.map((d) => (
-            <Badge key={d} tone={settings.weeklyOffDefault.includes(d) ? 'blue' : 'gray'}>{d}</Badge>
+            <button
+              key={d}
+              type="button"
+              disabled={!isEditingWeeklyOff}
+              onClick={() => {
+                if (!weeklyOffDraft) return;
+                setWeeklyOffDraft(
+                  weeklyOffDraft.includes(d)
+                    ? weeklyOffDraft.filter((x) => x !== d)
+                    : [...weeklyOffDraft, d]
+                );
+              }}
+              className={isEditingWeeklyOff ? 'cursor-pointer' : 'cursor-default'}
+            >
+              <Badge tone={effectiveWeeklyOff.includes(d) ? 'blue' : 'gray'}>{d}</Badge>
+            </button>
           ))}
         </div>
+        {isEditingWeeklyOff && (
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              onClick={() => weeklyOffMutation.mutate(weeklyOffDraft!)}
+              disabled={weeklyOffMutation.isPending}
+            >
+              {weeklyOffMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="btn-outline btn-sm"
+              onClick={() => setWeeklyOffDraft(null)}
+              disabled={weeklyOffMutation.isPending}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
-      {canManage && (
-        <div className="text-xs text-text-subtle pt-2">
-          Inline edit for shifts and weekly-off coming in Phase 1 sprint 6. Schema and PATCH endpoint already support it.
-        </div>
-      )}
     </SectionCard>
   );
 }
@@ -902,7 +1049,7 @@ function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canMan
     >
       {!canManage && (
         <p className="text-xs text-text-muted -mt-1 mb-1">
-          Read-only: you do not have permission to change export filenames.
+          Read-only — you do not have permission to change export filenames.
         </p>
       )}
       <p className="text-xs text-text-muted">
@@ -1399,7 +1546,7 @@ function EditUserModal({
       toast(
         selfMode
           ? 'Profile updated.'
-          : 'User updated. Previous sessions for this user were ended; they must sign in again.',
+          : 'User updated. Previous sessions for this user were ended — they must sign in again.',
         'success'
       );
       qc.invalidateQueries({ queryKey: ['users'] });

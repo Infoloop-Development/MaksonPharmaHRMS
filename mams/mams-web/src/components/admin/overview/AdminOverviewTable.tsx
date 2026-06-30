@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type {
   AdminOverviewTableConfig,
-  AdminOverviewTableKind,
   DashboardAttendanceStatusFilter,
   Permission,
   Role,
@@ -27,11 +26,9 @@ import {
   type GenericTableFilterDefaults,
 } from '../../../lib/adminOverviewTableUtils';
 import { countActiveFilters } from '../../../lib/countActiveFilters';
-import { EMPTY_CELL, fmtDate } from '../../../lib/format';
+import { fmtDate } from '../../../lib/format';
 import { useTableSort } from '../../../lib/tableSort';
-import { tableColumnTooltip, type TableColumnModule } from '../../../lib/tooltips/tableColumnTooltips';
 import { useToast } from '../../ui/Toast';
-import { InfoTip } from '../../ui/Tooltip';
 import { MobileFilterBar } from '../../ui/MobileFilterBar';
 import { AdminOverviewGenericCardList } from './AdminOverviewGenericCardList';
 import { DashboardAttendanceTable } from '../../dashboard/DashboardAttendanceTable';
@@ -42,23 +39,6 @@ const DASH_SELECT =
 
 const MONO_COLS = new Set(['empCode', 'deviceCode', 'biometricId', 'occurredAt', 'lastLogin', 'lastPing']);
 const TIMESTAMP_COLS = new Set(['occurredAt', 'lastLogin', 'lastPing']);
-
-function tooltipModuleForKind(kind: AdminOverviewTableKind): TableColumnModule | null {
-  switch (kind) {
-    case 'users':
-      return 'settings';
-    case 'audit':
-      return 'audit';
-    case 'devices':
-      return 'devices';
-    case 'employees':
-      return 'employees';
-    case 'attendance':
-      return 'attendance';
-    default:
-      return null;
-  }
-}
 
 function DownloadIcon() {
   return (
@@ -74,7 +54,7 @@ function cellValue(col: string, row: Record<string, unknown>): string {
   if (col === 'lastPing' && row.lastPing) return new Date(String(row.lastPing)).toLocaleString();
   if (col === 'active' || col === 'online') return row[col] ? 'Yes' : 'No';
   const val = row[col];
-  if (val == null || val === '') return EMPTY_CELL;
+  if (val == null || val === '') return '—';
   return String(val);
 }
 
@@ -95,7 +75,7 @@ function EmployeeStatusPill({ status }: { status: string }) {
 function renderGenericCell(col: string, row: Record<string, unknown>): ReactNode {
   if (col === 'role') {
     const val = row.role;
-    return val ? <RolePill role={String(val)} /> : EMPTY_CELL;
+    return val ? <RolePill role={String(val)} /> : '—';
   }
   if (col === 'active' || col === 'online') return <BoolPill value={Boolean(row[col])} />;
   if (col === 'status' && row.status != null) return <EmployeeStatusPill status={String(row.status)} />;
@@ -423,7 +403,6 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
   );
 
   const title = kindLabel(config.kind);
-  const tooltipModule = tooltipModuleForKind(config.kind);
 
   return (
     <div className="dash-table-card">
@@ -475,28 +454,15 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
         <table>
           <thead>
             <tr>
-              {columns.map((c) => {
-                const tip = tooltipModule ? tableColumnTooltip(tooltipModule, c.id) : undefined;
-                return (
+              {columns.map((c) => (
                 <th
                   key={c.id}
                   className={sortCol === c.id ? 'sorted' : ''}
                   onClick={() => toggleSort(c.id)}
                 >
-                  {c.label}
-                  {tip ? (
-                    <span
-                      className="inline-flex align-middle"
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                      <InfoTip content={tip} label={`About ${c.label}`} />
-                    </span>
-                  ) : null}{' '}
-                  <span className="sort-arrow">{sortArrow(c.id)}</span>
+                  {c.label} <span className="sort-arrow">{sortArrow(c.id)}</span>
                 </th>
-                );
-              })}
+              ))}
             </tr>
           </thead>
           <tbody>

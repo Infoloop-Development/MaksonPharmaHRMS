@@ -1,9 +1,9 @@
 import { api } from './client';
-import type { EmployeeChangeRequestBody, EmployeeChangeRequestDecision } from '@mams/types';
+import type { EmployeeChangeRequestBody, EmployeeChangeRequestReview } from '@mams/types';
 
 export const employeeChangeRequestsApi = {
   list(params?: {
-    status?: 'Pending' | 'Approved' | 'Rejected';
+    status?: 'Flagged' | 'Reviewed';
     changeType?: 'create' | 'update' | 'delete';
     employeeId?: string;
     page?: number;
@@ -20,7 +20,7 @@ export const employeeChangeRequestsApi = {
       total: number;
       page: number;
       pageSize: number;
-      counts: { Pending: number; Approved: number; Rejected: number };
+      counts: { Flagged: number; Reviewed: number };
     }>(`/employee-change-requests?${q}`);
   },
 
@@ -28,7 +28,7 @@ export const employeeChangeRequestsApi = {
     return api.post<{ _id: string }>('/employee-change-requests', body);
   },
 
-  decide(id: string, body: EmployeeChangeRequestDecision) {
-    return api.post<Record<string, unknown>>(`/employee-change-requests/${id}/decide`, body);
+  review(id: string, body: EmployeeChangeRequestReview) {
+    return api.post<Record<string, unknown>>(`/employee-change-requests/${id}/review`, body);
   },
 };

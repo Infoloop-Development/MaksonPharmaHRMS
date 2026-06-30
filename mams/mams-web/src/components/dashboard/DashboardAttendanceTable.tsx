@@ -17,7 +17,7 @@ import { brandingFromSettings } from '../../lib/companyBranding';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
-import { EMPTY_CELL, fmtHours, fmtWeekdayShort } from '../../lib/format';
+import { fmtHours, fmtWeekdayShort } from '../../lib/format';
 import { useTableSort } from '../../lib/tableSort';
 import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
 import {
@@ -27,6 +27,7 @@ import {
 } from './dashboardAttendanceUi';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
+import { useAuth } from '../../store/auth';
 
 type ShiftFilter = 'All' | 'Day' | 'Night';
 type StatusFilter = DashboardAttendanceStatusFilter;
@@ -77,7 +78,7 @@ function renderAdminAttendanceCell(
     case 'status':
       return <AttendanceStatusPill status={row.displayStatus} />;
     default:
-      return EMPTY_CELL;
+      return '—';
   }
 }
 
@@ -101,6 +102,7 @@ export function DashboardAttendanceTable({
   const { logDashboardAction } = useActivityLog();
   const formatCell = useDisplayAttendanceCell();
   const { fmtHhmm } = useTimeDisplay();
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
   const dayShift = settings?.realShifts.find((s) => s.id === 'Day');
   const nightShift = settings?.realShifts.find((s) => s.id === 'Night');
@@ -325,11 +327,13 @@ export function DashboardAttendanceTable({
           </option>
         ))}
       </select>
-      <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
-        <option value="All">All Time Shifts</option>
-        <option value="Day">{dayShiftLabel}</option>
-        <option value="Night">{nightShiftLabel}</option>
-      </select>
+      {!isCompliant &&(
+        <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+          <option value="All">All Time Shifts</option>
+          <option value="Day">{dayShiftLabel}</option>
+          <option value="Night">{nightShiftLabel}</option>
+        </select>
+      )}
       <select
         className="w-full"
         value={status}
@@ -383,11 +387,13 @@ export function DashboardAttendanceTable({
               </option>
             ))}
           </select>
-          <select value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
-            <option value="All">All Time Shifts</option>
-            <option value="Day">{dayShiftLabel}</option>
-            <option value="Night">{nightShiftLabel}</option>
-          </select>
+          {!isCompliant &&(
+            <select value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+              <option value="All">All Time Shifts</option>
+              <option value="Day">{dayShiftLabel}</option>
+              <option value="Night">{nightShiftLabel}</option>
+            </select>
+          )}
           <select
             value={status}
             onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}

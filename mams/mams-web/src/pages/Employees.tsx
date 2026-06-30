@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, Link as RouterLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
 import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
 import { downloadEmployeeCsvTemplate, uploadEmployeeCsv, type CsvImportResult } from '../api/csvImport';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
+import { Link as RouterLink } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
@@ -26,8 +27,6 @@ import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
-
-const EMPLOYEES_DEFAULT_SORT = { col: 'empCode' as const, dir: 'asc' as const };
 
 export function Employees() {
   const { logSearch } = useActivityLog();
@@ -53,24 +52,20 @@ export function Employees() {
     queryFn: () => employeesApi.list({ search, page, pageSize, sortBy, sortDir }),
   });
 
+  const { data: flaggedRequests } = useQuery({
+    queryKey: ['employee-change-requests', { status: 'Flagged' }],
+    queryFn: () => employeeChangeRequestsApi.list({ status: 'Flagged', pageSize: 200 }),
+    enabled: !isCompliant && canManage,
+  });
+
   const toggleSort = useCallback((col: string) => {
-    const next = nextSortState(
-      col,
-      { col: sortBy, dir: sortDir },
-      EMPLOYEES_DEFAULT_SORT
-    );
-    setSortBy((next.col ?? EMPLOYEES_DEFAULT_SORT.col) as typeof sortBy);
+    const next = nextSortState(col, { col: sortBy, dir: sortDir }, { col: 'empCode', dir: 'asc' });
+    setSortBy((next.col ?? 'empCode') as typeof sortBy);
     setSortDir(next.dir);
     setPage(1);
   }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy, sortDir), [sortBy, sortDir]);
-
-  const { data: pendingRequests } = useQuery({
-    queryKey: ['employee-change-requests', { status: 'Pending' }],
-    queryFn: () => employeeChangeRequestsApi.list({ status: 'Pending', pageSize: 200 }),
-    enabled: isCompliant,
-  });
 
   const tour = usePageTourController('employees', employeesTourScript, {
     pageApiRef,
@@ -99,8 +94,6 @@ export function Employees() {
     logSearch('employees', 'search', { search: search.trim() });
   }, [search, logSearch]);
 
-  const tableColSpan = 8 + (isCompliant ? 0 : 1) + (canEdit ? 1 : 0);
-
   return (
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="employees-header">
@@ -115,7 +108,7 @@ export function Employees() {
         {canEdit && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-              {isCompliant ? 'Request new employee' : 'Add employee'}
+              Add employee
             </button>
             {canManage && (
               <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
@@ -133,14 +126,10 @@ export function Employees() {
         </div>
       )}
 
-      {isCompliant && pendingRequests && pendingRequests.counts.Pending > 0 && (
+      {!isCompliant && flaggedRequests && flaggedRequests.counts.Flagged > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
-          <span className="font-semibold">
-            {pendingRequests.counts.Pending} change request{pendingRequests.counts.Pending !== 1 ? 's' : ''} pending HR review.
-          </span>
-          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">
-            View requests
-          </RouterLink>
+          <span className="font-semibold">{flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''} need your review.</span>
+          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">Review now</RouterLink>
         </div>
       )}
 
@@ -165,7 +154,7 @@ export function Employees() {
         error={!!error}
         canManage={canEdit}
         onEdit={setEditEmployee}
-        onDelete={(e) => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
+        onDelete={(e) => isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e)}
       />
 
       <div className="card overflow-hidden hidden md:block" data-tour-id="employees-table">
@@ -187,10 +176,10 @@ export function Employees() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canEdit ? 1 : 0)} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {error && (
-                <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
+                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canEdit ? 1 : 0)} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
@@ -216,7 +205,7 @@ export function Employees() {
                         <button
                           type="button"
                           className="btn-outline btn-sm text-red"
-                          onClick={() => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
+                          onClick={() => isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e)}
                         >
                           Delete
                         </button>
@@ -231,13 +220,16 @@ export function Employees() {
       </div>
       </div>
 
-      {data && data.total > pageSize && (
-        <TablePagination
-          page={page}
-          totalPages={Math.ceil(data.total / pageSize)}
-          onPrev={() => setPage((p) => Math.max(1, p - 1))}
-          onNext={() => setPage((p) => p + 1)}
-        />
+      {data && Math.ceil(data.total / pageSize) > 1 && (
+        <div className="mt-4 flex items-center justify-between text-sm" data-tour-id="employees-pagination">
+          <div className="text-text-muted">
+            Page {page} of {Math.ceil(data.total / pageSize)} · {data.total.toLocaleString()} employees
+          </div>
+          <div className="flex gap-2">
+            <button className="btn-outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
+            <button className="btn-outline" onClick={() => setPage(p => p + 1)} disabled={page * pageSize >= data.total}>Next</button>
+          </div>
+        </div>
       )}
 
       {importOpen && <CsvImportModal onClose={() => setImportOpen(false)} />}
@@ -318,7 +310,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
       {!result && (
         <div className="space-y-4">
           <div className="rounded-md border border-border bg-surface2/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1: template</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1 — template</div>
             <button
               type="button"
               className="btn-primary w-full sm:w-auto"
@@ -345,7 +337,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           <div className="p-4 bg-primary-bg rounded-md text-sm">
             <div className="font-semibold mb-1">Before you import</div>
             <ol className="list-decimal pl-5 space-y-1 text-xs">
-              <li>Do not change or reorder the header row: column names must match the template exactly.</li>
+              <li>Do not change or reorder the header row — column names must match the template exactly.</li>
               <li>
                 <span className="font-mono">empCode</span>: unique, format <span className="font-mono">MKS</span> + four digits (e.g. <span className="font-mono">MKS0042</span>).
               </li>
@@ -360,7 +352,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <span className="font-mono">biometricId</span> must be unique and must match the user ID enrolled on
-                each biometric device (exact string, e.g. device sends <span className="font-mono">42</span>, CSV must
+                each biometric device (exact string — e.g. device sends <span className="font-mono">42</span>, CSV must
                 be <span className="font-mono">42</span>, not <span className="font-mono">BIO042</span> unless the device
                 uses that).
               </li>
@@ -378,7 +370,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
-              Step 2: choose CSV file
+              Step 2 — choose CSV file
             </label>
             <input
               type="file"
@@ -394,7 +386,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="text-xs text-text-muted bg-amber-bg text-amber px-3 py-2 rounded">
-            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility; we do not silently fix.
+            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility — we do not silently fix.
           </div>
         </div>
       )}
@@ -457,11 +449,12 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     setError(null);
     try {
       await employeeChangeRequestsApi.submit({ changeType: 'delete', employeeId: employee.id, reason: reason.trim() });
-      toast('Deletion request submitted for HR review', 'success');
+      toast('Employee deleted', 'success');
+      qc.invalidateQueries({ queryKey: ['employees'] });
       qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
       onClose();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not submit request.');
+      setError(e instanceof Error ? e.message : 'Could not delete employee.');
     } finally {
       setBusy(false);
     }
@@ -471,19 +464,19 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     <Modal
       open
       onClose={onClose}
-      title="Request employee deletion"
+      title="Delete employee"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
-            {busy ? 'Submitting…' : 'Submit request'}
+            {busy ? 'Delete anyway' : 'Delete employee'}
           </button>
         </>
       }
     >
       <div className="space-y-4 text-sm">
         <p className="text-text-muted">
-          Request deletion of <strong className="text-text">{employee.name}</strong> ({employee.empCode}). HR must approve before the record is removed.
+          Delete <strong className="text-text">{employee.name}</strong> ({employee.empCode}). This action is permanent and cannot be umdone.
         </p>
         <div>
           <label className="label">Reason</label>

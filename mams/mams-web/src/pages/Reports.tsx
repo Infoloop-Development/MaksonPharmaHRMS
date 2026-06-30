@@ -270,9 +270,9 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
                 <SortableTh label="Location" sortKey="location" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('reports', 'location')} />
                 <th className="px-4 py-3 font-semibold">Entry</th>
                 <th className="px-4 py-3 font-semibold">Exit</th>
-                <SortableTh label={isCompliant ? 'Hours' : 'Net Hrs'} sortKey="hours" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('reports', 'hours')} />
-                {!isCompliant && <SortableTh label="OT" sortKey="ot" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" tooltip={tableColumnTooltip('reports', 'ot')} />}
-                <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('reports', 'status')} />
+                <SortableTh label={isCompliant ? 'Hours' : 'Net Hrs'} sortKey="hours" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
+                {!isCompliant && <SortableTh label="OT" sortKey="ot" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="hidden lg:table-cell" />}
+                <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -415,7 +415,7 @@ function MonthlyReport() {
               { key: 'absent', label: 'Absent', mono: true },
               { key: 'weeklyOff', label: 'Weekly Off', mono: true },
               { key: 'totalHrs', label: 'Total Hrs', mono: true },
-              { key: 'ot', label: 'OT Hrs', mono: true },
+              ...(isCompliant ? [] : [{ key: 'ot', label: 'OT Hrs', mono: true }]),
               { key: 'equivDays', label: 'Equiv. Days', mono: true },
             ],
             rows: data.rows.map((r) => ({
@@ -427,7 +427,7 @@ function MonthlyReport() {
               weeklyOff: r.weeklyOffDays,
               totalHrs: fmtHours(isCompliant ? r.totalCompliantHours : r.totalRealNetHours),
               ot: fmtHours(r.totalOtHours),
-              equivDays: r.equivalentDays?.toFixed(1) ?? EMPTY_CELL,
+              equivDays: r.equivalentDays?.toFixed(1) ?? '—',
             })),
           });
           if (!opened) toast('Could not start print. Please try again.', 'error');
@@ -454,21 +454,21 @@ function MonthlyReport() {
           <table className="w-full text-sm md:min-w-[560px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Code" sortKey="code" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} tooltip={tableColumnTooltip('reports', 'code')} />
-                <SortableTh label="Name" sortKey="name" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} tooltip={tableColumnTooltip('reports', 'name')} />
-                <SortableTh label="Dept" sortKey="department" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden lg:table-cell" tooltip={tableColumnTooltip('reports', 'department')} />
-                <SortableTh label="Present" sortKey="present" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} tooltip={tableColumnTooltip('reports', 'present')} />
-                <SortableTh label="Absent" sortKey="absent" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} tooltip={tableColumnTooltip('reports', 'absent')} />
-                <SortableTh label="Weekly Off" sortKey="weeklyOff" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden lg:table-cell" tooltip={tableColumnTooltip('reports', 'weeklyOff')} />
-                <SortableTh label="Total Hrs" sortKey="totalHrs" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} tooltip={tableColumnTooltip('reports', 'totalHrs')} />
-                <SortableTh label="OT" sortKey="ot" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('reports', 'ot')} />
-                <SortableTh label="Equiv. Days" sortKey="equivDays" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('reports', 'equivDays')} />
+                <SortableTh label="Code" sortKey="code" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Name" sortKey="name" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Dept" sortKey="department" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden lg:table-cell" />
+                <SortableTh label="Present" sortKey="present" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Absent" sortKey="absent" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                <SortableTh label="Weekly Off" sortKey="weeklyOff" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden lg:table-cell" />
+                <SortableTh label="Total Hrs" sortKey="totalHrs" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} />
+                {!isCompliant && <SortableTh label="OT" sortKey="ot" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden xl:table-cell" />}
+                <SortableTh label="Equiv. Days" sortKey="equivDays" activeCol={monthlySortCol} sortArrow={monthlySortArrow} onSort={toggleMonthlySort} className="hidden xl:table-cell" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {isLoading && <tr><td colSpan={9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+              {isLoading && <tr><td colSpan={isCompliant ? 8 : 9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
+                <tr><td colSpan={isCompliant ? 8 : 9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
               )}
               {sortedMonthlyRows.map((r) => (
                 <tr key={r.employeeId} className="hover:bg-surface2/50">
@@ -479,8 +479,8 @@ function MonthlyReport() {
                   <td className="px-4 py-2.5 font-mono text-xs">{r.absentDays}</td>
                   <td className="px-4 py-2.5 font-mono text-xs hidden lg:table-cell">{r.weeklyOffDays}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(isCompliant ? r.totalCompliantHours : r.totalRealNetHours)}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{fmtHours(r.totalOtHours)}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{r.equivalentDays?.toFixed(1) ?? EMPTY_CELL}</td>
+                  {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{fmtHours(r.totalOtHours)}</td>}
+                  <td className="px-4 py-2.5 font-mono text-xs hidden xl:table-cell">{r.equivalentDays?.toFixed(1) ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -494,6 +494,7 @@ function MonthlyReport() {
 function DepartmentReport() {
   const { logReportsAction } = useActivityLog();
   const toast = useToast((s) => s.push);
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
@@ -556,8 +557,8 @@ function DepartmentReport() {
               { key: 'employees', label: 'Employees', mono: true },
               { key: 'present', label: 'Present', mono: true },
               { key: 'absent', label: 'Absent', mono: true },
-              { key: 'compliantHrs', label: 'Compliant Hrs', mono: true },
-              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'compliantHrs', label: isCompliant ? 'Compliant Hrs' : 'Net Hrs', mono: true },
+              ...(isCompliant ? [] : [{ key: 'ot', label: 'OT Hrs', mono: true }]),
               { key: 'rate', label: 'Attendance Rate', mono: true },
             ],
             rows: data.rows.map((r) => ({
@@ -590,19 +591,19 @@ function DepartmentReport() {
         <table className="w-full text-sm md:min-w-[640px]">
           <thead className="bg-surface2">
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <SortableTh label="Department" sortKey="department" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'department')} />
-              <SortableTh label="Employees" sortKey="employees" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'employees')} />
-              <SortableTh label="Present" sortKey="present" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'present')} />
-              <SortableTh label="Absent" sortKey="absent" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'absent')} />
-              <SortableTh label="Compliant Hrs" sortKey="compliantHrs" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'hours')} />
-              <SortableTh label="OT Hrs" sortKey="ot" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'ot')} />
-              <SortableTh label="Attendance Rate" sortKey="rate" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} tooltip={tableColumnTooltip('reports', 'avgHrs')} />
+              <SortableTh label="Department" sortKey="department" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Employees" sortKey="employees" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Present" sortKey="present" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Absent" sortKey="absent" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              <SortableTh label="Compliant Hrs" sortKey="compliantHrs" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
+              {!isCompliant && <SortableTh label="OT Hrs" sortKey="ot" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />}
+              <SortableTh label="Attendance Rate" sortKey="rate" activeCol={deptSortCol} sortArrow={deptSortArrow} onSort={toggleDeptSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+            {isLoading && <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
             {!isLoading && !data?.rows.length && (
-              <tr><td colSpan={7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
+              <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
             )}
             {sortedDeptRows.map((r) => (
               <tr key={r.department} className="hover:bg-surface2/50">
@@ -611,7 +612,7 @@ function DepartmentReport() {
                 <td className="px-4 py-2.5">{r.presentDays}</td>
                 <td className="px-4 py-2.5">{r.absentDays}</td>
                 <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalCompliantHours)}</td>
-                <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>
+                {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>}
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
                     <div className="w-24 h-2 bg-surface2 rounded-full overflow-hidden">
@@ -633,6 +634,7 @@ function DepartmentReport() {
 function LocationReport() {
   const { logReportsAction } = useActivityLog();
   const toast = useToast((s) => s.push);
+  const isCompliant = useAuth((s) => s.user?.viewMode === 'compliant');
   const now = new Date();
   const defaultYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [yearMonth, setYearMonth] = useState(defaultYearMonth);
@@ -695,8 +697,8 @@ function LocationReport() {
               { key: 'employees', label: 'Employees', mono: true },
               { key: 'present', label: 'Present', mono: true },
               { key: 'absent', label: 'Absent', mono: true },
-              { key: 'compliantHrs', label: 'Compliant Hrs', mono: true },
-              { key: 'ot', label: 'OT Hrs', mono: true },
+              { key: 'compliantHrs', label: isCompliant ? 'Compliant Hrs' : 'Net Hrs', mono: true },
+              ...(isCompliant ? [] : [{ key: 'ot', label: 'OT Hrs', mono: true }]),
               { key: 'rate', label: 'Attendance Rate', mono: true },
             ],
             rows: data.rows.map((r) => ({
@@ -745,7 +747,7 @@ function LocationReport() {
               <span className="font-mono text-xs">{r.attendanceRate.toFixed(0)}% rate</span>
             </div>
             <div className="mt-3 text-xs text-text-muted">
-              {fmtHours(r.totalCompliantHours)} compliant · {fmtHours(r.totalOtHours)} OT
+              {fmtHours(r.totalCompliantHours)} compliant{!isCompliant && ` · ${fmtHours(r.totalOtHours)} OT`}
             </div>
           </div>
         ))}
@@ -756,19 +758,19 @@ function LocationReport() {
           <table className="w-full text-sm md:min-w-[640px]">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Location" sortKey="location" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'location')} />
-                <SortableTh label="Employees" sortKey="employees" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'employees')} />
-                <SortableTh label="Present" sortKey="present" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'present')} />
-                <SortableTh label="Absent" sortKey="absent" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'absent')} />
-                <SortableTh label="Compliant Hrs" sortKey="compliantHrs" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'hours')} />
-                <SortableTh label="OT Hrs" sortKey="ot" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'ot')} />
-                <SortableTh label="Attendance Rate" sortKey="rate" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} tooltip={tableColumnTooltip('reports', 'avgHrs')} />
+                <SortableTh label="Location" sortKey="location" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Employees" sortKey="employees" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Present" sortKey="present" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Absent" sortKey="absent" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                <SortableTh label="Compliant Hrs" sortKey="compliantHrs" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
+                {!isCompliant && <SortableTh label="OT Hrs" sortKey="ot" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />}
+                <SortableTh label="Attendance Rate" sortKey="rate" activeCol={locSortCol} sortArrow={locSortArrow} onSort={toggleLocSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
+              {isLoading && <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
+                <tr><td colSpan={isCompliant ? 6 : 7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
               )}
               {sortedLocRows.map((r) => (
                 <tr key={r.location} className="hover:bg-surface2/50">
@@ -777,7 +779,7 @@ function LocationReport() {
                   <td className="px-4 py-2.5">{fmtNumber(r.presentDays)}</td>
                   <td className="px-4 py-2.5">{fmtNumber(r.absentDays)}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalCompliantHours)}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>
+                  {!isCompliant && <td className="px-4 py-2.5 font-mono text-xs">{fmtHours(r.totalOtHours)}</td>}
                   <td className="px-4 py-2.5 font-mono text-xs">{r.attendanceRate.toFixed(0)}%</td>
                 </tr>
               ))}

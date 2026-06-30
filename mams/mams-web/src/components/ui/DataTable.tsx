@@ -57,8 +57,8 @@ export function DataTable<T>({
                     sortArrow={sortArrow}
                     onSort={onSort}
                     sortable={col.sortable !== false && Boolean(onSort)}
-                    tooltip={col.tooltip}
                     className={col.headerClassName ?? col.className ?? ''}
+                    tooltip={col.tooltip}
                   />
                 ))}
               </tr>

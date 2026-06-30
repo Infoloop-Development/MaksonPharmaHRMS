@@ -9,7 +9,6 @@ import { ActivityDescription } from './ActivityDescription';
 import { SortableTh } from '../ui/SortableTh';
 import { TablePagination } from '../ui/TablePagination';
 import { useTableSort } from '../../lib/tableSort';
-import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 const PAGE_SIZE = 50;
 
@@ -70,8 +69,8 @@ export function ActivityLogPanel() {
           <table className="w-full text-sm">
             <thead className="bg-surface2 sticky top-0">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Time (IST)" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[220px]" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
-                <SortableTh label="Area" sortKey="area" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" tooltip={tableColumnTooltip('audit', 'area')} />
+                <SortableTh label="Time (IST)" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[220px]" />
+                <SortableTh label="Area" sortKey="area" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" />
                 <th className="px-3 py-2 font-semibold">Activity</th>
               </tr>
             </thead>
