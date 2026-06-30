@@ -5,6 +5,9 @@ export function DeviceTable({
   devices,
   isLoading,
   canManage,
+  selectable,
+  isSelected,
+  onToggleSelect,
   syncing,
   onSync,
   onTest,
@@ -14,6 +17,9 @@ export function DeviceTable({
   devices: Device[];
   isLoading: boolean;
   canManage: boolean;
+  selectable?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
   syncing: Record<string, boolean>;
   onSync: (id: string) => void;
   onTest: (id: string) => void;
@@ -25,6 +31,9 @@ export function DeviceTable({
       devices={devices}
       isLoading={isLoading}
       canManage={canManage}
+      selectable={selectable}
+      isSelected={isSelected}
+      onToggleSelect={onToggleSelect}
       syncing={syncing}
       onSync={onSync}
       onTest={onTest}

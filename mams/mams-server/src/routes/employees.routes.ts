@@ -8,6 +8,7 @@ import {
   EmployeeListQuerySchema,
   EmployeeCreateBodySchema,
   EmployeePatchBodySchema,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
 import { toMaskedEmployee } from '../services/employee.service.js';
@@ -222,6 +223,51 @@ router.patch('/:id', manageEmployeesGate, async (req, res, next) => {
       }
     );
     res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Bulk soft delete (must be before /:id)
+router.post('/bulk-delete', manageEmployeesGate, async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      if (!Types.ObjectId.isValid(id)) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+        continue;
+      }
+      const doc = await EmployeeModel.findById(id);
+      if (!doc || doc.isDeleted) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Employee not found' });
+        continue;
+      }
+
+      doc.isDeleted = true;
+      doc.status = 'Inactive';
+      await doc.save();
+
+      await audit(
+        'employee_deleted',
+        {
+          userId: req.auth!.sub,
+          ipAddress: req.clientIp ?? null,
+          userAgent: req.header('user-agent') ?? null,
+        },
+        {
+          entityType: 'employee',
+          entityId: doc._id,
+          payload: { empCode: doc.empCode, name: doc.name, bulk: true },
+        }
+      );
+      result.succeeded += 1;
+    }
+
+    res.json(result);
   } catch (err) {
     next(err);
   }

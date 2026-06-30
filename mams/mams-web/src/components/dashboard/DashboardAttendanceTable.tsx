@@ -88,6 +88,8 @@ export function DashboardAttendanceTable({
   shiftFilter,
   onShiftFilterChange,
   visibleColumns,
+  cardTourId,
+  filtersTourId,
 }: {
   selectedDate: string;
   statusFilter: StatusFilter;
@@ -96,6 +98,8 @@ export function DashboardAttendanceTable({
   onShiftFilterChange: (s: ShiftFilter) => void;
   /** When set (Admin Overview), only these columns render. Omit for full dashboard table. */
   visibleColumns?: string[];
+  cardTourId?: string;
+  filtersTourId?: string;
 }) {
   const toast = useToast((s) => s.push);
   const { logDashboardAction } = useActivityLog();
@@ -351,7 +355,7 @@ export function DashboardAttendanceTable({
   }
 
   return (
-    <div className="dash-table-card" data-tour-id="dashboard-attendance-table">
+    <div className="dash-table-card" data-tour-id={cardTourId ?? 'dashboard-attendance-table'}>
       <div className="dash-table-header">
         <h3>
           Attendance - {selectedDate}
@@ -368,7 +372,7 @@ export function DashboardAttendanceTable({
         >
           {filterFields}
         </MobileFilterBar>
-        <div className="dash-table-filters hidden md:flex">
+        <div className="dash-table-filters hidden md:flex" data-tour-id={filtersTourId}>
           <input
             placeholder="Search name or ID..."
             value={search}

@@ -50,6 +50,7 @@ function SortableKpiSlot({
   values,
   filterState,
   isEditing,
+  isFirstSlot,
   onCardClick,
   onPickMetric,
 }: {
@@ -57,6 +58,7 @@ function SortableKpiSlot({
   values: AdminKpiValues;
   filterState: AdminOverviewKpiFilterState;
   isEditing: boolean;
+  isFirstSlot?: boolean;
   onCardClick: () => void;
   onPickMetric: () => void;
 }) {
@@ -76,6 +78,7 @@ function SortableKpiSlot({
           type="button"
           className="dash-kpi-drag-handle dash-drag-handle"
           aria-label="Drag to reorder"
+          data-tour-id={isFirstSlot ? 'admin-kpi-drag-handle' : undefined}
           {...attributes}
           {...listeners}
         >
@@ -111,6 +114,8 @@ export function AdminOverviewKpiGrid({
   onSave,
   canSave,
   isSaving,
+  pickerSlot: controlledPickerSlot,
+  onPickerSlotChange,
 }: {
   slots: AdminOverviewKpiMetricId[];
   values: AdminKpiValues;
@@ -123,8 +128,12 @@ export function AdminOverviewKpiGrid({
   onSave: () => void;
   canSave: boolean;
   isSaving: boolean;
+  pickerSlot?: number | null;
+  onPickerSlotChange?: (slot: number | null) => void;
 }) {
-  const [pickerSlot, setPickerSlot] = useState<number | null>(null);
+  const [internalPickerSlot, setInternalPickerSlot] = useState<number | null>(null);
+  const pickerSlot = controlledPickerSlot !== undefined ? controlledPickerSlot : internalPickerSlot;
+  const setPickerSlot = onPickerSlotChange ?? setInternalPickerSlot;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -144,13 +153,14 @@ export function AdminOverviewKpiGrid({
   const grid = (
     <div className={`dash-stat-grid ${isEditing ? 'dash-kpi-grid--editing' : ''}`}>
       <SortableContext items={slots} strategy={rectSortingStrategy}>
-        {slots.map((metricId) => (
+        {slots.map((metricId, index) => (
           <SortableKpiSlot
             key={metricId}
             metricId={metricId}
             values={values}
             filterState={filterState}
             isEditing={isEditing}
+            isFirstSlot={index === 0}
             onCardClick={() => onFilterChange(applyAdminMetricClick(metricId, filterState))}
             onPickMetric={() => setPickerSlot(slots.indexOf(metricId))}
           />
@@ -160,10 +170,13 @@ export function AdminOverviewKpiGrid({
   );
 
   return (
-    <div>
+    <div data-tour-id="admin-overview-kpi-grid">
       {isEditing && (
         <>
-          <div className="dash-kpi-toolbar flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-2">
+          <div
+            className="dash-kpi-toolbar flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-2"
+            data-tour-id="admin-overview-kpi-edit-toolbar"
+          >
             <button type="button" className="btn-outline btn-sm" onClick={onCancelEdit}>
               Cancel
             </button>
@@ -176,7 +189,10 @@ export function AdminOverviewKpiGrid({
               {isSaving ? 'Saving…' : 'Save KPIs'}
             </button>
           </div>
-          <p className="dash-kpi-edit-hint text-xs text-text-muted mb-2 md:mb-3">
+          <p
+            className="dash-kpi-edit-hint text-xs text-text-muted mb-2 md:mb-3"
+            data-tour-id="admin-overview-kpi-edit-hint"
+          >
             Drag cards to reorder. Tap a card to change its metric.
           </p>
         </>

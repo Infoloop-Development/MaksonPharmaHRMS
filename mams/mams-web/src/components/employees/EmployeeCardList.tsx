@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '../ui/Badge';
+import { BulkSelectCheckbox } from '../ui/BulkSelectCheckbox';
 import type { EmployeeMasked } from '@mams/types';
 
 export function EmployeeCardList({
@@ -7,6 +8,9 @@ export function EmployeeCardList({
   isLoading,
   error,
   canManage = false,
+  selectable = false,
+  isSelected,
+  onToggleSelect,
   onEdit,
   onDelete,
 }: {
@@ -14,6 +18,9 @@ export function EmployeeCardList({
   isLoading: boolean;
   error: boolean;
   canManage?: boolean;
+  selectable?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
   onEdit?: (employee: EmployeeMasked) => void;
   onDelete?: (employee: EmployeeMasked) => void;
 }) {
@@ -32,10 +39,19 @@ export function EmployeeCardList({
       {items.map((e) => (
         <div key={e.id} className="card p-4">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <Link to={`/employees/${e.id}`} className="block hover:opacity-90 transition">
-              <div className="font-semibold text-text">{e.name}</div>
-              <div className="font-mono text-xs text-text-muted">{e.empCode}</div>
-            </Link>
+            <div className="flex items-start gap-3 min-w-0">
+              {selectable && isSelected && onToggleSelect && (
+                <BulkSelectCheckbox
+                  checked={isSelected(e.id)}
+                  onChange={() => onToggleSelect(e.id)}
+                  ariaLabel={`Select ${e.name}`}
+                />
+              )}
+              <Link to={`/employees/${e.id}`} className="block hover:opacity-90 transition min-w-0">
+                <div className="font-semibold text-text">{e.name}</div>
+                <div className="font-mono text-xs text-text-muted">{e.empCode}</div>
+              </Link>
+            </div>
             <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
           </div>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs mb-3">

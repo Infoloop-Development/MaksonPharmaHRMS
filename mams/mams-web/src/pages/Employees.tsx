@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Link as RouterLink } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
@@ -26,6 +26,11 @@ import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar } from '../components/ui/BulkActionBar';
+import { BulkConfirmModal } from '../components/ui/BulkConfirmModal';
+import { BulkSelectCheckbox } from '../components/ui/BulkSelectCheckbox';
+import type { BulkMutationResult } from '@mams/types';
 
 const EMPLOYEES_DEFAULT_SORT = { col: 'empCode' as const, dir: 'asc' as const };
 
@@ -40,6 +45,11 @@ export function Employees() {
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteRequestEmployee, setDeleteRequestEmployee] = useState<EmployeeMasked | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkRequestOpen, setBulkRequestOpen] = useState(false);
+  const bulk = useBulkSelection();
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
   const pageSize = 50;
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
@@ -99,7 +109,19 @@ export function Employees() {
     logSearch('employees', 'search', { search: search.trim() });
   }, [search, logSearch]);
 
-  const tableColSpan = 8 + (isCompliant ? 0 : 1) + (canEdit ? 1 : 0);
+  const pageItems = data?.items ?? [];
+  const pageIds = useMemo(() => pageItems.map((e) => e.id), [pageItems]);
+  const pageCheck = bulk.pageSelectionState(pageIds);
+  const selectedEmployees = useMemo(
+    () => pageItems.filter((e) => bulk.isSelected(e.id)),
+    [pageItems, bulk]
+  );
+
+  useEffect(() => {
+    bulk.clear();
+  }, [page, search, sortBy, sortDir]);
+
+  const tableColSpan = 8 + (isCompliant ? 0 : 1) + (canEdit ? 2 : 0);
 
   return (
     <div>
@@ -159,11 +181,23 @@ export function Employees() {
       </div>
 
       <div data-tour-id="employees-list">
+      {canEdit && (
+        <BulkActionBar
+          count={bulk.count}
+          overLimit={bulk.overLimit}
+          actionLabel={isCompliant ? 'Request deletion' : 'Delete selected'}
+          onAction={() => (isCompliant ? setBulkRequestOpen(true) : setBulkDeleteOpen(true))}
+          onClear={bulk.clear}
+        />
+      )}
       <EmployeeCardList
         items={data?.items}
         isLoading={isLoading}
         error={!!error}
         canManage={canEdit}
+        selectable={canEdit}
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
         onEdit={setEditEmployee}
         onDelete={(e) => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
       />
@@ -173,6 +207,16 @@ export function Employees() {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+                {canEdit && (
+                  <th className="px-4 py-3 w-10">
+                    <BulkSelectCheckbox
+                      checked={pageCheck.allSelected && pageIds.length > 0}
+                      indeterminate={pageCheck.someSelected}
+                      onChange={() => bulk.togglePage(pageIds)}
+                      ariaLabel="Select all employees on this page"
+                    />
+                  </th>
+                )}
                 <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
                 <th className="px-4 py-3 font-semibold">Biometric ID</th>
                 <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
@@ -194,6 +238,15 @@ export function Employees() {
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
+                  {canEdit && (
+                    <td className="px-4 py-3">
+                      <BulkSelectCheckbox
+                        checked={bulk.isSelected(e.id)}
+                        onChange={() => bulk.toggle(e.id)}
+                        ariaLabel={`Select ${e.name}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 font-mono text-xs">{e.empCode}</td>
                   <td className="px-4 py-3 font-mono text-xs text-text-muted">{e.biometricId}</td>
                   <td className="px-4 py-3 font-medium">
@@ -250,6 +303,43 @@ export function Employees() {
       )}
       {deleteRequestEmployee && (
         <EmployeeDeleteRequestModal employee={deleteRequestEmployee} onClose={() => setDeleteRequestEmployee(null)} />
+      )}
+      <BulkConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Delete selected employees?"
+        description={
+          <>
+            Delete <strong>{bulk.count}</strong> employee{bulk.count !== 1 ? 's' : ''}? This cannot be undone.
+          </>
+        }
+        itemLabels={selectedEmployees.map((e) => `${e.name} (${e.empCode})`)}
+        confirmLabel="Delete employees"
+        onConfirm={async () => {
+          const result = await employeesApi.bulkDelete(bulk.ids);
+          toast(
+            `Deleted ${result.succeeded} employee${result.succeeded !== 1 ? 's' : ''}${
+              result.skipped ? `, ${result.skipped} skipped` : ''
+            }`,
+            result.succeeded > 0 ? 'success' : 'error'
+          );
+          qc.invalidateQueries({ queryKey: ['employees'] });
+          qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+          bulk.clear();
+          return result;
+        }}
+      />
+      {bulkRequestOpen && (
+        <EmployeeBulkDeleteRequestModal
+          count={bulk.count}
+          itemLabels={selectedEmployees.map((e) => `${e.name} (${e.empCode})`)}
+          employeeIds={bulk.ids}
+          onClose={() => setBulkRequestOpen(false)}
+          onSuccess={() => {
+            bulk.clear();
+            setBulkRequestOpen(false);
+          }}
+        />
       )}
     </div>
   );
@@ -437,6 +527,108 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       )}
+    </Modal>
+  );
+}
+
+function EmployeeBulkDeleteRequestModal({
+  count,
+  itemLabels,
+  employeeIds,
+  onClose,
+  onSuccess,
+}: {
+  count: number;
+  itemLabels: string[];
+  employeeIds: string[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+
+  const onConfirm = async () => {
+    if (reason.trim().length < 10) {
+      setError('Reason must be at least 10 characters.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const result: BulkMutationResult = { succeeded: 0, skipped: 0, errors: [] };
+    try {
+      for (const employeeId of employeeIds) {
+        try {
+          await employeeChangeRequestsApi.submit({
+            changeType: 'delete',
+            employeeId,
+            reason: reason.trim(),
+          });
+          result.succeeded += 1;
+        } catch (e: unknown) {
+          result.skipped += 1;
+          result.errors.push({
+            id: employeeId,
+            reason: e instanceof Error ? e.message : 'Could not submit request',
+          });
+        }
+      }
+      toast(
+        `Submitted ${result.succeeded} deletion request${result.succeeded !== 1 ? 's' : ''}${
+          result.skipped ? `, ${result.skipped} failed` : ''
+        }`,
+        result.succeeded > 0 ? 'success' : 'error'
+      );
+      qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
+      onSuccess();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not submit requests.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Request employee deletions"
+      footer={
+        <>
+          <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
+            {busy ? 'Submitting…' : `Submit ${count} request${count !== 1 ? 's' : ''}`}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4 text-sm">
+        <p className="text-text-muted">
+          Request deletion of <strong className="text-text">{count}</strong> employee{count !== 1 ? 's' : ''}. HR must approve before records are removed.
+        </p>
+        {itemLabels.length > 0 && (
+          <ul className="list-disc pl-5 text-text-muted space-y-0.5">
+            {itemLabels.slice(0, 5).map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+            {itemLabels.length > 5 && (
+              <li className="list-none -ml-5 text-text-subtle">…and {itemLabels.length - 5} more</li>
+            )}
+          </ul>
+        )}
+        <div>
+          <label className="label">Reason</label>
+          <textarea
+            className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
+            placeholder="Describe why these employees should be removed (min 10 characters)…"
+            value={reason}
+            onChange={(e) => { setReason(e.target.value); setError(null); }}
+          />
+          {error && <p className="mt-1 text-[11px] text-red">{error}</p>}
+        </div>
+      </div>
     </Modal>
   );
 }

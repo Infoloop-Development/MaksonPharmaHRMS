@@ -1,3 +1,4 @@
+export * from './bulkMutation.js';
 export * from './user.js';
 export * from './sensitiveUnmask.js';
 export * from './rbac.js';

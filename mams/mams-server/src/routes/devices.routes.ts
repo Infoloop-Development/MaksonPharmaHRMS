@@ -5,6 +5,7 @@ import {
   DeviceIntegrationConfigSchema,
   DeviceProtocolModeSchema,
   DeviceVendorSchema,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import { DeviceModel } from '../models/Device.js';
 import { EmployeeModel } from '../models/Employee.js';
@@ -150,6 +151,43 @@ router.patch('/:id', requirePermission('manage.devices'), async (req, res, next)
       { entityType: 'device', entityId: doc._id, payload: { changedFields: Object.keys(body) } }
     );
     res.json(doc);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/bulk-delete', requirePermission('manage.devices'), async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      if (!Types.ObjectId.isValid(id)) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+        continue;
+      }
+      const doc = await DeviceModel.findById(id);
+      if (!doc) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Device not found' });
+        continue;
+      }
+
+      await DeviceModel.findByIdAndDelete(id);
+      await audit(
+        'device_deleted',
+        { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
+        {
+          entityType: 'device',
+          entityId: doc._id,
+          payload: { serialNumber: doc.serialNumber, model: doc.model, vendor: doc.vendor, bulk: true },
+        }
+      );
+      result.succeeded += 1;
+    }
+
+    res.json(result);
   } catch (err) {
     next(err);
   }

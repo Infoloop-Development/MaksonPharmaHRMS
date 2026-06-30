@@ -116,6 +116,7 @@ export const OnboardingTourIdSchema = z.enum([
   'visitors',
   'devices',
   'settings',
+  'admin-overview',
 ]);
 export type OnboardingTourId = z.infer<typeof OnboardingTourIdSchema>;
 

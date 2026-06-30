@@ -426,7 +426,7 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
   const tooltipModule = tooltipModuleForKind(config.kind);
 
   return (
-    <div className="dash-table-card">
+    <div className="dash-table-card" data-tour-id="admin-overview-table-inner">
       <div className="dash-table-header">
         <h3>
           {title}
@@ -443,7 +443,7 @@ function GenericAdminTable({ config }: { config: AdminOverviewTableConfig }) {
         >
           {filterFields}
         </MobileFilterBar>
-        <div className="dash-table-filters hidden md:flex shrink-0">
+        <div className="dash-table-filters hidden md:flex shrink-0" data-tour-id="admin-overview-table-filters">
           <input
             placeholder="Search…"
             value={search}
@@ -630,6 +630,8 @@ export function AdminOverviewTable({
         shiftFilter={shiftFilter ?? 'All'}
         onShiftFilterChange={onShiftFilterChange ?? (() => {})}
         visibleColumns={config.columns}
+        cardTourId="admin-overview-table-inner"
+        filtersTourId="admin-overview-table-filters"
       />
     );
   }

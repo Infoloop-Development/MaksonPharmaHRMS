@@ -56,4 +56,9 @@ export const TOUR_META: Record<OnboardingTourId, TourMeta> = {
     welcomeDescription:
       'Configure company info, shifts, branding, users, and system preferences.',
   },
+  'admin-overview': {
+    welcomeTitle: 'Welcome to Admin Overview',
+    welcomeDescription:
+      'Learn how to filter KPIs and charts, customize metrics, chart types, table datasets, and columns for your organization.',
+  },
 };

@@ -13,6 +13,7 @@ import {
   LeaveRejectSchema,
   LeaveTypeCreateSchema,
   LeaveTypePatchSchema,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import type { Permission } from '@mams/types';
 import { resolveLeaveAdminApply } from '@mams/types';
@@ -173,6 +174,33 @@ router.patch('/holidays/:id', requirePermission('manage.leave'), async (req, res
     const updated = await HolidayModel.findByIdAndUpdate(id, { $set: body }, { new: true });
     if (!updated) throw new ApiError(404, 'not_found', 'Holiday not found');
     res.json(mapHoliday(updated.toObject()));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/holidays/bulk-delete', requirePermission('manage.leave'), async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      try {
+        const mongoId = requireMongoId(id);
+        const deleted = await HolidayModel.findByIdAndDelete(mongoId);
+        if (!deleted) {
+          result.skipped += 1;
+          result.errors.push({ id, reason: 'Holiday not found' });
+          continue;
+        }
+        result.succeeded += 1;
+      } catch {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+      }
+    }
+
+    res.json(result);
   } catch (err) {
     next(err);
   }

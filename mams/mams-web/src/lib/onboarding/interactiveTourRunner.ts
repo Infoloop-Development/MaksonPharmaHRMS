@@ -4,12 +4,14 @@ import type { DriveStep } from 'driver.js';
 import { DRIVER_DEFAULTS } from './driverDefaults';
 import {
   findTourElement,
+  lockPageScroll,
   lockTourTarget,
   resolvePopoverSide,
   scrollTourElementIntoView,
   settleDom,
   tourElementExists,
   unlockAllTourTargets,
+  unlockPageScroll,
   unlockTourTarget,
   waitForTourElement,
 } from './tourDom';
@@ -43,6 +45,7 @@ function flattenScript(script: TourScript): ResolvedTourStep[] {
 function resolveVisibleSteps(flat: ResolvedTourStep[]): ResolvedTourStep[] {
   return flat.filter(({ def }) => {
     if (def.when && !def.when()) return false;
+    if (def.dynamic) return true;
     return tourElementExists(def.id);
   });
 }
@@ -111,6 +114,7 @@ export function createInteractiveTourRunner(options: RunnerOptions): Interactive
   const destroy = () => {
     highlightGen += 1;
     unlockAllTourTargets();
+    unlockPageScroll();
     if (driverInst) {
       driverInst.destroy();
       driverInst = null;
@@ -156,10 +160,12 @@ export function createInteractiveTourRunner(options: RunnerOptions): Interactive
                   await runPhaseExit(index, nextIndex);
                 }
                 if (finished) return;
-                if (index >= visibleSteps.length - 1) {
+                if (nextIndex >= visibleSteps.length) {
                   finishTour();
                 } else {
-                  d.moveNext();
+                  currentFlatIndex = nextIndex;
+                  await settleDom(80);
+                  d.moveTo(nextIndex);
                 }
               } finally {
                 navigating = false;
@@ -189,6 +195,10 @@ export function createInteractiveTourRunner(options: RunnerOptions): Interactive
             if (def.onEnter) {
               await def.onEnter(buildCtx());
               await settleDom();
+            }
+            if (gen !== highlightGen || finished) return;
+            if (def.dynamic || !findTourElement(def.id)) {
+              await waitForTourElement(def.id, 5000);
             }
             if (gen !== highlightGen || finished) return;
             scrollTourElementIntoView(def.id);
@@ -276,6 +286,7 @@ export function createInteractiveTourRunner(options: RunnerOptions): Interactive
     });
 
     active = true;
+    lockPageScroll();
     if (script.onStart) await script.onStart(buildCtx());
     await settleDom(120);
     if (finished) return;

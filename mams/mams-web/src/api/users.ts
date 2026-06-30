@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Permission, Role, SensitiveUnmaskField, UserPublic, UserUpdateBody } from '@mams/types';
+import type { Permission, Role, SensitiveUnmaskField, UserPublic, UserUpdateBody, BulkMutationResult } from '@mams/types';
 
 export interface UserSummary {
   _id: string;
@@ -35,5 +35,6 @@ export const usersApi = {
     permissions?: Permission[];
   }) => api.post<UserCreateResponse>('/users', body),
   patch: (id: string, body: UserUpdateBody) => api.patch<UserPatchResponse>(`/users/${id}`, body),
+  bulkDeactivate: (ids: string[]) => api.post<BulkMutationResult>('/users/bulk-deactivate', { ids }),
   revokeSessions: (id: string) => api.post<{ ok: boolean }>(`/users/${id}/revoke-sessions`, {}),
 };

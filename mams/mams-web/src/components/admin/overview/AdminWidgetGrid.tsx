@@ -27,6 +27,7 @@ function SortableWidget({
   selectedDayIndex,
   onDayClick,
   isEditing,
+  isFirstWidget,
   onEdit,
   onRemove,
 }: {
@@ -36,6 +37,7 @@ function SortableWidget({
   selectedDayIndex: number;
   onDayClick: (index: number) => void;
   isEditing: boolean;
+  isFirstWidget?: boolean;
   onEdit: () => void;
   onRemove?: () => void;
 }) {
@@ -55,6 +57,7 @@ function SortableWidget({
           type="button"
           className="dash-kpi-drag-handle dash-drag-handle mb-1"
           aria-label="Drag to reorder"
+          data-tour-id={isFirstWidget ? 'admin-chart-drag-handle' : undefined}
           {...attributes}
           {...listeners}
         >
@@ -70,6 +73,13 @@ function SortableWidget({
         isEditing={isEditing}
         onEdit={onEdit}
         onRemove={onRemove}
+        tourAnchorId={
+          isEditing && isFirstWidget
+            ? 'admin-overview-chart-edit-card'
+            : !isEditing && isFirstWidget
+              ? 'admin-overview-first-chart'
+              : undefined
+        }
       />
     </div>
   );
@@ -132,7 +142,7 @@ export function AdminWidgetGrid({
   const canAdd = isEditing && widgets.length < ADMIN_OVERVIEW_WIDGET_MAX;
 
   const grid = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6" data-tour-id="admin-overview-chart-grid">
       {widgets.map((widget, index) => (
         <SortableWidget
           key={widget.id}
@@ -142,6 +152,7 @@ export function AdminWidgetGrid({
           selectedDayIndex={selectedDayIndex}
           onDayClick={onDayClick}
           isEditing={isEditing}
+          isFirstWidget={index === 0}
           onEdit={() => onEditWidget(index)}
           onRemove={
             widgets.length > 2

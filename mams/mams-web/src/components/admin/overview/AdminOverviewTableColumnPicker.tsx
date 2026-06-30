@@ -35,6 +35,7 @@ export function AdminOverviewTableColumnPicker({
     >
       <div
         className="dash-kpi-picker-panel card w-full sm:max-w-sm max-h-[min(85vh,520px)] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-lg"
+        data-tour-id="admin-table-column-picker"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 pb-2 border-b border-border">

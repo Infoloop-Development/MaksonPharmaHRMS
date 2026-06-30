@@ -16,6 +16,7 @@ import {
   RoleSchema,
   UnmaskFieldGrantsSchema,
   UserUpdateBodySchema,
+  BulkIdsBodySchema,
   canRoleHaveUnmaskFieldGrants,
   dedupePermissions,
   dedupeUnmaskFieldGrants,
@@ -210,6 +211,68 @@ router.post('/:id/revoke-sessions', requireAnyPermission('manage.security', 'man
       }
     );
     res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/bulk-deactivate', manageUsersGate, async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const actorId = req.auth!.sub;
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const rawId of body.ids) {
+      if (!mongoose.isValidObjectId(rawId)) {
+        result.skipped += 1;
+        result.errors.push({ id: rawId, reason: 'Invalid id' });
+        continue;
+      }
+      if (actorId === rawId) {
+        result.skipped += 1;
+        result.errors.push({ id: rawId, reason: 'Cannot deactivate your own account' });
+        continue;
+      }
+
+      const user = await UserModel.findById(rawId);
+      if (!user) {
+        result.skipped += 1;
+        result.errors.push({ id: rawId, reason: 'User not found' });
+        continue;
+      }
+      if (!user.isActive) {
+        result.skipped += 1;
+        result.errors.push({ id: rawId, reason: 'Already inactive' });
+        continue;
+      }
+
+      try {
+        await assertLeavingAtLeastOneOtherOrgAdmin(rawId, user.role as Role, false);
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'last_org_admin') {
+          result.skipped += 1;
+          result.errors.push({ id: rawId, reason: e.message });
+          continue;
+        }
+        throw e;
+      }
+
+      user.isActive = false;
+      await user.save();
+      await revokeRefreshTokensForUser(rawId);
+      await audit(
+        'user_updated',
+        { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
+        {
+          entityType: 'user',
+          entityId: user._id,
+          payload: { isActive: false, bulk: true },
+        }
+      );
+      result.succeeded += 1;
+    }
+
+    res.json(result);
   } catch (err) {
     next(err);
   }

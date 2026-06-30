@@ -1,4 +1,5 @@
 import { Badge } from '../ui/Badge';
+import { BulkSelectCheckbox } from '../ui/BulkSelectCheckbox';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { EMPTY_CELL } from '../../lib/format';
 import type { Device } from '../../api/devices';
@@ -11,6 +12,9 @@ import {
 function DeviceCard({
   d,
   canManage,
+  selectable,
+  isSelected,
+  onToggleSelect,
   syncing,
   onSync,
   onTest,
@@ -19,6 +23,9 @@ function DeviceCard({
 }: {
   d: Device;
   canManage: boolean;
+  selectable?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
   syncing: Record<string, boolean>;
   onSync: (id: string) => void;
   onTest: (id: string) => void;
@@ -31,9 +38,18 @@ function DeviceCard({
   return (
     <div className="card p-5 flex flex-col h-full">
       <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="min-w-0">
-          <div className="font-bold text-[15px] truncate">{d.name}</div>
-          <div className="font-mono text-xs text-text-muted mt-0.5">{d.deviceCode}</div>
+        <div className="min-w-0 flex items-start gap-3">
+          {selectable && isSelected && onToggleSelect && (
+            <BulkSelectCheckbox
+              checked={isSelected(d._id)}
+              onChange={() => onToggleSelect(d._id)}
+              ariaLabel={`Select ${d.name}`}
+            />
+          )}
+          <div className="min-w-0">
+            <div className="font-bold text-[15px] truncate">{d.name}</div>
+            <div className="font-mono text-xs text-text-muted mt-0.5">{d.deviceCode}</div>
+          </div>
         </div>
         <div className="shrink-0">
           <Badge tone={connectionStateBadgeTone(connState)}>
@@ -133,6 +149,9 @@ export function DeviceCardGrid({
   devices,
   isLoading,
   canManage,
+  selectable,
+  isSelected,
+  onToggleSelect,
   syncing,
   onSync,
   onTest,
@@ -142,6 +161,9 @@ export function DeviceCardGrid({
   devices: Device[];
   isLoading: boolean;
   canManage: boolean;
+  selectable?: boolean;
+  isSelected?: (id: string) => boolean;
+  onToggleSelect?: (id: string) => void;
   syncing: Record<string, boolean>;
   onSync: (id: string) => void;
   onTest: (id: string) => void;
@@ -162,6 +184,9 @@ export function DeviceCardGrid({
           key={d._id}
           d={d}
           canManage={canManage}
+          selectable={selectable}
+          isSelected={isSelected}
+          onToggleSelect={onToggleSelect}
           syncing={syncing}
           onSync={onSync}
           onTest={onTest}

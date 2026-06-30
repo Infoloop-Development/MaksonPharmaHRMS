@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsApi, settingsOrgNotificationAlerts, type Settings as SettingsT } from '../api/settings';
@@ -40,6 +40,10 @@ import { useTableSort } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { settingsTourScript } from '../lib/onboarding/scripts/settingsTourScript';
 import { AppearanceSection } from '../components/ui/ThemeToggle';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar } from '../components/ui/BulkActionBar';
+import { BulkConfirmModal } from '../components/ui/BulkConfirmModal';
+import { BulkSelectCheckbox } from '../components/ui/BulkSelectCheckbox';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -1052,7 +1056,12 @@ export function UsersManagementPanel() {
   const [openAdd, setOpenAdd] = useState(false);
   const [editUser, setEditUser] = useState<UserSummary | null>(null);
   const [userPage, setUserPage] = useState(1);
+  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
   const sessionUser = useAuth((s) => s.user);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+  const bulk = useBulkSelection();
   const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
   const items = data?.items ?? [];
@@ -1067,10 +1076,46 @@ export function UsersManagementPanel() {
   const total = sortedRows.length;
   const pageCount = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
   const paginatedItems = sortedRows.slice((userPage - 1) * USERS_PAGE_SIZE, userPage * USERS_PAGE_SIZE);
+  const pageIds = useMemo(() => paginatedItems.map((u) => u._id), [paginatedItems]);
+  const pageCheck = bulk.pageSelectionState(pageIds);
+  const selectedUsers = useMemo(
+    () => paginatedItems.filter((u) => bulk.isSelected(u._id)),
+    [paginatedItems, bulk]
+  );
 
   useEffect(() => {
     if (userPage > pageCount) setUserPage(pageCount);
   }, [userPage, pageCount]);
+
+  useEffect(() => {
+    bulk.clear();
+  }, [userPage, sortCol]);
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      usersApi.patch(id, { isActive }),
+    onMutate: ({ id }) => setTogglingUserId(id),
+    onSettled: () => setTogglingUserId(null),
+    onSuccess: (_, { isActive }) => {
+      toast(
+        isActive
+          ? 'User activated.'
+          : 'User deactivated. Previous sessions were ended; they must sign in again if reactivated.',
+        'success'
+      );
+      qc.invalidateQueries({ queryKey: ['users'] });
+      invalidateActivity(qc);
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError) toast(e.message, 'error');
+      else toast('Could not update user status', 'error');
+    },
+  });
+
+  const handleToggleActive = (u: UserSummary, next: boolean) => {
+    if (sessionUser?.id === u._id) return;
+    toggleActiveMutation.mutate({ id: u._id, isActive: next });
+  };
 
   return (
     <SectionCard
@@ -1079,16 +1124,36 @@ export function UsersManagementPanel() {
         <button className="btn-primary btn-sm" onClick={() => setOpenAdd(true)}>+ Add User</button>
       }
     >
+      <BulkActionBar
+        count={bulk.count}
+        overLimit={bulk.overLimit}
+        actionLabel="Deactivate selected"
+        onAction={() => setBulkDeactivateOpen(true)}
+        onClear={bulk.clear}
+      />
       <UserCardList
         items={paginatedItems}
         isLoading={isLoading}
         sessionUserId={sessionUser?.id}
+        selectable
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
+        togglingUserId={togglingUserId}
+        onToggleActive={handleToggleActive}
         onEdit={setEditUser}
       />
       <div className="tbl-scroll hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+              <th className="py-2 w-10">
+                <BulkSelectCheckbox
+                  checked={pageCheck.allSelected && pageIds.length > 0}
+                  indeterminate={pageCheck.someSelected}
+                  onChange={() => bulk.togglePage(pageIds)}
+                  ariaLabel="Select all users on this page"
+                />
+              </th>
               <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'name')} />
               <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'email')} />
               <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'role')} />
@@ -1097,13 +1162,29 @@ export function UsersManagementPanel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={5} className="py-4 text-center text-text-muted">Loading...</td></tr>}
+            {isLoading && <tr><td colSpan={6} className="py-4 text-center text-text-muted">Loading...</td></tr>}
             {!isLoading && paginatedItems.map((u) => (
               <tr key={u._id}>
+                <td className="py-2">
+                  <BulkSelectCheckbox
+                    checked={bulk.isSelected(u._id)}
+                    onChange={() => bulk.toggle(u._id)}
+                    ariaLabel={`Select ${u.name}`}
+                  />
+                </td>
                 <td className="py-2 font-medium">{u.name}</td>
                 <td className="py-2 text-xs">{u.email}</td>
                 <td className="py-2"><Badge tone="blue">{u.role}</Badge></td>
-                <td className="py-2"><Badge tone={u.isActive ? 'green' : 'red'}>{u.isActive ? 'Active' : 'Inactive'}</Badge></td>
+                <td className="py-2">
+                  <div className="flex items-center gap-2">
+                    <Toggle
+                      checked={u.isActive}
+                      onChange={(next) => handleToggleActive(u, next)}
+                      disabled={sessionUser?.id === u._id || togglingUserId === u._id}
+                    />
+                    <span className="text-xs text-text-muted">{u.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </td>
                 <td className="py-2 text-right">
                   <button
                     type="button"
@@ -1134,6 +1215,32 @@ export function UsersManagementPanel() {
           onClose={() => setEditUser(null)}
         />
       )}
+      <BulkConfirmModal
+        open={bulkDeactivateOpen}
+        onClose={() => setBulkDeactivateOpen(false)}
+        title="Deactivate selected users?"
+        description={
+          <>
+            Deactivate <strong>{bulk.count}</strong> user{bulk.count !== 1 ? 's' : ''}? Their sessions will be
+            ended and they cannot sign in until reactivated.
+          </>
+        }
+        itemLabels={selectedUsers.map((u) => `${u.name} (${u.email})`)}
+        confirmLabel="Deactivate users"
+        onConfirm={async () => {
+          const result = await usersApi.bulkDeactivate(bulk.ids);
+          toast(
+            `Deactivated ${result.succeeded} user${result.succeeded !== 1 ? 's' : ''}${
+              result.skipped ? `, ${result.skipped} skipped` : ''
+            }`,
+            result.succeeded > 0 ? 'success' : 'error'
+          );
+          qc.invalidateQueries({ queryKey: ['users'] });
+          invalidateActivity(qc);
+          bulk.clear();
+          return result;
+        }}
+      />
     </SectionCard>
   );
 }
@@ -1346,7 +1453,6 @@ function EditUserModal({
   const [role, setRole] = useState<Role>('hr.admin');
   const [unmaskFieldGrants, setUnmaskFieldGrants] = useState<SensitiveUnmaskField[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Permission[]>([]);
-  const [isActive, setIsActive] = useState(true);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
@@ -1363,7 +1469,6 @@ function EditUserModal({
     setUnmaskFieldGrants(
       Array.isArray(user.unmaskFieldGrants) ? [...user.unmaskFieldGrants] : []
     );
-    setIsActive(user.isActive);
     setMustChangePassword(user.mustChangePassword ?? false);
   }, [user]);
 
@@ -1380,7 +1485,6 @@ function EditUserModal({
         permissions: permsForSave,
         unmaskFieldGrants:
           isUnmaskEnabled() && role === 'hr.admin' ? unmaskFieldGrants : [],
-        isActive,
         mustChangePassword,
       });
     },
@@ -1480,10 +1584,6 @@ function EditUserModal({
                 <option value="it.admin">IT Admin</option>
               </Select>
             </Field>
-            <div className="flex items-center justify-between gap-3 py-1">
-              <span className="text-sm font-medium">Active</span>
-              <Toggle checked={isActive} onChange={setIsActive} />
-            </div>
             <div className="flex items-center justify-between gap-3 py-1">
               <span className="text-sm font-medium">Force password change on next login</span>
               <Toggle checked={mustChangePassword} onChange={setMustChangePassword} />

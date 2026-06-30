@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MAKSON_DEPARTMENTS, MAKSON_FACTORY_LOCATIONS } from '@mams/types';
 import { devicesApi, type Device } from '../../api/devices';
@@ -23,6 +23,10 @@ import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
 import { CardSortSelect } from '../ui/CardSortSelect';
 import { STAT_CARD_TOOLTIPS } from '../../lib/tooltips/statCardTooltips';
+import { useBulkSelection } from '../../hooks/useBulkSelection';
+import { BulkActionBar } from '../ui/BulkActionBar';
+import { BulkConfirmModal } from '../ui/BulkConfirmModal';
+import { BulkSelectCheckbox } from '../ui/BulkSelectCheckbox';
 
 export function DeviceManagementPanel({
   canManage,
@@ -45,6 +49,9 @@ export function DeviceManagementPanel({
   const [connectionFilter, setConnectionFilter] = useState<string>('all');
   const [cardSort, setCardSort] = useState('name-asc');
   const [postRegister, setPostRegister] = useState<DeviceCreate | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const bulk = useBulkSelection();
 
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
@@ -114,10 +121,7 @@ export function DeviceManagementPanel({
   });
 
   const handleDelete = (device: Device) => {
-    const ok = window.confirm(
-      `Delete device "${device.name}" (${device.serialNumber})?\n\nThis frees the serial number so you can register it again. Existing attendance punches are kept.`
-    );
-    if (ok) deleteMutation.mutate(device._id);
+    setDeleteTarget(device);
   };
 
   const allDevices = data?.items ?? [];
@@ -151,6 +155,17 @@ export function DeviceManagementPanel({
     });
     return list;
   }, [filtered, cardSort]);
+
+  const pageIds = useMemo(() => sortedFiltered.map((d) => d._id), [sortedFiltered]);
+  const pageCheck = bulk.pageSelectionState(pageIds);
+  const selectedDevices = useMemo(
+    () => sortedFiltered.filter((d) => bulk.isSelected(d._id)),
+    [sortedFiltered, bulk]
+  );
+
+  useEffect(() => {
+    bulk.clear();
+  }, [vendorFilter, deptFilter, locFilter, onlineFilter, connectionFilter, cardSort]);
 
   const online = allDevices.filter((d) => d.isOnline).length;
   const recentPunches = allDevices.reduce((sum, d) => sum + d.recentPunchCount, 0);
@@ -306,10 +321,35 @@ export function DeviceManagementPanel({
       </div>
 
       <div data-tour-id="devices-list">
+      {canManage && (
+        <>
+          <BulkActionBar
+            count={bulk.count}
+            overLimit={bulk.overLimit}
+            actionLabel="Delete selected"
+            onAction={() => setBulkDeleteOpen(true)}
+            onClear={bulk.clear}
+          />
+          {sortedFiltered.length > 0 && (
+            <div className="mb-3 flex items-center gap-2 text-sm text-text-muted">
+              <BulkSelectCheckbox
+                checked={pageCheck.allSelected && pageIds.length > 0}
+                indeterminate={pageCheck.someSelected}
+                onChange={() => bulk.togglePage(pageIds)}
+                ariaLabel="Select all devices on this page"
+              />
+              <span>Select all on this page</span>
+            </div>
+          )}
+        </>
+      )}
       <DeviceTable
         devices={sortedFiltered}
         isLoading={isLoading}
         canManage={canManage}
+        selectable={canManage}
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
         syncing={syncing}
         onSync={(id) => syncMutation.mutate(id)}
         onTest={handleTest}
@@ -343,6 +383,50 @@ export function DeviceManagementPanel({
       {editDevice && (
         <DeviceRegisterModal editDevice={editDevice} onClose={() => setEditDevice(null)} />
       )}
+      <BulkConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete device?"
+        description={
+          deleteTarget ? (
+            <>
+              Delete device <strong>{deleteTarget.name}</strong> ({deleteTarget.serialNumber})? This frees the serial
+              number so you can register it again. Existing attendance punches are kept.
+            </>
+          ) : null
+        }
+        confirmLabel="Delete device"
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteMutation.mutateAsync(deleteTarget._id);
+        }}
+      />
+      <BulkConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Delete selected devices?"
+        description={
+          <>
+            Delete <strong>{bulk.count}</strong> device{bulk.count !== 1 ? 's' : ''}? Serial numbers will be freed for
+            re-registration. Existing attendance punches are kept.
+          </>
+        }
+        itemLabels={selectedDevices.map((d) => `${d.name} (${d.serialNumber})`)}
+        confirmLabel="Delete devices"
+        onConfirm={async () => {
+          const result = await devicesApi.bulkDelete(bulk.ids);
+          toast(
+            `Deleted ${result.succeeded} device${result.succeeded !== 1 ? 's' : ''}${
+              result.skipped ? `, ${result.skipped} skipped` : ''
+            }`,
+            result.succeeded > 0 ? 'success' : 'error'
+          );
+          qc.invalidateQueries({ queryKey: ['devices'] });
+          qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+          bulk.clear();
+          return result;
+        }}
+      />
     </div>
   );
 }

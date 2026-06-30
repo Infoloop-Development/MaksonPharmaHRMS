@@ -14,6 +14,7 @@ import {
   resolveVisitValidUntil,
   type VisitorField,
   type VisitorFormLocale,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import { VisitorFormModel } from '../models/VisitorForm.js';
 import { VisitorRequestModel } from '../models/VisitorRequest.js';
@@ -372,6 +373,36 @@ router.patch('/forms/:id/toggle-active', requirePermission('manage.visitors'), a
     await form.save();
     const submissionCount = await VisitorRequestModel.countDocuments({ formId: form._id });
     res.json(enrichFormResponse(form, submissionCount));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/forms/bulk-archive', requirePermission('manage.visitors'), async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      if (!Types.ObjectId.isValid(id)) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+        continue;
+      }
+      const form = await VisitorFormModel.findOne({ _id: id, isArchived: false });
+      if (!form) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Form not found or already archived' });
+        continue;
+      }
+      form.isArchived = true;
+      form.isActive = false;
+      form.updatedBy = new Types.ObjectId(req.auth!.sub);
+      await form.save();
+      result.succeeded += 1;
+    }
+
+    res.json(result);
   } catch (err) {
     next(err);
   }
