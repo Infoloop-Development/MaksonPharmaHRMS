@@ -12,7 +12,7 @@ import { ApiError } from '../api/client';
 type ChangeRequest = {
   _id: string;
   changeType: 'create' | 'update' | 'delete';
-  employeeId: { _id: string; name: string; empCode: string } | null;
+  employeeId: { _id: string; name: string; empCode: string; isDeleted?: boolean } | null;
   proposedData: Record<string, unknown> | null;
   previousData: Record<string, unknown> | null;
   reason: string;
@@ -48,7 +48,6 @@ function employeeDisplayCode(req: ChangeRequest): string {
 
 export function EmployeeChangeRequests() {
   const user = useAuth((s) => s.user);
-  const isCompliant = user?.viewMode === 'compliant';
   const canApprove = user?.permissions.includes('approve.employee_change') ?? false;
 
   const [statusFilter, setStatusFilter] = useState<'Flagged' | 'Reviewed' | ''>('Flagged');
@@ -75,26 +74,33 @@ export function EmployeeChangeRequests() {
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Employee Change Requests</h1>
+          <h1 className="text-2xl font-bold">{canApprove ? 'Employee Change Requests' : 'Change History'}</h1>
           <p className="text-sm text-text-muted mt-0.5">
-            {isCompliant ? 'Employee changes you have made' : 'Compliance-initiated employee changes — review and correct if needed'}
+            {canApprove ? 'Compliance-initiated employee changes — review and correct if needed' : 'Your submitted employee changes and their outcomes'}
           </p>
         </div>
       </div>
 
       {/* Stat tiles */}
       <div className="dash-stat-grid mb-6">
-        {(['Flagged', 'Reviewed'] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => { setStatusFilter(statusFilter === s ? '' : s); setPage(1); }}
-            className={`card p-4 text-left transition hover:shadow-md ${statusFilter === s ? 'ring-2 ring-primary' : ''}`}
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{s}</div>
-            <div className="text-3xl font-bold mt-1">{counts[s]}</div>
-          </button>
-        ))}
+        {canApprove ? (
+          (['Flagged', 'Reviewed'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { setStatusFilter(statusFilter === s ? '' : s); setPage(1); }}
+              className={`card p-4 text-left transition hover:shadow-md ${statusFilter === s ? 'ring-2 ring-primary' : ''}`}
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{s}</div>
+              <div className="text-3xl font-bold mt-1">{counts[s]}</div>
+            </button>
+          ))
+        ) : (
+          <div className="card p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Total Changes</div>
+            <div className="text-3xl font-bold mt-1">{data?.total ?? 0}</div>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -139,7 +145,9 @@ export function EmployeeChangeRequests() {
                     {req.initiatedAt ? fmtDate(req.initiatedAt.slice(0, 10)) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge tone={STATUS_TONE[req.status]}>{req.status}</Badge>
+                    <Badge tone={STATUS_TONE[req.status]}>
+                      {canApprove ? req.status : 'Processed'}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -147,7 +155,7 @@ export function EmployeeChangeRequests() {
                       className="btn-outline btn-sm"
                       onClick={() => setReviewRequest(req)}
                     >
-                      Review
+                      {req.status === 'Flagged' ? 'Review' : 'View'}
                     </button>
                   </td>
                 </tr>
@@ -204,6 +212,7 @@ function ReviewModal({
   const isCreate = request.changeType === 'create';
   const isUpdate = request.changeType === 'update';
   const isDelete = request.changeType === 'delete';
+  const employeeIsDeleted = request.employeeId?.isDeleted ?? false;
 
   const submit = async (action: 'keep' | 'remove' | 'revert' | 'reinstate') => {
     setBusy(true);
@@ -277,38 +286,42 @@ function ReviewModal({
             <>
               {isCreate && (
                 <>
+                {!employeeIsDeleted && (
                   <button type="button" className="btn-outline text-red" disabled={busy} onClick={() => submit('remove')}>
                     {busy ? 'Processing…' : 'Remove employee'}
                   </button>
-                  <button type="button" className="btn-primary" disabled={busy} onClick={() => submit('keep')}>
-                    {busy ? 'Processing…' : 'Keep employee'}
-                  </button>
-                </>
-              )}
-              {isUpdate && (
-                <>
+                )}
+                <button type="button" className="btn-primary" disabled={busy} onClick={() => submit('keep')}>
+                  {busy ? 'Processing…' : 'Keep employee'}
+                </button>
+            </>
+          )}
+          {isUpdate && (
+            <>
+              {!employeeIsDeleted && (
                   <button type="button" className="btn-outline text-red" disabled={busy} onClick={() => submit('revert')}>
                     {busy ? 'Processing…' : 'Revert changes'}
                   </button>
-                  <button type="button" className="btn-primary" disabled={busy} onClick={() => submit('keep')}>
-                    {busy ? 'Processing…' : 'Keep changes'}
-                  </button>
-                </>
               )}
-              {isDelete && (
-                <>
-                  <button type="button" className="btn-outline" disabled={busy} onClick={() => submit('reinstate')}>
-                    {busy ? 'Processing…' : 'Reinstate employee'}
-                  </button>
-                  <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy} onClick={() => submit('keep')}>
-                    {busy ? 'Processing…' : 'Confirm deletion'}
-                  </button>
-                </>
-              )}
+              <button type="button" className="btn-primary" disabled={busy} onClick={() => submit('keep')}>
+                {busy ? 'Processing…' : 'Keep changes'}
+              </button>
+            </>
+          )}
+          {isDelete && (
+            <>
+              <button type="button" className="btn-outline" disabled={busy} onClick={() => submit('reinstate')}>
+                {busy ? 'Processing…' : 'Reinstate employee'}
+              </button>
+              <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy} onClick={() => submit('keep')}>
+                {busy ? 'Processing…' : 'Confirm deletion'}
+              </button>
             </>
           )}
         </>
-      }
+      )}
+    </>
+  }
     >
       <div className="space-y-5 text-sm">
         <div className="flex flex-wrap gap-4 text-xs text-text-muted">
@@ -321,6 +334,18 @@ function ReviewModal({
           <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Reason</div>
           <p className="text-sm">{request.reason}</p>
         </div>
+
+        {isCreate && employeeIsDeleted && (
+          <div className="rounded-md border border-amber/30 bg-amber-bg px-4 py-3 text-sm text-amber">
+            This employee has been deleted. You can only acknowledge this record — handle the Delete record first.
+          </div>
+        )}
+
+        {isUpdate && employeeIsDeleted && (
+          <div className="rounded-md border border-amber/30 bg-amber-bg px-4 py-3 text-sm text-amber">
+            This employee has been deleted. You cannot revert this update — handle the Delete record first.
+          </div>
+        )}
 
         {isDelete && (
           <div className="rounded-md border border-red/30 bg-red-bg px-4 py-3 text-sm text-red">

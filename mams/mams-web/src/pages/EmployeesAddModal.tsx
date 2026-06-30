@@ -90,7 +90,7 @@ const SENSITIVE_KEYS = [
   'accountType',
 ] as const;
 
-function draftFromEmployee(employee: EmployeeMasked, isCompliant: boolean): Draft {
+function draftFromEmployee(employee: EmployeeMasked | EmployeeUnmasked, isCompliant: boolean): Draft {
   if (!isCompliant && !employee.timeShift) {
     throw new Error('EmployeesAddModal: edit requires real view (timeShift is masked)');
   }
@@ -125,7 +125,7 @@ export function EmployeesAddModal({
 }: {
   onClose: () => void;
   mode?: 'create' | 'edit';
-  employee?: EmployeeMasked;
+  employee?: EmployeeMasked | EmployeeUnmasked;
 }) {
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
@@ -137,7 +137,6 @@ export function EmployeesAddModal({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dupeWarning, setDupeWarning] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
   const canUnmask = isEdit;
@@ -250,17 +249,6 @@ export function EmployeesAddModal({
     }
 
     if (isCompliant) {
-      if (isEdit && employee && !dupeWarning) {
-        try {
-          const check = await employeeChangeRequestsApi.list({ status: 'Flagged', employeeId: employee.id, pageSize: 1 });
-          if (check.total > 0) {
-            setDupeWarning(true);
-            return;
-          }
-        } catch {
-          // fail-open: proceed if the check errors
-        }
-      }
       setBusy(true);
       try {
         const proposedData = {
@@ -427,7 +415,7 @@ export function EmployeesAddModal({
         </button>
       ) : (
         <button type="button" className="btn-primary" onClick={onSubmit} disabled={busy || (isEdit && !hasChanges)}>
-          {busy ? 'Saving…' : isEdit ? (dupeWarning ? 'Submit anyway' : 'Save changes') : 'Save employee'}
+          {busy ? 'Saving…' : isEdit ?  'Save changes' : 'Save employee'}
         </button>
       )}
     </>
@@ -461,11 +449,6 @@ export function EmployeesAddModal({
           </div>
         </div>
 
-        {dupeWarning && isEdit && isCompliant && (
-          <div className="text-sm text-amber bg-amber-bg px-3 py-2 rounded" role="alert">
-            This employee already has a pending review. Are you sure you want to submit another change?
-          </div>
-        )}
         {formError && (
           <div className="text-sm text-red bg-red-bg px-3 py-2 rounded" role="alert">
             {formError}
@@ -627,9 +610,9 @@ export function EmployeesAddModal({
               </div>
             </section>
 
-            {isCompliant && isEdit && (
+            {isCompliant && (
               <section>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Reason for change</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">{isEdit ? 'Reason for change' : 'Reason for adding'}</h3>
                 <div>
                   <textarea
                     className={`input w-full min-h-[80px] resize-y ${reasonError ? 'ring-1 ring-red' : ''}`}

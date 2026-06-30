@@ -21,7 +21,7 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
 ];
 
 const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
-const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/regularization', '/visitors', '/autogeneration-demo']);
+const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/regularization', '/visitors', '/devices', '/autogeneration-demo']);
 
 const COMPLIANCE_ATTENDANCE_NAV = {
   to: '/compliance-attendance',
@@ -61,7 +61,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
   const canViewComplianceActivity = user?.permissions.includes('read.compliance_activity') ?? false;
-  const canViewChangeRequests = user?.permissions.includes('approve.employee_change') ?? false;
+  const canViewChangeRequests = (user?.permissions.includes('approve.employee_change') || user?.permissions.includes('write.employee_change')) ?? false;
   const location = useLocation();
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -160,7 +160,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
         {canViewChangeRequests && (
           <NavLink
             to="/employee-change-requests"
-            title={collapsed ? 'Employee Change Requests' : undefined}
+            title={collapsed ? (isCompliant ? 'Change History' : 'Employee Change Requests') : undefined}
             className={({ isActive }) =>
               `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
                 collapsed ? 'lg:justify-center' : ''
@@ -168,7 +168,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             }
           >
             <NavIcon name="adjustments" />
-            {!collapsed && <span>Change Requests</span>}
+            {!collapsed && <span>{isCompliant ? 'Change History' : 'Change Requests'}</span>}
           </NavLink>
         )}
         {canViewComplianceActivity && (

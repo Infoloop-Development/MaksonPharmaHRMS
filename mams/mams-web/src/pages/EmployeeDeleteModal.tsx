@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { EmployeeMasked } from '@mams/types';
+import type { EmployeeMasked, EmployeeUnmasked } from '@mams/types';
 import { employeesApi } from '../api/employees';
 import { ApiError } from '../api/client';
 import { Modal } from '../components/ui/Modal';
@@ -13,7 +13,7 @@ export function EmployeeDeleteModal({
   onClose,
   redirectOnSuccess = false,
 }: {
-  employee: EmployeeMasked;
+  employee: EmployeeMasked | EmployeeUnmasked;
   onClose: () => void;
   redirectOnSuccess?: boolean;
 }) {

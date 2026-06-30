@@ -54,6 +54,13 @@ function RequirePermission({ permission, fallback, children }: { permission: Per
   return <>{children}</>;
 }
 
+function RequireAnyPermission({ permissions, fallback, children }: { permissions: Permission[]; fallback: string; children: React.ReactNode }) {
+  const user = useAuth((s) => s.user);
+  if (!user) return <Navigate to="/login" replace />;
+  if (!permissions.some((p) => user.permissions.includes(p))) return <Navigate to={fallback} replace />;
+  return <>{children}</>;
+}
+
 function SettingsGate(){
   const viewMode = useAuth((s) => s.user?.viewMode);
   return viewMode === 'compliant' ? <ComplianceSettings /> : <Settings />;
@@ -121,9 +128,9 @@ export function App() {
         <Route
           path="employee-change-requests"
           element={
-            <RequirePermission permission="approve.employee_change" fallback="/employees">
+            <RequireAnyPermission permissions={['approve.employee_change', 'write.employee_change']} fallback="/employees">
               <EmployeeChangeRequests />
-            </RequirePermission>
+            </RequireAnyPermission>
           }
         />
         <Route path="settings" element={<SettingsGate />} />

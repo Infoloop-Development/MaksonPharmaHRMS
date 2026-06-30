@@ -442,7 +442,6 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dupeWarning, setDupeWarning] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
 
@@ -450,17 +449,6 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     if (reason.trim().length < 10) {
       setError('Reason must be at least 10 characters.');
       return;
-    }
-    if (!dupeWarning) {
-      try {
-        const check = await employeeChangeRequestsApi.list({ status: 'Flagged', employeeId: employee.id, pageSize: 1 });
-        if (check.total > 0) {
-          setDupeWarning(true);
-          return;
-        }
-      } catch {
-        // fail-open: proceed if the check errors
-      }
     }
     setBusy(true);
     setError(null);
@@ -486,20 +474,15 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
-            {busy ? 'Deleting…' : dupeWarning ? 'Delete anyway' : 'Delete employee'}
+            {busy ? 'Delete anyway' : 'Delete employee'}
           </button>
         </>
       }
     >
       <div className="space-y-4 text-sm">
         <p className="text-text-muted">
-          Delete <strong className="text-text">{employee.name}</strong> ({employee.empCode}). This will take effect immediately and HR will be notified to review.
+          Delete <strong className="text-text">{employee.name}</strong> ({employee.empCode}). This action is permanent and cannot be umdone.
         </p>
-        {dupeWarning && (
-          <div className="text-sm text-amber bg-amber-bg px-3 py-2 rounded" role="alert">
-            This employee already has a pending review. Are you sure you want to submit another change?
-          </div>
-        )}
         <div>
           <label className="label">Reason</label>
           <textarea

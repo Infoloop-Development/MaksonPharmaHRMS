@@ -30,14 +30,14 @@ router.get('/', async (req, res, next) => {
     const [total, items, statusCounts] = await Promise.all([
       EmployeeChangeRequestModel.countDocuments(filter),
       EmployeeChangeRequestModel.find(filter)
-        .populate('employeeId', 'name empCode')
+        .populate('employeeId', 'name empCode isDeleted')
         .populate('initiatedBy', 'name email')
         .populate('reviewedBy', 'name email')
         .sort({ initiatedAt: -1 })
         .skip((q.page - 1) * q.pageSize)
         .limit(q.pageSize)
         .lean(),
-      EmployeeChangeRequestModel.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      EmployeeChangeRequestModel.aggregate([{ $match: filter }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     ]);
 
     const counts: Record<string, number> = { Flagged: 0, Reviewed: 0 };
@@ -175,13 +175,15 @@ router.post('/:id/review', requirePermission('approve.employee_change'), async (
     const doc = await EmployeeChangeRequestModel.findOne({ _id: id, status: 'Flagged' });
     if (!doc) throw new ApiError(404, 'not_found', 'Flagged change request not found');
 
-    if (doc.changeType === 'create' && body.timeShift && doc.employeeId) {
-      await EmployeeModel.updateOne({ _id: doc.employeeId }, { $set: { timeShift: body.timeShift } });
-    }
-
     if (body.action === 'keep'){
       if (doc.changeType === 'create' && body.timeShift && doc.employeeId){
         await EmployeeModel.updateOne({ _id: doc.employeeId }, {$set: { timeShift: body.timeShift }})
+      }
+      if (doc.changeType === 'delete' && doc.employeeId){
+        await EmployeeChangeRequestModel.updateMany(
+          { employeeId: doc.employeeId, _id: { $ne: doc._id }, status: 'Flagged'},
+          { $set: { status: 'Reviewed', reviewNote: 'Auto-closed: employee was confirmed deleted.'}}
+        );
       }
     } else if (body.action === 'remove'){
       if (doc.changeType !== 'create') throw new ApiError(400, 'invalid_action','remove is only valid for create requests');
