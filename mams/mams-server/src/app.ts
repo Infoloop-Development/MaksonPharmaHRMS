@@ -37,7 +37,11 @@ export function buildApp() {
       credentials: true,
     })
   );
-  app.use(express.json({ limit: '1mb' }));
+  app.use((req, res, next) => {
+    const isBugReportSubmit =
+      req.method === 'POST' && /^\/api\/bug-reports\/?$/.test(req.path);
+    express.json({ limit: isBugReportSubmit ? '5mb' : '1mb' })(req, res, next);
+  });
   app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
   app.use(requestContext);
 

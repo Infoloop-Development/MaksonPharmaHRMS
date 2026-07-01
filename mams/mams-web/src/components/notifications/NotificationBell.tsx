@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { NotificationItem } from '@mams/types';
-import { isOrgAdminRole } from '@mams/types';
+import { hasOrgAdminLikeAccess } from '@mams/types';
 import { useAuth } from '../../store/auth';
 import { notificationsApi, notificationsQueryKey, NOTIFICATIONS_QUERY_PREFIX } from '../../api/notifications';
 import { useToast } from '../ui/Toast';
@@ -83,7 +83,7 @@ export function NotificationBell() {
   const toastedIdsRef = useRef<Set<string>>(new Set());
   const initialLoadRef = useRef(true);
 
-  const enabled = Boolean(user && isOrgAdminRole(user.role));
+  const enabled = Boolean(user && hasOrgAdminLikeAccess(user.role));
 
   const { data, isLoading } = useQuery({
     queryKey: notificationsQueryKey(user?.id, pageSize),

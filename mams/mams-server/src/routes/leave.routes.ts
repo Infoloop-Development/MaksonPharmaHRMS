@@ -53,6 +53,7 @@ import {
 } from '../services/notification.service.js';
 import { eachDateInRange } from '../services/leave/leaveDate.util.js';
 import { z } from 'zod';
+import { softDeleteFields } from '../utils/softDelete.util.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -91,6 +92,7 @@ function mapHoliday(doc: { _id: Types.ObjectId; [k: string]: unknown }) {
 async function holidaysInRange(from: string, to: string) {
   return HolidayModel.find({
     date: { $gte: from, $lte: to },
+    isDeleted: { $ne: true },
   }).lean();
 }
 
@@ -141,7 +143,7 @@ router.patch('/types/:id', requirePermission('manage.leave'), async (req, res, n
 router.get('/holidays', async (req, res, next) => {
   try {
     const year = req.query.year ? String(req.query.year) : undefined;
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = { isDeleted: { $ne: true } };
     if (year && /^\d{4}$/.test(year)) {
       filter.date = { $gte: `${year}-01-01`, $lte: `${year}-12-31` };
     }
@@ -187,12 +189,15 @@ router.post('/holidays/bulk-delete', requirePermission('manage.leave'), async (r
     for (const id of body.ids) {
       try {
         const mongoId = requireMongoId(id);
-        const deleted = await HolidayModel.findByIdAndDelete(mongoId);
-        if (!deleted) {
+        const doc = await HolidayModel.findOne({ _id: mongoId, isDeleted: { $ne: true } });
+        if (!doc) {
           result.skipped += 1;
           result.errors.push({ id, reason: 'Holiday not found' });
           continue;
         }
+        doc.isDeleted = true;
+        Object.assign(doc, softDeleteFields(req.auth!.sub));
+        await doc.save();
         result.succeeded += 1;
       } catch {
         result.skipped += 1;
@@ -209,8 +214,11 @@ router.post('/holidays/bulk-delete', requirePermission('manage.leave'), async (r
 router.delete('/holidays/:id', requirePermission('manage.leave'), async (req, res, next) => {
   try {
     const id = requireMongoId(req.params.id);
-    const deleted = await HolidayModel.findByIdAndDelete(id);
-    if (!deleted) throw new ApiError(404, 'not_found', 'Holiday not found');
+    const doc = await HolidayModel.findOne({ _id: id, isDeleted: { $ne: true } });
+    if (!doc) throw new ApiError(404, 'not_found', 'Holiday not found');
+    doc.isDeleted = true;
+    Object.assign(doc, softDeleteFields(req.auth!.sub));
+    await doc.save();
     res.status(204).end();
   } catch (err) {
     next(err);

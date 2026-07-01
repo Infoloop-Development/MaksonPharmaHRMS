@@ -2,7 +2,7 @@ import mongoose, { Schema, type InferSchemaType } from 'mongoose';
 
 const employeeSchema = new Schema(
   {
-    empCode: { type: String, required: true, unique: true, index: true },
+    empCode: { type: String, required: true },
     name: { type: String, required: true },
     gender: { type: String, enum: ['M', 'F', 'O'], required: true },
     department: { type: String, required: true, index: true },
@@ -12,10 +12,8 @@ const employeeSchema = new Schema(
     alternateShift: { type: String, enum: ['A', 'B', 'C'], required: true },
     weeklyOff: { type: [String], default: ['Sunday'] },
     joinDate: { type: Date, required: true },
-    biometricId: { type: String, required: true, unique: true, index: true },
+    biometricId: { type: String, required: true },
 
-    // SENSITIVE - stored unmasked at the DB level (the disk volume is encrypted by ops);
-    // masked at the API serialisation layer. Unmasking is role-gated and audit-logged.
     pan: { type: String, required: true },
     aadhaar: { type: String, required: true },
     bankAccountNumber: { type: String, required: true },
@@ -27,14 +25,23 @@ const employeeSchema = new Schema(
     esiNumber: { type: String, required: true },
 
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active', index: true },
-    isDeleted: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );
 
 employeeSchema.index({ department: 1, location: 1, status: 1 });
 employeeSchema.index({ location: 1, status: 1 });
+employeeSchema.index(
+  { empCode: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: false } }
+);
+employeeSchema.index(
+  { biometricId: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: false } }
+);
 
 export type EmployeeDoc = InferSchemaType<typeof employeeSchema> & { _id: mongoose.Types.ObjectId };
 export const EmployeeModel = mongoose.model('Employee', employeeSchema);

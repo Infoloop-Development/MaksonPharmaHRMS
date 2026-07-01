@@ -7,9 +7,12 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { ThemeProvider } from './store/theme';
 import { OrgBrandingProvider } from './store/orgBranding';
 import { bootstrapOrgBrandingFromCache } from './lib/orgBrandingCache';
+import { initBugReportInstrumentation, ensureSessionStart } from './lib/bugReport';
 import './styles/index.css';
 
 bootstrapOrgBrandingFromCache();
+initBugReportInstrumentation();
+ensureSessionStart();
 
 const queryClient = new QueryClient({
   defaultOptions: {

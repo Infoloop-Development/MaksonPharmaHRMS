@@ -1,3 +1,5 @@
+export * from './recycleBin.js';
+export * from './bugReport.js';
 export * from './bulkMutation.js';
 export * from './user.js';
 export * from './sensitiveUnmask.js';

@@ -35,6 +35,7 @@ import {
   visitorIntroVideoFieldId,
 } from '../services/visitor/visitorIntroMedia.service.js';
 import { buildVisitorFormTranslations } from '../services/visitor/visitorTranslate.service.js';
+import { softDeleteFields } from '../utils/softDelete.util.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -398,6 +399,7 @@ router.post('/forms/bulk-archive', requirePermission('manage.visitors'), async (
       form.isArchived = true;
       form.isActive = false;
       form.updatedBy = new Types.ObjectId(req.auth!.sub);
+      Object.assign(form, softDeleteFields(req.auth!.sub));
       await form.save();
       result.succeeded += 1;
     }
@@ -417,6 +419,7 @@ router.delete('/forms/:id', requirePermission('manage.visitors'), async (req, re
     form.isArchived = true;
     form.isActive = false;
     form.updatedBy = new Types.ObjectId(req.auth!.sub);
+    Object.assign(form, softDeleteFields(req.auth!.sub));
     await form.save();
     res.status(204).send();
   } catch (err) {

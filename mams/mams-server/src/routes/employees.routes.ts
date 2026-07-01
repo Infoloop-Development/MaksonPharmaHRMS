@@ -19,6 +19,7 @@ import { isUnmaskEnabled } from '../config/featureFlags.js';
 import { audit, logUnmask, logUnmaskActivity } from '../services/audit.service.js';
 import { parseSortQuery } from '../utils/sortQuery.js';
 import { mapEmployeeCreateDuplicateError } from '../utils/mongoDuplicate.js';
+import { softDeleteFields } from '../utils/softDelete.util.js';
 
 const router = Router();
 
@@ -249,6 +250,7 @@ router.post('/bulk-delete', manageEmployeesGate, async (req, res, next) => {
 
       doc.isDeleted = true;
       doc.status = 'Inactive';
+      Object.assign(doc, softDeleteFields(req.auth!.sub));
       await doc.save();
 
       await audit(
@@ -285,6 +287,7 @@ router.delete('/:id', manageEmployeesGate, async (req, res, next) => {
 
     doc.isDeleted = true;
     doc.status = 'Inactive';
+    Object.assign(doc, softDeleteFields(req.auth!.sub));
     await doc.save();
 
     await audit(

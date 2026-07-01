@@ -101,6 +101,8 @@ const visitorFormSchema = new Schema(
     fields: { type: [visitorFieldSchema], default: [] },
     isActive: { type: Boolean, default: true },
     isArchived: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

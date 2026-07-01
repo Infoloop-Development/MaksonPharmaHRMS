@@ -7,7 +7,7 @@ import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { clearFirstLoginSession } from '../lib/onboarding/session';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, CloseIcon, type NavIconName } from './navIcons';
-import { isOrgAdminRole, type Role } from '@mams/types';
+import { hasOrgAdminLikeAccess, type Role } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -106,7 +106,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         </button>
       </div>
       <nav className="sidebar-nav-scroll flex-1 py-2 lg:py-3 px-2 overflow-y-auto">
-        {user && isOrgAdminRole(user.role) && (
+        {user && hasOrgAdminLikeAccess(user.role) && (
           <>
             <div className="text-[9px] uppercase tracking-[1.5px] sidebar-muted px-1.5 pb-1.5 font-semibold">Administration</div>
             <NavLink to="/admin" className={({ isActive }) => navLinkClass(isActive)}>
@@ -116,7 +116,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <div className="text-[9px] uppercase tracking-[1.5px] sidebar-muted px-1.5 pb-1.5 pt-1.5 font-semibold">HR modules</div>
           </>
         )}
-        {user && isOrgAdminRole(user.role) ? null : (
+        {user && hasOrgAdminLikeAccess(user.role) ? null : (
           <div className="text-[9px] uppercase tracking-[1.5px] sidebar-muted px-1.5 pb-1.5 font-semibold">Navigation</div>
         )}
         {buildNav(user?.permissions ?? [], user?.role as Role | undefined).map((n) => (

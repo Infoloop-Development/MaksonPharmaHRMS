@@ -46,6 +46,8 @@ export const PermissionSchema = z.enum([
   'read.compliance_activity',
   'write.employee_change',
   'approve.employee_change',
+  'manage.recycle_bin',
+  'manage.bug_reports',
 ]);
 export type Permission = z.infer<typeof PermissionSchema>;
 

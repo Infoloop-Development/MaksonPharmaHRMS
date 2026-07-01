@@ -85,6 +85,8 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'read.compliance_activity': 'View compliance activity log',
   'write.employee_change': 'Submit employee add/edit/delete change requests',
   'approve.employee_change': 'Approve/reject employee change requests',
+  'manage.recycle_bin': 'View recycle bin, restore or permanently delete items',
+  'manage.bug_reports': 'Review and manage user-submitted bug reports',
 };
 
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
@@ -106,6 +108,8 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
       'manage.feature_flags',
       'read.system_health',
       'manage.export_naming',
+      'manage.recycle_bin',
+      'manage.bug_reports',
     ],
   },
 ];

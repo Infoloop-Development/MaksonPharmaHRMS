@@ -47,6 +47,8 @@ const SeedUsersEnvSchema = z.object({
   SEED_ORG_ADMIN_NAME: z.string().min(1).default('Organization Admin'),
   SEED_HR_ADMIN_EMAIL: z.string().email().default('hr.admin@makson-group.com'),
   SEED_HR_COMPLIANCE_EMAIL: z.string().email().default('hr.compliance@makson-group.com'),
+  SEED_IT_ADMIN_EMAIL: z.string().email().default('it.admin@makson-group.com'),
+  SEED_IT_ADMIN_NAME: z.string().min(1).default('IT Administrator'),
   SEED_DEFAULT_PASSWORD: z.string().min(8).default('makson2026'),
   SEED_HR_ADMIN_NAME: z.string().min(1).default('Priya Patel'),
   SEED_HR_COMPLIANCE_NAME: z.string().min(1).default('Compliance Auditor'),
@@ -103,6 +105,16 @@ async function main() {
       mustChangePassword: false,
     },
     {
+      email: seedUsers.SEED_IT_ADMIN_EMAIL.toLowerCase(),
+      passwordHash,
+      name: seedUsers.SEED_IT_ADMIN_NAME,
+      role: 'it.admin',
+      permissions: PERMISSIONS_BY_ROLE['it.admin'],
+      viewMode: 'real',
+      isActive: true,
+      mustChangePassword: false,
+    },
+    {
       email: seedUsers.SEED_HR_COMPLIANCE_EMAIL.toLowerCase(),
       passwordHash,
       name: seedUsers.SEED_HR_COMPLIANCE_NAME,
@@ -116,6 +128,7 @@ async function main() {
   const adminUser = users[1]!;
   logger.info('Created seed users', {
     orgAdminEmail: seedUsers.SEED_ORG_ADMIN_EMAIL,
+    itAdminEmail: seedUsers.SEED_IT_ADMIN_EMAIL,
     adminEmail: seedUsers.SEED_HR_ADMIN_EMAIL,
     complianceEmail: seedUsers.SEED_HR_COMPLIANCE_EMAIL,
   });

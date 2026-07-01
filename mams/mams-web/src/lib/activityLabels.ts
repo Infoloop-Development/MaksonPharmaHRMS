@@ -226,6 +226,10 @@ export function formatActivityDescription(item: ActivityListItem): string {
     }
     case 'employee_deleted':
       return `Deleted employee ${p.name ?? 'employee'}${p.empCode ? ` (${p.empCode})` : ''}`.trim();
+    case 'bug_report_submitted':
+      return `Submitted bug report: ${p.title ?? 'Untitled'}`;
+    case 'bug_report_updated':
+      return 'Updated bug report triage';
     case 'csv_import':
       return `Imported CSV: ${p.successCount ?? 0} employee(s) added`;
     case 'ui.employees.search':

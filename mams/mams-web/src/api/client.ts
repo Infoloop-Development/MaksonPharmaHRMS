@@ -1,5 +1,6 @@
 import { useAuth } from '../store/auth';
 import { apiBasePath, apiRootUrl } from './apiBase';
+import { recordFailedRequest } from '../lib/bugReport';
 
 const apiRoot = apiRootUrl();
 const BASE = apiBasePath();
@@ -62,6 +63,14 @@ async function rawRequest<T>(method: string, path: string, body?: unknown, retri
   if (!res.ok) {
     let payload: any = null;
     try { payload = await res.json(); } catch { /* ignore */ }
+    if (res.status >= 400) {
+      recordFailedRequest({
+        method,
+        path,
+        status: res.status,
+        body: payload,
+      });
+    }
     throw new ApiError(res.status, payload?.error ?? 'http_error', payload?.message ?? res.statusText, payload);
   }
   if (res.status === 204) return undefined as T;

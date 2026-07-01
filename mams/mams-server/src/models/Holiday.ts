@@ -7,6 +7,9 @@ const holidaySchema = new Schema(
     type: { type: String, enum: ['National', 'Regional', 'Company'], default: 'National' },
     departments: { type: [String], default: [] },
     locations: { type: [String], default: [] },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );

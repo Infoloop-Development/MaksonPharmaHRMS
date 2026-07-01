@@ -6,6 +6,7 @@ import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { setFirstLoginSession } from '../lib/onboarding/session';
 import { useAuth } from '../store/auth';
 import { defaultHomePath } from '@mams/types';
+import { resetSessionStart } from '../lib/bugReport';
 
 export function Login() {
   const [email, setEmail] = useState('org.admin@makson-group.com');
@@ -24,6 +25,7 @@ export function Login() {
       const data = await authApi.login({ email, password });
       qc.removeQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
       setAuth(data);
+      resetSessionStart();
       if (data.isFirstLogin) {
         setFirstLoginSession();
       }
@@ -77,6 +79,8 @@ export function Login() {
           <strong>Demo credentials</strong> (password <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">makson2026</code>):
           <br />
           <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">org.admin@makson-group.com</code>: Admin Console
+          <br />
+          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">it.admin@makson-group.com</code>: IT Admin (Admin Console + Recycle bin)
           <br />
           <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.admin@makson-group.com</code>: HR (real / 12-hour view)
           <br />

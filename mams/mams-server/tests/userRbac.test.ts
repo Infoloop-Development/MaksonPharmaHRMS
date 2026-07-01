@@ -96,5 +96,12 @@ describe('ROLE_PERMISSION_CAP', () => {
     expect(cap).toContain('manage.org_users');
     expect(cap).toContain('manage.org_settings');
     expect(cap).toContain('read.org_audit');
+    expect(cap).not.toContain('manage.recycle_bin');
+  });
+
+  it('it.admin cap includes org governance and recycle bin', () => {
+    const cap = ROLE_PERMISSION_CAP['it.admin'];
+    expect(cap).toContain('manage.org_users');
+    expect(cap).toContain('manage.recycle_bin');
   });
 });

@@ -7,6 +7,7 @@ import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
 import { clearFirstLoginSession } from '../../lib/onboarding/session';
 import { isAutogenDemoEnabled } from '../../config/featureFlags';
 import { NavIcon, CloseIcon, type NavIconName } from '../navIcons';
+import { canManageBugReports, canManageRecycleBin, hasOrgAdminLikeAccess } from '@mams/types';
 
 const ADMIN_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/admin', label: 'Overview', icon: 'dashboard' },
@@ -61,7 +62,9 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
     }
   };
 
-  const showHrModules = user?.role === 'org.admin';
+  const showHrModules = hasOrgAdminLikeAccess(user?.role ?? 'hr.admin');
+  const showRecycleBin = canManageRecycleBin(user?.permissions ?? []);
+  const showBugReporting = canManageBugReports(user?.permissions ?? []);
 
   return (
     <aside
@@ -87,6 +90,18 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
             <span>{n.label}</span>
           </NavLink>
         ))}
+        {showRecycleBin && (
+          <NavLink to="/admin/recycle-bin" className={({ isActive }) => navLinkClass(isActive)}>
+            <NavIcon name="adjustments" />
+            <span>Recycle bin</span>
+          </NavLink>
+        )}
+        {showBugReporting && (
+          <NavLink to="/admin/bug-reporting" className={({ isActive }) => navLinkClass(isActive)}>
+            <NavIcon name="reports" />
+            <span>Bug reporting</span>
+          </NavLink>
+        )}
         {showHrModules && (
           <>
             <div className="text-[9px] uppercase tracking-[1.5px] sidebar-muted px-1.5 pb-1.5 pt-2 font-semibold">HR modules</div>

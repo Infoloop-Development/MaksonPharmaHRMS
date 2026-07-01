@@ -2,12 +2,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { AdminSidebar } from './admin/AdminSidebar';
 import { TopBar } from './TopBar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { ToastContainer } from './ui/Toast';
 import { authApi } from '../api/auth';
 import { settingsApi } from '../api/settings';
 import { useAuth } from '../store/auth';
+import { hasOrgAdminLikeAccess } from '@mams/types';
 import { hasMobileBottomNav } from '../lib/mobileBottomNav';
 import { TimeFormatProvider } from '../store/timeFormat';
 
@@ -66,6 +68,7 @@ export function Layout() {
   }, [settings?.favicon]);
 
   const showMobileBottomNav = hasMobileBottomNav(user?.role);
+  const useAdminSidebar = hasOrgAdminLikeAccess(user?.role ?? 'hr.admin');
 
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
@@ -77,7 +80,11 @@ export function Layout() {
           companyName={settings?.companyName}
           companyLogo={settings?.companyLogo}
         />
-        <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+        {useAdminSidebar ? (
+          <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
+        ) : (
+          <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+        )}
         {sidebarOpen && (
           <button
             type="button"

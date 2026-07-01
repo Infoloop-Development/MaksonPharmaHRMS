@@ -161,7 +161,14 @@ router.post('/:id/decide', requirePermission('approve.employee_change'), async (
         if (!doc.employeeId) throw new ApiError(400, 'missing_employee', 'No employee linked to this request');
         await EmployeeModel.updateOne(
           { _id: doc.employeeId },
-          { $set: { isDeleted: true, deletedAt: new Date(), status: 'Inactive' } }
+          {
+            $set: {
+              isDeleted: true,
+              deletedAt: new Date(),
+              deletedBy: new Types.ObjectId(req.auth!.sub),
+              status: 'Inactive',
+            },
+          }
         );
       }
     }

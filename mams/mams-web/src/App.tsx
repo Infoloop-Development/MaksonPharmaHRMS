@@ -26,6 +26,11 @@ import { AdminSecurity } from './pages/admin/AdminSecurity';
 import { AdminAudit } from './pages/admin/AdminAudit';
 import { AdminSystemHealth } from './pages/admin/AdminSystemHealth';
 import { AdminFeatureFlags } from './pages/admin/AdminFeatureFlags';
+import { AdminRecycleBin } from './pages/admin/AdminRecycleBin';
+import { AdminBugReporting } from './pages/admin/AdminBugReporting';
+import { AdminBugReportDetail } from './pages/admin/AdminBugReportDetail';
+import { BugReportInstrumentationProvider } from './components/bugReport/BugReportInstrumentationProvider';
+import { BugReportFab } from './components/bugReport/BugReportFab';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
 import { ComplianceAttendanceLog } from './pages/ComplianceAttendanceLog';
@@ -60,7 +65,8 @@ function HomeRedirect() {
 
 export function App() {
   return (
-    <Routes>
+    <BugReportInstrumentationProvider>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/visit/:slug" element={<PublicVisitorForm />} />
       <Route
@@ -86,6 +92,9 @@ export function App() {
         <Route path="audit" element={<AdminAudit />} />
         <Route path="health" element={<AdminSystemHealth />} />
         <Route path="feature-flags" element={<AdminFeatureFlags />} />
+        <Route path="recycle-bin" element={<AdminRecycleBin />} />
+        <Route path="bug-reporting" element={<AdminBugReporting />} />
+        <Route path="bug-reporting/:id" element={<AdminBugReportDetail />} />
       </Route>
       <Route
         path="/"
@@ -115,6 +124,8 @@ export function App() {
         <Route path="settings" element={<SettingsGate />} />
       </Route>
       <Route path="*" element={<HomeRedirect />} />
-    </Routes>
+      </Routes>
+      <BugReportFab />
+    </BugReportInstrumentationProvider>
   );
 }
