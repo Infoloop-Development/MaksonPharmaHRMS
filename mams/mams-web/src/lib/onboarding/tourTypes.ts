@@ -23,8 +23,10 @@ export type TourStepDef = {
   side?: TourPopoverSide;
   /** When true, the highlighted control stays clickable (e.g. pencil to enter edit mode). Default: locked. */
   allowInteraction?: boolean;
-  /** Skip step when false or anchor missing. */
+  /** Skip step when false. */
   when?: () => boolean;
+  /** Include even when anchor is not in the DOM yet (e.g. configure mode). Runner waits before highlight. */
+  dynamic?: boolean;
   onEnter?: (ctx: TourRuntimeContext) => void | Promise<void>;
   onLeaveForward?: (ctx: TourRuntimeContext) => void | Promise<void>;
   onLeaveBackward?: (ctx: TourRuntimeContext) => void | Promise<void>;

@@ -1,9 +1,9 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Field, Input, Select } from '../components/ui/Field';
 import { Badge } from '../components/ui/Badge';
+import { EMPTY_CELL } from '../lib/format';
 import { SortableTh } from '../components/ui/SortableTh';
 import { useTableSort } from '../lib/tableSort';
-import { EMPTY_CELL } from '../lib/format';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { ComplianceMonthCalendar } from '../components/autogen/ComplianceMonthCalendar';
 import { computeMonthlyPlan, formatCheckOutLabel, type MonthlyPlanDay } from '../lib/monthlyCompliancePlanner';
@@ -322,7 +322,7 @@ export function AutogenerationDemo() {
           </Field>
           <Field
             label="Personnel involved"
-            hint="Comma-separated names — rotated across present days"
+            hint="Comma-separated names, rotated across present days"
           >
             <Input
               value={involvedPersonnel}

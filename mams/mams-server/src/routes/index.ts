@@ -19,6 +19,9 @@ import adminRoutes from './admin.routes.js';
 import adminOverviewRoutes from './adminOverview.routes.js';
 import complianceAttendanceRoutes from './complianceAttendance.routes.js';
 import notificationsRoutes from './notifications.routes.js';
+import recycleBinRoutes from './recycleBin.routes.js';
+import bugReportsRoutes from './bugReports.routes.js';
+import adminBugReportingRoutes from './adminBugReporting.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
@@ -40,6 +43,9 @@ apiRouter.use('/regularization', regularizationRoutes);
 apiRouter.use('/visitors', visitorsRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/admin/overview', adminOverviewRoutes);
+apiRouter.use('/admin/recycle-bin', recycleBinRoutes);
+apiRouter.use('/admin/bug-reporting', adminBugReportingRoutes);
+apiRouter.use('/bug-reports', bugReportsRoutes);
 apiRouter.use('/notifications', notificationsRoutes);
 
 apiRouter.get('/health', (_req, res) => {

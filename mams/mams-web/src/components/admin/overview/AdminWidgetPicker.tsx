@@ -70,6 +70,7 @@ export function AdminWidgetPicker({
     >
       <div
         className="dash-kpi-picker-panel card w-full sm:max-w-2xl max-h-[min(90vh,640px)] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-lg"
+        data-tour-id="admin-widget-picker-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 pb-2 border-b border-border shrink-0">
@@ -84,7 +85,10 @@ export function AdminWidgetPicker({
         </div>
 
         <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
-          <div className="sm:w-[200px] shrink-0 border-b sm:border-b-0 sm:border-r border-border p-2 overflow-y-auto">
+          <div
+            className="sm:w-[200px] shrink-0 border-b sm:border-b-0 sm:border-r border-border p-2 overflow-y-auto"
+            data-tour-id="admin-widget-picker-types"
+          >
             <div className="text-xs font-bold uppercase text-text-muted px-2 py-1 mb-1">Chart type</div>
             <ul className="space-y-1">
               <li>
@@ -141,7 +145,7 @@ export function AdminWidgetPicker({
             </ul>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 min-h-[200px]">
+          <div className="flex-1 overflow-y-auto p-3 min-h-[200px]" data-tour-id="admin-widget-picker-metrics">
             {!hasOptions ? (
               <p className="text-sm text-text-muted p-4 text-center">
                 No metrics available for this chart type with your permissions.

@@ -5,7 +5,7 @@ import { useAuth } from '../store/auth';
 import { settingsApi } from '../api/settings';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
-import { isOrgAdminRole, type Role } from '@mams/types';
+import { hasOrgAdminLikeAccess, type Role } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -136,7 +136,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
         </button>
       </div>
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
-        {user && isOrgAdminRole(user.role) && (
+        {user && hasOrgAdminLikeAccess(user.role) && (
           <>
             <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Administration</div>
             <NavLink
@@ -157,7 +157,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             )}
           </>
         )}
-        {(!user || !isOrgAdminRole(user.role)) && !collapsed && (
+        {(!user || !hasOrgAdminLikeAccess(user.role)) && !collapsed && (
           <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Navigation</div>
         )}
         {buildNav(user?.permissions ?? [], user?.role as Role | undefined).map((n) => (

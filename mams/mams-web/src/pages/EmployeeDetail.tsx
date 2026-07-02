@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ALL_SENSITIVE_UNMASK_FIELDS,
   SENSITIVE_UNMASK_FIELD_LABELS,
+  type EmployeeMasked,
   type SensitiveUnmaskField,
 } from '@mams/types';
 import { employeesApi } from '../api/employees';
@@ -267,7 +268,7 @@ export function EmployeeDetail() {
       )}
 
       {editOpen && (
-        <EmployeesAddModal mode="edit" employee={data} onClose={() => setEditOpen(false)} />
+        <EmployeesAddModal mode="edit" employee={data as EmployeeMasked} onClose={() => setEditOpen(false)} />
       )}
       {deleteOpen && (
         <EmployeeDeleteModal employee={data} onClose={() => setDeleteOpen(false)} redirectOnSuccess />

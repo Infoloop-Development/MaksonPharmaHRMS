@@ -161,3 +161,29 @@ export function unlockAllTourTargets() {
   document.querySelectorAll<HTMLElement>(`.${TOUR_LOCK_CLASS}`).forEach(unlockTourElement);
   document.querySelectorAll<HTMLElement>('[data-mams-tour-lock="1"]').forEach(restoreInteractiveControl);
 }
+
+const PAGE_SCROLL_LOCK_CLASS = 'mams-tour-scroll-lock';
+let lockedScrollY = 0;
+
+function preventUserScroll(e: Event) {
+  e.preventDefault();
+}
+
+/** Block wheel/touch scrolling while a tour is active; programmatic scrollIntoView still works. */
+export function lockPageScroll() {
+  if (document.documentElement.classList.contains(PAGE_SCROLL_LOCK_CLASS)) return;
+  lockedScrollY = window.scrollY;
+  document.documentElement.classList.add(PAGE_SCROLL_LOCK_CLASS);
+  document.body.classList.add(PAGE_SCROLL_LOCK_CLASS);
+  document.addEventListener('wheel', preventUserScroll, { passive: false });
+  document.addEventListener('touchmove', preventUserScroll, { passive: false });
+}
+
+export function unlockPageScroll() {
+  if (!document.documentElement.classList.contains(PAGE_SCROLL_LOCK_CLASS)) return;
+  document.documentElement.classList.remove(PAGE_SCROLL_LOCK_CLASS);
+  document.body.classList.remove(PAGE_SCROLL_LOCK_CLASS);
+  document.removeEventListener('wheel', preventUserScroll);
+  document.removeEventListener('touchmove', preventUserScroll);
+  window.scrollTo({ top: lockedScrollY, behavior: 'instant' });
+}

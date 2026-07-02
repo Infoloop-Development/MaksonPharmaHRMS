@@ -8,14 +8,15 @@ import { Badge } from '../ui/Badge';
 import { Input, Select } from '../ui/Field';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
-import { fmtDate } from '../../lib/format';
+import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { employeeInitials, leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 import { LeaveApplicationCardList } from './LeaveApplicationCardList';
 import { useToast } from '../ui/Toast';
-import { format, startOfMonth, endOfMonth, addDays } from 'date-fns';
 import { SortableTh } from '../ui/SortableTh';
 import { TablePagination } from '../ui/TablePagination';
-import { sortArrowFor, type SortDir } from '../../lib/tableSort';
+import { nextSortState, sortArrowFor, type SortDir } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
+import { STAT_CARD_TOOLTIPS } from '../../lib/tooltips/statCardTooltips';
 
 export function LeaveRequestsTab({
   canApply,
@@ -45,19 +46,12 @@ export function LeaveRequestsTab({
   const [typeFilter, setTypeFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [startsFrom, setStartsFrom] = useState('');
-  const [startsTo,setStartsTo] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<string | undefined>();
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [expandedReason, setExpandedReason] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const toast = useToast((s) => s.push);
-  const today = new Date();
-  const todayStr = format(today, 'yyyy-MM-dd');
-  const weekEndStr = format(addDays(today, 7), 'yyyy-MM-dd');
-  const monthStartStr = format(startOfMonth(today), 'yyyy-MM-dd');
-  const monthEndStr = format(endOfMonth(today), 'yyyy-MM-dd');
 
   const exportParams = () => ({
     status: statusFilter === 'All' ? undefined : statusFilter,
@@ -65,8 +59,6 @@ export function LeaveRequestsTab({
     leaveTypeId: typeFilter || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
-    startsFrom: startsFrom || undefined,
-    startsTo: startsTo || undefined,
   });
 
   const onExportExcel = async () => {
@@ -87,9 +79,9 @@ export function LeaveRequestsTab({
     </button>
   );
 
-  const filterDefaults = { statusFilter: 'All' as const, typeFilter: '', startDate: '', endDate: '' ,startsFrom: '', startsTo: ''};
+  const filterDefaults = { statusFilter: 'All' as const, typeFilter: '', startDate: '', endDate: '' };
   const activeCount = countActiveFilters(
-    { statusFilter, typeFilter, startDate, endDate, startsFrom, startsTo },
+    { statusFilter, typeFilter, startDate, endDate },
     filterDefaults
   );
 
@@ -98,13 +90,11 @@ export function LeaveRequestsTab({
     setTypeFilter('');
     setStartDate('');
     setEndDate('');
-    setStartsFrom('');
-    setStartsTo('');
     setPage(1);
   };
 
   const { data: applications, isLoading } = useQuery({
-    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate,startsFrom, startsTo, page, sortBy, sortDir }],
+    queryKey: ['leave', 'applications', { statusFilter, search, typeFilter, startDate, endDate, page, sortBy, sortDir }],
     queryFn: () =>
       leaveApi.listApplications({
         status: statusFilter === 'All' ? undefined : statusFilter,
@@ -112,8 +102,6 @@ export function LeaveRequestsTab({
         leaveTypeId: typeFilter || undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        startsFrom: startsFrom || undefined,
-        startsTo: startsTo || undefined,
         page,
         pageSize: 50,
         sortBy,
@@ -122,16 +110,11 @@ export function LeaveRequestsTab({
   });
 
   const toggleSort = useCallback((col: string) => {
-    setSortBy((prev) => {
-      if (prev === col) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return col;
-      }
-      setSortDir('asc');
-      return col;
-    });
+    const next = nextSortState(col, { col: sortBy ?? null, dir: sortDir });
+    setSortBy(next.col ?? undefined);
+    setSortDir(next.dir);
     setPage(1);
-  }, []);
+  }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy ?? null, sortDir), [sortBy, sortDir]);
 
@@ -174,7 +157,7 @@ export function LeaveRequestsTab({
         type="date"
         className="md:max-w-[160px]"
         value={startDate}
-        onChange={(e) => { setStartDate(e.target.value); setStartsFrom(''); setStartsTo(''); setPage(1); }}
+        onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
         title="From date"
       />
       <Input
@@ -182,12 +165,9 @@ export function LeaveRequestsTab({
         className="md:max-w-[160px]"
         value={endDate}
         min={startDate || undefined}
-        onChange={(e) => { setEndDate(e.target.value); setStartsFrom(''); setStartsTo(''); setPage(1); }}
+        onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
         title="To date"
       />
-      <button type="button" className="hidden md:inline-flex btn-outline btn-sm shrink-0" onClick={clearFilters}>
-        Clear filters
-      </button>
     </>
   );
 
@@ -212,9 +192,13 @@ export function LeaveRequestsTab({
           value={String(summary?.leavesToday ?? 0)}
           accent="primary"
           sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : ''}
-          title={summary?.leavesTodayNames?.join(', ') || 'No one on leave today'}
-          selected={statusFilter === 'Approved' && startDate === todayStr && endDate === todayStr}
-          onClick={() => { setStatusFilter('Approved'); setStartDate(todayStr); setEndDate(todayStr); setStartsFrom(''); setStartsTo(''); setPage(1); }}
+          selected={false}
+          onClick={() => {}}
+          tooltip={
+            summary?.leavesTodayNames?.length
+              ? `${STAT_CARD_TOOLTIPS.leave.leavesToday} ${summary.leavesTodayNames.join(', ')}`
+              : STAT_CARD_TOOLTIPS.leave.leavesToday
+          }
         />
         <DashboardStatCard
           label="Pending Approvals"
@@ -223,22 +207,25 @@ export function LeaveRequestsTab({
           sub=""
           selected={statusFilter === 'Pending'}
           onClick={() => { setStatusFilter('Pending'); setPage(1); }}
+          tooltip={STAT_CARD_TOOLTIPS.leave.pendingApprovals}
         />
         <DashboardStatCard
           label="Upcoming (7 days)"
           value={String(summary?.upcomingLeaves7Days ?? 0)}
           accent="green"
           sub=""
-          selected = {statusFilter === 'Approved' && startsFrom === todayStr && startsTo === weekEndStr}
-          onClick={() => {setStatusFilter('Approved'); setStartDate(''); setEndDate(''); setStartsFrom(todayStr); setStartsTo(weekEndStr); setPage(1); }}
+          selected={false}
+          onClick={() => {}}
+          tooltip={STAT_CARD_TOOLTIPS.leave.upcoming7Days}
         />
         <DashboardStatCard
           label="Leaves This Month"
           value={String(summary?.leavesThisMonth ?? 0)}
           accent="primary"
-          sub=""
-          selected={statusFilter === 'Approved' && startDate === monthStartStr && endDate === monthEndStr}
-          onClick={() => {setStatusFilter('Approved'); setStartDate(monthStartStr); setEndDate(monthEndStr); setStartsFrom(''); setStartsTo(''); setPage(1)}}
+          sub="Total days consumed"
+          selected={false}
+          onClick={() => {}}
+          tooltip={STAT_CARD_TOOLTIPS.leave.leavesThisMonth}
         />
       </div>
 
@@ -284,12 +271,12 @@ export function LeaveRequestsTab({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
-              <SortableTh label="Employee" sortKey="employee" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Employee" sortKey="employee" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'employee')} />
               <th className="px-4 py-3">Type</th>
-              <SortableTh label="Dates" sortKey="fromDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-              <SortableTh label="Days" sortKey="totalDays" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Dates" sortKey="fromDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'fromDate')} />
+              <SortableTh label="Days" sortKey="totalDays" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'totalDays')} />
               <th className="px-4 py-3">Reason</th>
-              <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'status')} />
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -321,7 +308,7 @@ export function LeaveRequestsTab({
                         {emp?.name ? employeeInitials(emp.name) : '?'}
                       </div>
                       <div>
-                        <div className="font-medium">{emp?.name ?? '—'}</div>
+                        <div className="font-medium">{emp?.name ?? EMPTY_CELL}</div>
                         <div className="text-xs font-mono text-text-muted">{emp?.empCode}</div>
                       </div>
                     </div>
@@ -329,7 +316,7 @@ export function LeaveRequestsTab({
                   <td className="px-4 py-3">{leaveTypeLabel(row)}</td>
                   <td className="px-4 py-3 text-xs whitespace-nowrap">
                     {fmtDate(row.fromDate)}
-                    {row.fromDate !== row.toDate && <> — {fmtDate(row.toDate)}</>}
+                    {row.fromDate !== row.toDate && <> to {fmtDate(row.toDate)}</>}
                   </td>
                   <td className="px-4 py-3 font-mono">{row.totalDays}</td>
                   <td className="px-4 py-3 max-w-[200px]">

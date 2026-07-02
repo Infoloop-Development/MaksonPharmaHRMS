@@ -5,6 +5,7 @@ import {
   DeviceIntegrationConfigSchema,
   DeviceProtocolModeSchema,
   DeviceVendorSchema,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import { DeviceModel } from '../models/Device.js';
 import { EmployeeModel } from '../models/Employee.js';
@@ -17,13 +18,14 @@ import {
   notifyOrgAdmins,
 } from '../services/notification.service.js';
 import { syncDevice, testDeviceConnectivity } from '../services/deviceSync.service.js';
+import { softDeleteFields } from '../utils/softDelete.util.js';
 
 const router = Router();
 router.use(requireAuth);
 
 router.get('/', async (_req, res, next) => {
   try {
-    const items = await DeviceModel.find().sort({ deviceCode: 1 }).lean();
+    const items = await DeviceModel.find({ isDeleted: { $ne: true } }).sort({ deviceCode: 1 }).lean();
     const now = Date.now();
     const counts = await Promise.all(
       items.map(async (d) => {
@@ -155,14 +157,57 @@ router.patch('/:id', requirePermission('manage.devices'), async (req, res, next)
   }
 });
 
+router.post('/bulk-delete', requirePermission('manage.devices'), async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      if (!Types.ObjectId.isValid(id)) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+        continue;
+      }
+      const doc = await DeviceModel.findById(id);
+      if (!doc || doc.isDeleted) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Device not found' });
+        continue;
+      }
+
+      doc.isDeleted = true;
+      doc.isActive = false;
+      Object.assign(doc, softDeleteFields(req.auth!.sub));
+      await doc.save();
+      await audit(
+        'device_deleted',
+        { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
+        {
+          entityType: 'device',
+          entityId: doc._id,
+          payload: { serialNumber: doc.serialNumber, model: doc.model, vendor: doc.vendor, bulk: true },
+        }
+      );
+      result.succeeded += 1;
+    }
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/:id', requirePermission('manage.devices'), async (req, res, next) => {
   try {
     const id = req.params.id ?? '';
     if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Device not found');
     const doc = await DeviceModel.findById(id);
-    if (!doc) throw new ApiError(404, 'not_found', 'Device not found');
+    if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Device not found');
 
-    await DeviceModel.findByIdAndDelete(id);
+    doc.isDeleted = true;
+    doc.isActive = false;
+    Object.assign(doc, softDeleteFields(req.auth!.sub));
+    await doc.save();
     await audit(
       'device_deleted',
       { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
@@ -219,7 +264,7 @@ router.post('/:id/sync', requirePermission('manage.devices'), async (req, res, n
 
 router.post('/sync-all', requirePermission('manage.devices'), async (req, res, next) => {
   try {
-    const devices = await DeviceModel.find({ isActive: true });
+    const devices = await DeviceModel.find({ isActive: true, isDeleted: { $ne: true } });
     const results = await Promise.all(
       devices.map(async (d) => {
         const r = await syncDevice(d, req.clientIp ?? null);

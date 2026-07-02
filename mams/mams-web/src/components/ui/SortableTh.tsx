@@ -9,8 +9,8 @@ export function SortableTh({
   onSort,
   sortable = true,
   className = '',
-  children,
   tooltip,
+  children,
 }: {
   label?: string;
   sortKey?: string;
@@ -19,8 +19,8 @@ export function SortableTh({
   onSort?: (col: string) => void;
   sortable?: boolean;
   className?: string;
-  children?: ReactNode;
   tooltip?: string;
+  children?: ReactNode;
 }) {
   const headerContent = (
     <>

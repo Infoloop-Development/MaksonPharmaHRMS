@@ -1,3 +1,6 @@
+export * from './recycleBin.js';
+export * from './bugReport.js';
+export * from './bulkMutation.js';
 export * from './user.js';
 export * from './sensitiveUnmask.js';
 export * from './rbac.js';
@@ -34,7 +37,7 @@ export * from './complianceAttendance.js';
 export * from './complianceDailyGenerator.js';
 export * from './monthlyCompliancePlanner.js';
 export * from './featureFlags.js';
+export * from './sort.js';
 export * from './notification.js';
 export * from './employeeChangeRequest.js';
 export * from './reportJob.js';
-export * from './sort.js';

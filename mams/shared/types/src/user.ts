@@ -46,6 +46,8 @@ export const PermissionSchema = z.enum([
   'read.compliance_activity',
   'write.employee_change',
   'approve.employee_change',
+  'manage.recycle_bin',
+  'manage.bug_reports',
 ]);
 export type Permission = z.infer<typeof PermissionSchema>;
 
@@ -116,6 +118,7 @@ export const OnboardingTourIdSchema = z.enum([
   'visitors',
   'devices',
   'settings',
+  'admin-overview',
 ]);
 export type OnboardingTourId = z.infer<typeof OnboardingTourIdSchema>;
 

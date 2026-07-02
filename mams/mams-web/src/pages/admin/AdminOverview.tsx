@@ -33,6 +33,13 @@ import { fmtDate, fmtWeekdayShort } from '../../lib/format';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../store/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../../api/activity';
+import { GiveMeATourButton } from '../../components/onboarding/GiveMeATourButton';
+import { usePageTourController } from '../../hooks/usePageTourController';
+import type { TourPageApi } from '../../lib/onboarding/tourTypes';
+import {
+  ADMIN_OVERVIEW_TOUR_ACTIONS,
+  adminOverviewTourScript,
+} from '../../lib/onboarding/scripts/adminOverviewTourScript';
 
 type ConfigureMode = null | 'kpi' | 'charts' | 'table';
 
@@ -66,7 +73,9 @@ export function AdminOverview() {
   const [activeKpiMetric, setActiveKpiMetric] = useState<AdminOverviewKpiMetricId | null>(null);
   const [pickerWidgetIndex, setPickerWidgetIndex] = useState<number | null>(null);
   const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [kpiPickerSlot, setKpiPickerSlot] = useState<number | null>(null);
   const tableSectionRef = useRef<HTMLDivElement>(null);
+  const pageApiRef = useRef<TourPageApi>({});
 
   const [draftKpiSlots, setDraftKpiSlots] = useState<AdminOverviewKpiMetricId[]>([
     ...DEFAULT_ADMIN_OVERVIEW_KPI.slots,
@@ -246,7 +255,7 @@ export function AdminOverview() {
     else if (stats.data?.asOfDate) setSelectedDate(stats.data.asOfDate);
   }, [analytics.data?.asOfDate, stats.data?.asOfDate]);
 
-  const cancelConfigure = () => {
+  const cancelConfigure = useCallback(() => {
     setDraftKpiSlots([...savedKpiSlots]);
     setDraftWidgetsConfig({
       ...savedWidgetsConfig,
@@ -254,7 +263,16 @@ export function AdminOverview() {
     });
     setDraftTableConfig({ ...savedTableConfig, columns: [...savedTableConfig.columns] });
     setConfigureMode(null);
-  };
+    setPickerWidgetIndex(null);
+    setShowColumnPicker(false);
+    setKpiPickerSlot(null);
+  }, [savedKpiSlots, savedTableConfig, savedWidgetsConfig]);
+
+  const closeModals = useCallback(() => {
+    setPickerWidgetIndex(null);
+    setShowColumnPicker(false);
+    setKpiPickerSlot(null);
+  }, []);
 
   const kpiChanged = !kpiConfigEquals({ slots: draftKpiSlots }, { slots: savedKpiSlots });
   const widgetsChanged = !widgetsConfigEquals(draftWidgetsConfig, savedWidgetsConfig);
@@ -287,7 +305,12 @@ export function AdminOverview() {
   };
 
   const tableSection = displayWidgetsConfig.showTable ? (
-    <div id="admin-overview-table" ref={tableSectionRef} className="scroll-mt-4">
+    <div
+      id="admin-overview-table"
+      data-tour-id="admin-overview-table"
+      ref={tableSectionRef}
+      className="scroll-mt-4"
+    >
       {isEditingTable && (
         <AdminOverviewTableEditBar
           kind={draftTableConfig.kind}
@@ -314,12 +337,55 @@ export function AdminOverview() {
     </div>
   ) : null;
 
+  const tour = usePageTourController('admin-overview', adminOverviewTourScript, {
+    pageApiRef,
+    ready: !stats.isLoading && Boolean(stats.data),
+    actionMap: ADMIN_OVERVIEW_TOUR_ACTIONS,
+    onBeforeStart: () => {
+      pageApiRef.current.closeModals?.();
+      pageApiRef.current.cancelConfigure?.();
+      pageApiRef.current.resetView?.();
+    },
+  });
+
+  pageApiRef.current = {
+    enterConfigureMode: (mode: unknown) => setConfigureMode(mode as ConfigureMode),
+    cancelConfigure,
+    closeModals,
+    resetView,
+    demoKpiFilter: () => {
+      setActiveKpiMetric('present');
+      setStatusFilter('Present');
+    },
+    openKpiPicker: () => {
+      setConfigureMode('kpi');
+      setKpiPickerSlot(0);
+    },
+    openWidgetPicker: () => {
+      setConfigureMode('charts');
+      setPickerWidgetIndex(0);
+    },
+    openColumnPicker: () => {
+      setConfigureMode('table');
+      setShowColumnPicker(true);
+    },
+    demoShowTable: () => {
+      setDraftWidgetsConfig((prev) => ({ ...prev, showTable: true }));
+    },
+    scrollToTop: () => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    },
+    scrollToTable: () => {
+      tableSectionRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    },
+  };
+
   if (stats.isLoading) return <div className="text-text-muted">Loading…</div>;
   if (stats.error) return <div className="text-red">Failed to load admin overview.</div>;
 
   return (
     <div className="2xl:max-w-[1600px] 2xl:mx-auto">
-      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3">
+      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3" data-tour-id="admin-overview-header">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold">Admin Overview</h1>
           <p className="text-sm text-text-muted mt-1">
@@ -328,19 +394,31 @@ export function AdminOverview() {
           </p>
           <div className="text-xs text-text-muted mt-1">As of {fmtDate(asOfDate)}</div>
         </div>
-        {!isConfiguring && (
-          <button type="button" className="btn-outline btn-sm shrink-0" onClick={() => setConfigureMode('charts')}>
-            Configure overview
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0 mt-0.5">
+          <GiveMeATourButton onClick={tour.onReplayTour} />
+          {!isConfiguring && (
+            <button
+              type="button"
+              className="btn-outline btn-sm shrink-0"
+              data-tour-id="admin-overview-configure-btn"
+              onClick={() => setConfigureMode('charts')}
+            >
+              Configure overview
+            </button>
+          )}
+        </div>
       </div>
 
       {isConfiguring && (
-        <div className="card p-3 mb-4 flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
+        <div
+          className="card p-3 mb-4 flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center"
+          data-tour-id="admin-overview-configure-toolbar"
+        >
           <span className="text-sm font-semibold mr-auto">Configure overview</span>
           <button
             type="button"
             className={`btn-sm ${configureMode === 'kpi' ? 'btn-primary' : 'btn-outline'}`}
+            data-tour-id="admin-overview-tab-kpi"
             onClick={() => setConfigureMode('kpi')}
           >
             Edit KPIs
@@ -348,6 +426,7 @@ export function AdminOverview() {
           <button
             type="button"
             className={`btn-sm ${configureMode === 'charts' ? 'btn-primary' : 'btn-outline'}`}
+            data-tour-id="admin-overview-tab-charts"
             onClick={() => setConfigureMode('charts')}
           >
             Edit charts
@@ -355,17 +434,24 @@ export function AdminOverview() {
           <button
             type="button"
             className={`btn-sm ${configureMode === 'table' ? 'btn-primary' : 'btn-outline'}`}
+            data-tour-id="admin-overview-tab-table"
             onClick={() => setConfigureMode('table')}
           >
             Edit table
           </button>
-          <button type="button" className="btn-outline btn-sm" onClick={cancelConfigure}>
+          <button
+            type="button"
+            className="btn-outline btn-sm"
+            data-tour-id="admin-overview-configure-cancel"
+            onClick={cancelConfigure}
+          >
             Cancel
           </button>
           {configureMode === 'kpi' && (
             <button
               type="button"
               className="btn-primary btn-sm"
+              data-tour-id="admin-overview-save-kpi"
               disabled={!kpiChanged || saveKpiMutation.isPending}
               onClick={() => saveKpiMutation.mutate({ slots: draftKpiSlots })}
             >
@@ -376,6 +462,7 @@ export function AdminOverview() {
             <button
               type="button"
               className="btn-primary btn-sm"
+              data-tour-id="admin-overview-save-charts"
               disabled={!widgetsChanged || saveWidgetsMutation.isPending}
               onClick={() => saveWidgetsMutation.mutate(draftWidgetsConfig)}
             >
@@ -386,6 +473,7 @@ export function AdminOverview() {
             <button
               type="button"
               className="btn-primary btn-sm"
+              data-tour-id="admin-overview-save-table"
               disabled={!tableChanged || saveTableMutation.isPending}
               onClick={() => saveTableMutation.mutate(draftTableConfig)}
             >
@@ -395,8 +483,12 @@ export function AdminOverview() {
         </div>
       )}
 
+      {isConfiguring && (
+        <span className="sr-only" data-tour-id="admin-overview-configure-shell" aria-hidden />
+      )}
+
       {isEditingCharts && (
-        <div className="flex flex-wrap gap-2 mb-3 items-center">
+        <div className="flex flex-wrap gap-2 mb-3 items-center" data-tour-id="admin-overview-charts-layout">
           <span className="text-sm text-text-muted">
             Charts: {draftWidgetsConfig.widgets.length} / {ADMIN_OVERVIEW_WIDGET_MAX} · up to 4 rows
           </span>
@@ -405,6 +497,7 @@ export function AdminOverview() {
             className="btn-outline btn-sm"
             disabled={draftWidgetsConfig.widgets.length >= ADMIN_OVERVIEW_WIDGET_MAX}
             onClick={addChart}
+            data-tour-id="admin-overview-add-chart"
           >
             + Add chart
           </button>
@@ -435,7 +528,7 @@ export function AdminOverview() {
       )}
 
       {isModified && (
-        <div className="dash-filter-bar mb-3">
+        <div className="dash-filter-bar mb-3" data-tour-id="admin-overview-filter-bar">
           <span className="dash-filter-bar-label">
             Viewing:{' '}
             <strong>
@@ -473,6 +566,8 @@ export function AdminOverview() {
         onSave={() => saveKpiMutation.mutate({ slots: draftKpiSlots })}
         canSave={kpiChanged}
         isSaving={saveKpiMutation.isPending}
+        pickerSlot={kpiPickerSlot}
+        onPickerSlotChange={setKpiPickerSlot}
       />
 
       {displayWidgetsConfig.tablePosition === 'top' && tableSection && (

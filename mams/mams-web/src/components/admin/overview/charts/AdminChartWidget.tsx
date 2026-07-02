@@ -16,6 +16,7 @@ export function AdminChartWidget({
   isEditing,
   onEdit,
   onRemove,
+  tourAnchorId,
 }: {
   widget: AdminOverviewWidget;
   analytics: AdminOverviewAnalyticsPayload | undefined;
@@ -25,6 +26,7 @@ export function AdminChartWidget({
   isEditing?: boolean;
   onEdit?: () => void;
   onRemove?: () => void;
+  tourAnchorId?: string;
 }) {
   const result = useAdminAnalyticsChart(analytics, widget, selectedDayIndex, onDayClick);
   const showEmpty = !isLoading && !result.hasData;
@@ -37,6 +39,7 @@ export function AdminChartWidget({
   return (
     <div
       className={`card p-4 md:p-5 h-full flex flex-col relative ${isEditing ? 'ring-2 ring-primary/30 cursor-pointer' : ''}`}
+      data-tour-id={tourAnchorId}
       onClick={handleCardClick}
       onKeyDown={(e) => {
         if (isEditing && onEdit && (e.key === 'Enter' || e.key === ' ')) {

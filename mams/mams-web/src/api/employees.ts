@@ -6,6 +6,7 @@ import type {
   EmployeeUnmasked,
   EmployeePatchBody,
   SensitiveUnmaskField,
+  BulkMutationResult,
 } from '@mams/types';
 import { api } from './client';
 
@@ -20,6 +21,8 @@ export const employeesApi = {
   create: (body: EmployeeCreateBody) => api.post<EmployeeMasked>('/employees', body),
   update: (id: string, body: EmployeePatchBody) => api.patch<EmployeeMasked>(`/employees/${id}`, body),
   delete: (id: string) => api.delete<void>(`/employees/${id}`),
+  bulkDelete: (ids: string[]) =>
+    api.post<BulkMutationResult>('/employees/bulk-delete', { ids }),
   unmask: (
     id: string,
     field: SensitiveUnmaskField,

@@ -1,5 +1,4 @@
 import type { Permission, Role } from './user.js';
-import { canAccessAdminConsole } from './rbac.js';
 
 export function canViewLeave(permissions: Permission[]): boolean {
   return (
@@ -62,11 +61,17 @@ export function isOrgAdminRole(role: Role): boolean {
   return role === 'org.admin';
 }
 
-export function defaultHomePath(role: Role): '/admin' | '/dashboard' {
-  return role === 'org.admin' ? '/admin' : '/dashboard';
+export function isItAdminRole(role: Role): boolean {
+  return role === 'it.admin';
 }
 
-export { canAccessAdminConsole };
+export function hasOrgAdminLikeAccess(role: Role): boolean {
+  return role === 'org.admin' || role === 'it.admin';
+}
+
+export function defaultHomePath(role: Role): '/admin' | '/dashboard' {
+  return hasOrgAdminLikeAccess(role) ? '/admin' : '/dashboard';
+}
 
 /** Resolve whether a leave application should be auto-approved on create. */
 export function resolveLeaveAdminApply(

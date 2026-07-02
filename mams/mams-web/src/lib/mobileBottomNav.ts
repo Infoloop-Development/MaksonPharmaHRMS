@@ -1,5 +1,6 @@
 import type { Role } from '@mams/types';
 import type { NavIconName } from '../components/navIcons';
+import { hasOrgAdminLikeAccess } from '@mams/types';
 
 export type MobileBottomTab = {
   to: string;
@@ -11,7 +12,7 @@ export type MobileBottomTab = {
 };
 
 export function mobileBottomNavTabs(role: Role | undefined): MobileBottomTab[] | null {
-  if (role === 'org.admin') {
+  if (hasOrgAdminLikeAccess(role ?? 'hr.admin')) {
     return [
       {
         to: '/compliance-attendance',

@@ -30,6 +30,13 @@ const ORG_GOVERNANCE: Permission[] = [
   'manage.export_naming',
 ];
 
+const ORG_ADMIN_CAP: Permission[] = [
+  ...ORG_GOVERNANCE,
+  ...HR_OPERATIONAL,
+  'manage.settings',
+  'manage.users',
+];
+
 /** Default permission set assigned when creating a user for a role. */
 export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
   'org.admin': [...ORG_GOVERNANCE, ...HR_OPERATIONAL],
@@ -56,17 +63,12 @@ export const PERMISSIONS_BY_ROLE: Record<Role, Permission[]> = {
     'approve.visitors',
     'write.employee_change',
   ],
-  'it.admin': ['read.real', 'manage.devices', 'manage.leave'],
+  'it.admin': [...ORG_GOVERNANCE, ...HR_OPERATIONAL, 'manage.recycle_bin', 'manage.bug_reports'],
 };
 
 /** Maximum permissions assignable per role (PATCH validation + Settings UI caps). */
 export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
-  'org.admin': [
-    ...ORG_GOVERNANCE,
-    ...HR_OPERATIONAL,
-    'manage.settings',
-    'manage.users',
-  ],
+  'org.admin': ORG_ADMIN_CAP,
   'hr.admin': [
     'read.real',
     'read.compliant',
@@ -95,14 +97,7 @@ export const ROLE_PERMISSION_CAP: Record<Role, readonly Permission[]> = {
     'approve.visitors',
     'write.employee_change',
   ],
-  'it.admin': [
-    'read.real',
-    'manage.devices',
-    'read.leave',
-    'write.leave',
-    'approve.leave',
-    'manage.leave',
-  ],
+  'it.admin': [...ORG_ADMIN_CAP, 'manage.recycle_bin', 'manage.bug_reports'],
 };
 
 const capSets: Record<Role, Set<string>> = {
@@ -157,6 +152,7 @@ export function hasManageUsersPermission(permissions: Permission[]): boolean {
 export function canAccessAdminConsole(role: Role, permissions: Permission[]): boolean {
   return (
     role === 'org.admin' ||
+    role === 'it.admin' ||
     permissions.includes('manage.org_users') ||
     permissions.includes('manage.org_settings') ||
     permissions.includes('read.org_audit') ||
@@ -164,6 +160,14 @@ export function canAccessAdminConsole(role: Role, permissions: Permission[]): bo
     permissions.includes('manage.feature_flags') ||
     permissions.includes('read.system_health')
   );
+}
+
+export function canManageRecycleBin(permissions: Permission[]): boolean {
+  return permissions.includes('manage.recycle_bin');
+}
+
+export function canManageBugReports(permissions: Permission[]): boolean {
+  return permissions.includes('manage.bug_reports');
 }
 
 /** Base role permissions with unmask.sensitive only when HR Admin has at least one field grant. */

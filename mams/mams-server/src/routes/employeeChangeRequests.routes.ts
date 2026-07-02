@@ -6,6 +6,7 @@ import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import { allocateNextEmpCode } from '../services/employeeCode.service.js';
+import { clearSoftDeleteFields, softDeleteFields } from '../utils/softDelete.util.js';
 import {
   EmployeeChangeRequestBodySchema,
   EmployeeChangeRequestReviewSchema,
@@ -190,7 +191,7 @@ router.post('/:id/review', requirePermission('approve.employee_change'), async (
       if (!doc.employeeId) throw new ApiError(400, 'missing_employee', 'No employee linked to this request');
       await EmployeeModel.updateOne(
         { _id: doc.employeeId },
-        { $set: { isDeleted: true, deletedAt: new Date(), status: 'Inactive'}}
+        { $set: { isDeleted: true, status: 'Inactive', ...softDeleteFields(req.auth!.sub) } }
       );
     } else if (body.action === 'revert') {
       if (doc.changeType !== 'update') throw new ApiError(400, 'invalid_action', 'revert is only valid for update requests');
@@ -217,7 +218,7 @@ router.post('/:id/review', requirePermission('approve.employee_change'), async (
       const prev = doc.previousData as Record<string, unknown>;
       await EmployeeModel.updateOne(
         { _id: doc.employeeId },
-        { $set: { isDeleted: false, deletedAt: null, status: prev.status ?? 'Active' } }
+        { $set: { isDeleted: false, status: prev.status ?? 'Active', ...clearSoftDeleteFields() } }
       );
     }
 

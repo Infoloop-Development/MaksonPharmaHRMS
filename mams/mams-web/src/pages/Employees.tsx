@@ -1,13 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, Link as RouterLink } from 'react-router-dom';
 import { employeesApi } from '../api/employees';
 import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
 import { downloadEmployeeCsvTemplate, uploadEmployeeCsv, type CsvImportResult } from '../api/csvImport';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
-import { Link as RouterLink } from 'react-router-dom';
 import { Badge } from '../components/ui/Badge';
 import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
@@ -27,6 +26,13 @@ import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar } from '../components/ui/BulkActionBar';
+import { BulkConfirmModal } from '../components/ui/BulkConfirmModal';
+import { BulkSelectCheckbox } from '../components/ui/BulkSelectCheckbox';
+import type { BulkMutationResult } from '@mams/types';
+
+const EMPLOYEES_DEFAULT_SORT = { col: 'empCode' as const, dir: 'asc' as const };
 
 export function Employees() {
   const { logSearch } = useActivityLog();
@@ -39,6 +45,11 @@ export function Employees() {
   const [editEmployee, setEditEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteEmployee, setDeleteEmployee] = useState<EmployeeMasked | null>(null);
   const [deleteRequestEmployee, setDeleteRequestEmployee] = useState<EmployeeMasked | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkRequestOpen, setBulkRequestOpen] = useState(false);
+  const bulk = useBulkSelection();
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
   const pageSize = 50;
   const user = useAuth((s) => s.user);
   const isCompliant = user?.viewMode === 'compliant';
@@ -52,20 +63,24 @@ export function Employees() {
     queryFn: () => employeesApi.list({ search, page, pageSize, sortBy, sortDir }),
   });
 
-  const { data: flaggedRequests } = useQuery({
-    queryKey: ['employee-change-requests', { status: 'Flagged' }],
-    queryFn: () => employeeChangeRequestsApi.list({ status: 'Flagged', pageSize: 200 }),
-    enabled: !isCompliant && canManage,
-  });
-
   const toggleSort = useCallback((col: string) => {
-    const next = nextSortState(col, { col: sortBy, dir: sortDir }, { col: 'empCode', dir: 'asc' });
-    setSortBy((next.col ?? 'empCode') as typeof sortBy);
+    const next = nextSortState(
+      col,
+      { col: sortBy, dir: sortDir },
+      EMPLOYEES_DEFAULT_SORT
+    );
+    setSortBy((next.col ?? EMPLOYEES_DEFAULT_SORT.col) as typeof sortBy);
     setSortDir(next.dir);
     setPage(1);
   }, [sortBy, sortDir]);
 
   const sortArrow = useCallback((col: string) => sortArrowFor(col, sortBy, sortDir), [sortBy, sortDir]);
+
+  const { data: flaggedRequests } = useQuery({
+    queryKey: ['employee-change-requests', { status: 'Flagged' }],
+    queryFn: () => employeeChangeRequestsApi.list({ status: 'Flagged', pageSize: 200 }),
+    enabled: !isCompliant && canManage,
+  });
 
   const tour = usePageTourController('employees', employeesTourScript, {
     pageApiRef,
@@ -94,6 +109,20 @@ export function Employees() {
     logSearch('employees', 'search', { search: search.trim() });
   }, [search, logSearch]);
 
+  const pageItems = data?.items ?? [];
+  const pageIds = useMemo(() => pageItems.map((e) => e.id), [pageItems]);
+  const pageCheck = bulk.pageSelectionState(pageIds);
+  const selectedEmployees = useMemo(
+    () => pageItems.filter((e) => bulk.isSelected(e.id)),
+    [pageItems, bulk]
+  );
+
+  useEffect(() => {
+    bulk.clear();
+  }, [page, search, sortBy, sortDir]);
+
+  const tableColSpan = 8 + (isCompliant ? 0 : 1) + (canEdit ? 2 : 0);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="employees-header">
@@ -108,7 +137,7 @@ export function Employees() {
         {canEdit && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-              Add employee
+              {isCompliant ? 'Request new employee' : 'Add employee'}
             </button>
             {canManage && (
               <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
@@ -128,8 +157,12 @@ export function Employees() {
 
       {!isCompliant && flaggedRequests && flaggedRequests.counts.Flagged > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
-          <span className="font-semibold">{flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''} need your review.</span>
-          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">Review now</RouterLink>
+          <span className="font-semibold">
+            {flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''} need your review.
+          </span>
+          <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">
+            Review now
+          </RouterLink>
         </div>
       )}
 
@@ -148,13 +181,25 @@ export function Employees() {
       </div>
 
       <div data-tour-id="employees-list">
+      {canEdit && (
+        <BulkActionBar
+          count={bulk.count}
+          overLimit={bulk.overLimit}
+          actionLabel={isCompliant ? 'Request deletion' : 'Delete selected'}
+          onAction={() => (isCompliant ? setBulkRequestOpen(true) : setBulkDeleteOpen(true))}
+          onClear={bulk.clear}
+        />
+      )}
       <EmployeeCardList
         items={data?.items}
         isLoading={isLoading}
         error={!!error}
         canManage={canEdit}
+        selectable={canEdit}
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
         onEdit={setEditEmployee}
-        onDelete={(e) => isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e)}
+        onDelete={(e) => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
       />
 
       <div className="card overflow-hidden hidden md:block" data-tour-id="employees-table">
@@ -162,6 +207,16 @@ export function Employees() {
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+                {canEdit && (
+                  <th className="px-4 py-3 w-10">
+                    <BulkSelectCheckbox
+                      checked={pageCheck.allSelected && pageIds.length > 0}
+                      indeterminate={pageCheck.someSelected}
+                      onChange={() => bulk.togglePage(pageIds)}
+                      ariaLabel="Select all employees on this page"
+                    />
+                  </th>
+                )}
                 <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
                 <th className="px-4 py-3 font-semibold">Biometric ID</th>
                 <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
@@ -176,13 +231,22 @@ export function Employees() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canEdit ? 1 : 0)} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
+                <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-text-muted">Loading...</td></tr>
               )}
               {error && (
-                <tr><td colSpan={8 + (!isCompliant ? 1 : 0) + (canEdit ? 1 : 0)} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
+                <tr><td colSpan={tableColSpan} className="px-4 py-10 text-center text-red">Failed to load.</td></tr>
               )}
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
+                  {canEdit && (
+                    <td className="px-4 py-3">
+                      <BulkSelectCheckbox
+                        checked={bulk.isSelected(e.id)}
+                        onChange={() => bulk.toggle(e.id)}
+                        ariaLabel={`Select ${e.name}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 font-mono text-xs">{e.empCode}</td>
                   <td className="px-4 py-3 font-mono text-xs text-text-muted">{e.biometricId}</td>
                   <td className="px-4 py-3 font-medium">
@@ -205,7 +269,7 @@ export function Employees() {
                         <button
                           type="button"
                           className="btn-outline btn-sm text-red"
-                          onClick={() => isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e)}
+                          onClick={() => (isCompliant ? setDeleteRequestEmployee(e) : setDeleteEmployee(e))}
                         >
                           Delete
                         </button>
@@ -220,16 +284,13 @@ export function Employees() {
       </div>
       </div>
 
-      {data && Math.ceil(data.total / pageSize) > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm" data-tour-id="employees-pagination">
-          <div className="text-text-muted">
-            Page {page} of {Math.ceil(data.total / pageSize)} · {data.total.toLocaleString()} employees
-          </div>
-          <div className="flex gap-2">
-            <button className="btn-outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
-            <button className="btn-outline" onClick={() => setPage(p => p + 1)} disabled={page * pageSize >= data.total}>Next</button>
-          </div>
-        </div>
+      {data && data.total > pageSize && (
+        <TablePagination
+          page={page}
+          totalPages={Math.ceil(data.total / pageSize)}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
 
       {importOpen && <CsvImportModal onClose={() => setImportOpen(false)} />}
@@ -242,6 +303,43 @@ export function Employees() {
       )}
       {deleteRequestEmployee && (
         <EmployeeDeleteRequestModal employee={deleteRequestEmployee} onClose={() => setDeleteRequestEmployee(null)} />
+      )}
+      <BulkConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Delete selected employees?"
+        description={
+          <>
+            Delete <strong>{bulk.count}</strong> employee{bulk.count !== 1 ? 's' : ''}? This cannot be undone.
+          </>
+        }
+        itemLabels={selectedEmployees.map((e) => `${e.name} (${e.empCode})`)}
+        confirmLabel="Delete employees"
+        onConfirm={async () => {
+          const result = await employeesApi.bulkDelete(bulk.ids);
+          toast(
+            `Deleted ${result.succeeded} employee${result.succeeded !== 1 ? 's' : ''}${
+              result.skipped ? `, ${result.skipped} skipped` : ''
+            }`,
+            result.succeeded > 0 ? 'success' : 'error'
+          );
+          qc.invalidateQueries({ queryKey: ['employees'] });
+          qc.invalidateQueries({ queryKey: ACTIVITY_QUERY_PREFIX });
+          bulk.clear();
+          return result;
+        }}
+      />
+      {bulkRequestOpen && (
+        <EmployeeBulkDeleteRequestModal
+          count={bulk.count}
+          itemLabels={selectedEmployees.map((e) => `${e.name} (${e.empCode})`)}
+          employeeIds={bulk.ids}
+          onClose={() => setBulkRequestOpen(false)}
+          onSuccess={() => {
+            bulk.clear();
+            setBulkRequestOpen(false);
+          }}
+        />
       )}
     </div>
   );
@@ -310,14 +408,14 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
       {!result && (
         <div className="space-y-4">
           <div className="rounded-md border border-border bg-surface2/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1 — template</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Step 1: template</div>
             <button
               type="button"
               className="btn-primary w-full sm:w-auto"
               disabled={templateBusy}
               onClick={onDownloadTemplate}
             >
-              {templateBusy ? 'Preparing…' : 'Download blank template (.csv)'}
+              {templateBusy ? 'Preparing?' : 'Download blank template (.csv)'}
             </button>
             <p className="mt-2 text-xs text-text-muted">
               Uses your login session so the file downloads correctly. Opens your browser&apos;s save dialog as{' '}
@@ -337,7 +435,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           <div className="p-4 bg-primary-bg rounded-md text-sm">
             <div className="font-semibold mb-1">Before you import</div>
             <ol className="list-decimal pl-5 space-y-1 text-xs">
-              <li>Do not change or reorder the header row — column names must match the template exactly.</li>
+              <li>Do not change or reorder the header row: column names must match the template exactly.</li>
               <li>
                 <span className="font-mono">empCode</span>: unique, format <span className="font-mono">MKS</span> + four digits (e.g. <span className="font-mono">MKS0042</span>).
               </li>
@@ -352,7 +450,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <span className="font-mono">biometricId</span> must be unique and must match the user ID enrolled on
-                each biometric device (exact string — e.g. device sends <span className="font-mono">42</span>, CSV must
+                each biometric device (exact string, e.g. device sends <span className="font-mono">42</span>, CSV must
                 be <span className="font-mono">42</span>, not <span className="font-mono">BIO042</span> unless the device
                 uses that).
               </li>
@@ -360,7 +458,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
                 PAN: five letters + four digits + one letter (<span className="font-mono">AAAAA0000A</span>); IFSC: valid 11-character bank code (<span className="font-mono">AAAA0XXXXXX</span>).
               </li>
               <li>
-                Aadhaar: exactly 12 digits (format only in Phase 1); bank account: 9–18 digits; ESI: 10 or 17 digits.
+                Aadhaar: exactly 12 digits (format only in Phase 1); bank account: 9?18 digits; ESI: 10 or 17 digits.
               </li>
               <li>
                 <span className="font-mono">accountType</span>: <span className="font-mono">Savings</span>, <span className="font-mono">Current</span>, or <span className="font-mono">Salary</span>; PF number: letters, digits, slashes, dots, hyphens, spaces (min 5, max 40 characters).
@@ -370,7 +468,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
-              Step 2 — choose CSV file
+              Step 2: choose CSV file
             </label>
             <input
               type="file"
@@ -386,7 +484,7 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="text-xs text-text-muted bg-amber-bg text-amber px-3 py-2 rounded">
-            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility — we do not silently fix.
+            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility; we do not silently fix.
           </div>
         </div>
       )}
@@ -433,6 +531,108 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function EmployeeBulkDeleteRequestModal({
+  count,
+  itemLabels,
+  employeeIds,
+  onClose,
+  onSuccess,
+}: {
+  count: number;
+  itemLabels: string[];
+  employeeIds: string[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+
+  const onConfirm = async () => {
+    if (reason.trim().length < 10) {
+      setError('Reason must be at least 10 characters.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const result: BulkMutationResult = { succeeded: 0, skipped: 0, errors: [] };
+    try {
+      for (const employeeId of employeeIds) {
+        try {
+          await employeeChangeRequestsApi.submit({
+            changeType: 'delete',
+            employeeId,
+            reason: reason.trim(),
+          });
+          result.succeeded += 1;
+        } catch (e: unknown) {
+          result.skipped += 1;
+          result.errors.push({
+            id: employeeId,
+            reason: e instanceof Error ? e.message : 'Could not submit request',
+          });
+        }
+      }
+      toast(
+        `Submitted ${result.succeeded} deletion request${result.succeeded !== 1 ? 's' : ''}${
+          result.skipped ? `, ${result.skipped} failed` : ''
+        }`,
+        result.succeeded > 0 ? 'success' : 'error'
+      );
+      qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
+      onSuccess();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not submit requests.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Request employee deletions"
+      footer={
+        <>
+          <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
+            {busy ? 'Submitting?' : `Submit ${count} request${count !== 1 ? 's' : ''}`}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4 text-sm">
+        <p className="text-text-muted">
+          Request deletion of <strong className="text-text">{count}</strong> employee{count !== 1 ? 's' : ''}. HR must approve before records are removed.
+        </p>
+        {itemLabels.length > 0 && (
+          <ul className="list-disc pl-5 text-text-muted space-y-0.5">
+            {itemLabels.slice(0, 5).map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+            {itemLabels.length > 5 && (
+              <li className="list-none -ml-5 text-text-subtle">?and {itemLabels.length - 5} more</li>
+            )}
+          </ul>
+        )}
+        <div>
+          <label className="label">Reason</label>
+          <textarea
+            className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
+            placeholder="Describe why these employees should be removed (min 10 characters)?"
+            value={reason}
+            onChange={(e) => { setReason(e.target.value); setError(null); }}
+          />
+          {error && <p className="mt-1 text-[11px] text-red">{error}</p>}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeMasked; onClose: () => void }) {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -449,12 +649,11 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     setError(null);
     try {
       await employeeChangeRequestsApi.submit({ changeType: 'delete', employeeId: employee.id, reason: reason.trim() });
-      toast('Employee deleted', 'success');
-      qc.invalidateQueries({ queryKey: ['employees'] });
+      toast('Deletion request submitted for HR review', 'success');
       qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
       onClose();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not delete employee.');
+      setError(e instanceof Error ? e.message : 'Could not submit request.');
     } finally {
       setBusy(false);
     }
@@ -464,25 +663,25 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     <Modal
       open
       onClose={onClose}
-      title="Delete employee"
+      title="Request employee deletion"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
-            {busy ? 'Delete anyway' : 'Delete employee'}
+            {busy ? 'Submitting?' : 'Submit request'}
           </button>
         </>
       }
     >
       <div className="space-y-4 text-sm">
         <p className="text-text-muted">
-          Delete <strong className="text-text">{employee.name}</strong> ({employee.empCode}). This action is permanent and cannot be umdone.
+          Request deletion of <strong className="text-text">{employee.name}</strong> ({employee.empCode}). HR must approve before the record is removed.
         </p>
         <div>
           <label className="label">Reason</label>
           <textarea
             className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
-            placeholder="Describe why this employee should be removed (min 10 characters)…"
+            placeholder="Describe why this employee should be removed (min 10 characters)?"
             value={reason}
             onChange={(e) => { setReason(e.target.value); setError(null); }}
           />

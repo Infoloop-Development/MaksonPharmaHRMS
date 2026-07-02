@@ -32,6 +32,7 @@ export function AdminOverviewKpiMetricPicker({
     >
       <div
         className="dash-kpi-picker-panel card w-full sm:max-w-sm max-h-[min(85vh,520px)] sm:max-h-[80vh] overflow-hidden flex flex-col rounded-t-2xl sm:rounded-lg"
+        data-tour-id="admin-kpi-picker-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 pb-2 border-b border-border shrink-0">
@@ -39,7 +40,7 @@ export function AdminOverviewKpiMetricPicker({
             Choose metric for card {slotIndex + 1}
           </h2>
         </div>
-        <ul className="overflow-y-auto p-2 sm:p-3 space-y-1 flex-1">
+        <ul className="overflow-y-auto p-2 sm:p-3 space-y-1 flex-1" data-tour-id="admin-kpi-picker-options">
           {ALL_ADMIN_OVERVIEW_KPI_METRICS.map((id) => {
             const disabled = usedElsewhere.has(id) || !allowed.has(id);
             return (

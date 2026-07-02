@@ -13,6 +13,7 @@ import type {
   VisitorRequestReject,
   VisitorRequestStatus,
   VisitorVisitAccessMode,
+  BulkMutationResult,
 } from '@mams/types';
 
 export interface VisitorFormItem {
@@ -90,6 +91,8 @@ export const visitorsApi = {
     api.patch<VisitorFormItem>(`/visitors/forms/${id}`, body),
   toggleFormActive: (id: string) => api.patch<VisitorFormItem>(`/visitors/forms/${id}/toggle-active`),
   deleteForm: (id: string) => api.delete<void>(`/visitors/forms/${id}`),
+  bulkArchiveForms: (ids: string[]) =>
+    api.post<BulkMutationResult>('/visitors/forms/bulk-archive', { ids }),
   uploadIntroMedia: async (
     formId: string,
     kind: 'image' | 'video',

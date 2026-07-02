@@ -14,6 +14,7 @@ import {
   resolveVisitValidUntil,
   type VisitorField,
   type VisitorFormLocale,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import { VisitorFormModel } from '../models/VisitorForm.js';
 import { VisitorRequestModel } from '../models/VisitorRequest.js';
@@ -34,6 +35,7 @@ import {
   visitorIntroVideoFieldId,
 } from '../services/visitor/visitorIntroMedia.service.js';
 import { buildVisitorFormTranslations } from '../services/visitor/visitorTranslate.service.js';
+import { softDeleteFields } from '../utils/softDelete.util.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -377,6 +379,37 @@ router.patch('/forms/:id/toggle-active', requirePermission('manage.visitors'), a
   }
 });
 
+router.post('/forms/bulk-archive', requirePermission('manage.visitors'), async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      if (!Types.ObjectId.isValid(id)) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+        continue;
+      }
+      const form = await VisitorFormModel.findOne({ _id: id, isArchived: false });
+      if (!form) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Form not found or already archived' });
+        continue;
+      }
+      form.isArchived = true;
+      form.isActive = false;
+      form.updatedBy = new Types.ObjectId(req.auth!.sub);
+      Object.assign(form, softDeleteFields(req.auth!.sub));
+      await form.save();
+      result.succeeded += 1;
+    }
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/forms/:id', requirePermission('manage.visitors'), async (req, res, next) => {
   try {
     const id = req.params.id ?? '';
@@ -386,6 +419,7 @@ router.delete('/forms/:id', requirePermission('manage.visitors'), async (req, re
     form.isArchived = true;
     form.isActive = false;
     form.updatedBy = new Types.ObjectId(req.auth!.sub);
+    Object.assign(form, softDeleteFields(req.auth!.sub));
     await form.save();
     res.status(204).send();
   } catch (err) {

@@ -4,7 +4,7 @@ import type { VisitorField, VisitorRequestStatus } from '@mams/types';
 import { visitorsApi, type VisitorFormItem, type VisitorRequestListItem } from '../../api/visitors';
 import { settingsApi } from '../../api/settings';
 import { brandingFromSettings } from '../../lib/companyBranding';
-import { fmtIstDate, fmtIstTime } from '../../lib/format';
+import { EMPTY_CELL, fmtIstDate, fmtIstTime } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
 import {
   fetchAllFilteredVisitorResponses,
@@ -17,13 +17,14 @@ import { Input, Select } from '../ui/Field';
 import { formatVisitorResponse, visitorStatusTone } from './visitorsUtils';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
 
 const PAGE_SIZE = 10;
 
 function cellValue(item: VisitorRequestListItem, field: VisitorField): string {
   if (field.type === 'file') {
     const att = item.fileAttachments?.find((a) => a.fieldId === field.id);
-    return att?.filename ?? '—';
+    return att?.filename ?? EMPTY_CELL;
   }
   return formatVisitorResponse(item.responses[field.id]);
 }
@@ -170,9 +171,9 @@ export function FormResponsesPanel({
         <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
-              <SortableTh label="Submitted" sortKey="submitted" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 whitespace-nowrap" />
-              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" />
-              <SortableTh label="Valid until" sortKey="validUntil" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 whitespace-nowrap" />
+              <SortableTh label="Submitted" sortKey="submitted" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 whitespace-nowrap" tooltip={tableColumnTooltip('visitors', 'submitted')} />
+              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2" tooltip={tableColumnTooltip('visitors', 'status')} />
+              <SortableTh label="Valid until" sortKey="validUntil" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 whitespace-nowrap" tooltip={tableColumnTooltip('visitors', 'validUntil')} />
               {fieldColumns.map((f) => (
                 <th key={f.id} className="px-3 py-2 whitespace-nowrap">
                   {f.label}
@@ -209,7 +210,7 @@ export function FormResponsesPanel({
                   <td className="px-3 py-2 text-xs text-text-muted whitespace-nowrap">
                     {item.status === 'Approved' && item.visitValidUntil
                       ? fmtDateTimeMs(item.visitValidUntil)
-                      : '—'}
+                      : EMPTY_CELL}
                   </td>
                   {fieldColumns.map((f) => (
                     <td key={f.id} className="px-3 py-2 max-w-[200px] truncate" title={cellValue(item, f)}>

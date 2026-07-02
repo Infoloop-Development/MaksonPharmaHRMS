@@ -10,6 +10,7 @@ import type {
   LeaveStatus,
   LeaveTypeCreate,
   LeaveTypePatch,
+  BulkMutationResult,
 } from '@mams/types';
 
 export interface LeaveSummary {
@@ -158,6 +159,8 @@ export const leaveApi = {
   createHoliday: (body: HolidayCreate) => api.post('/leave/holidays', body),
   patchHoliday: (id: string, body: HolidayPatch) => api.patch(`/leave/holidays/${id}`, body),
   deleteHoliday: (id: string) => api.delete(`/leave/holidays/${id}`),
+  bulkDeleteHolidays: (ids: string[]) =>
+    api.post<BulkMutationResult>('/leave/holidays/bulk-delete', { ids }),
   importHolidaysCsv: (rows: HolidayCreate[]) => api.post<{ imported: number }>('/leave/holidays/import-csv', { rows }),
 
   getPolicy: () =>

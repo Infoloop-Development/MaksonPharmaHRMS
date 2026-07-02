@@ -8,9 +8,10 @@ import {
   EmployeeListQuerySchema,
   EmployeeCreateBodySchema,
   EmployeePatchBodySchema,
+  BulkIdsBodySchema,
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
-import { toMaskedEmployee, toUnmaskedEmployee } from '../services/employee.service.js';
+import { toMaskedEmployee } from '../services/employee.service.js';
 import { allocateNextEmpCode, previewNextEmpCode } from '../services/employeeCode.service.js';
 import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
@@ -18,6 +19,7 @@ import { isUnmaskEnabled } from '../config/featureFlags.js';
 import { audit, logUnmask, logUnmaskActivity } from '../services/audit.service.js';
 import { parseSortQuery } from '../utils/sortQuery.js';
 import { mapEmployeeCreateDuplicateError } from '../utils/mongoDuplicate.js';
+import { softDeleteFields } from '../utils/softDelete.util.js';
 
 const router = Router();
 
@@ -80,11 +82,7 @@ router.get('/:id', async (req, res, next) => {
     }
     const doc = await EmployeeModel.findById(req.params.id);
     if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
-    const canUnmask = req.auth!.permissions.includes('unmask.sensitive') || req.auth!.permissions.includes('write.employee_change');
-    const payload = canUnmask
-      ? toUnmaskedEmployee(doc.toObject() as any, req.auth!.viewMode)
-      : toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode);
-    res.json(payload);
+    res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
   } catch (err) {
     next(err);
   }
@@ -231,6 +229,52 @@ router.patch('/:id', manageEmployeesGate, async (req, res, next) => {
   }
 });
 
+// Bulk soft delete (must be before /:id)
+router.post('/bulk-delete', manageEmployeesGate, async (req, res, next) => {
+  try {
+    const body = BulkIdsBodySchema.parse(req.body);
+    const result = { succeeded: 0, skipped: 0, errors: [] as Array<{ id: string; reason: string }> };
+
+    for (const id of body.ids) {
+      if (!Types.ObjectId.isValid(id)) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Invalid id' });
+        continue;
+      }
+      const doc = await EmployeeModel.findById(id);
+      if (!doc || doc.isDeleted) {
+        result.skipped += 1;
+        result.errors.push({ id, reason: 'Employee not found' });
+        continue;
+      }
+
+      doc.isDeleted = true;
+      doc.status = 'Inactive';
+      Object.assign(doc, softDeleteFields(req.auth!.sub));
+      await doc.save();
+
+      await audit(
+        'employee_deleted',
+        {
+          userId: req.auth!.sub,
+          ipAddress: req.clientIp ?? null,
+          userAgent: req.header('user-agent') ?? null,
+        },
+        {
+          entityType: 'employee',
+          entityId: doc._id,
+          payload: { empCode: doc.empCode, name: doc.name, bulk: true },
+        }
+      );
+      result.succeeded += 1;
+    }
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // DELETE (soft)
 router.delete('/:id', manageEmployeesGate, async (req, res, next) => {
   try {
@@ -243,6 +287,7 @@ router.delete('/:id', manageEmployeesGate, async (req, res, next) => {
 
     doc.isDeleted = true;
     doc.status = 'Inactive';
+    Object.assign(doc, softDeleteFields(req.auth!.sub));
     await doc.save();
 
     await audit(

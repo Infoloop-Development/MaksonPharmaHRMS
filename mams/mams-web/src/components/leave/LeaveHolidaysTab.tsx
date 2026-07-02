@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { HolidayCreate } from '@mams/types';
 import { leaveApi } from '../../api/leave';
@@ -10,6 +10,11 @@ import { HolidayFormModal, type HolidayRow } from './HolidayFormModal';
 import { LeaveHolidayCardList } from './LeaveHolidayCardList';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
+import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
+import { useBulkSelection } from '../../hooks/useBulkSelection';
+import { BulkActionBar } from '../ui/BulkActionBar';
+import { BulkConfirmModal } from '../ui/BulkConfirmModal';
+import { BulkSelectCheckbox } from '../ui/BulkSelectCheckbox';
 
 function parseHolidayCsv(text: string): HolidayCreate[] {
   const lines = text.trim().split(/\r?\n/).filter((l) => l.trim());
@@ -33,6 +38,9 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const bulk = useBulkSelection();
 
   const { data, isLoading } = useQuery({
     queryKey: ['leave', 'holidays', year],
@@ -49,6 +57,16 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
   }, []);
 
   const { sortCol, toggleSort, sortArrow, sortedRows } = useTableSort(holidayItems, getSortValue, { date: 'date' });
+  const pageIds = useMemo(() => sortedRows.map((h) => h.id), [sortedRows]);
+  const pageCheck = bulk.pageSelectionState(pageIds);
+  const selectedHolidays = useMemo(
+    () => sortedRows.filter((h) => bulk.isSelected(h.id)),
+    [sortedRows, bulk]
+  );
+
+  useEffect(() => {
+    bulk.clear();
+  }, [year, sortCol]);
 
   const deleteMu = useMutation({
     mutationFn: (id: string) => leaveApi.deleteHoliday(id),
@@ -83,29 +101,61 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
         </div>
       )}
 
+      {canConfigure && (
+        <BulkActionBar
+          count={bulk.count}
+          overLimit={bulk.overLimit}
+          actionLabel="Delete selected"
+          onAction={() => setBulkDeleteOpen(true)}
+          onClear={bulk.clear}
+        />
+      )}
+
       <LeaveHolidayCardList
         items={sortedRows}
         isLoading={isLoading}
         canConfigure={canConfigure}
+        selectable={canConfigure}
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
         onEdit={setEditHoliday}
-        onDelete={(id) => deleteMu.mutate(id)}
+        onDelete={(h) => setDeleteTarget({ id: h.id, name: h.name })}
       />
 
       <div className="card tbl-scroll hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-              <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
-              <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" />
+              {canConfigure && (
+                <th className="px-4 py-3 w-10">
+                  <BulkSelectCheckbox
+                    checked={pageCheck.allSelected && pageIds.length > 0}
+                    indeterminate={pageCheck.someSelected}
+                    onChange={() => bulk.togglePage(pageIds)}
+                    ariaLabel="Select all holidays on this page"
+                  />
+                </th>
+              )}
+              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'name')} />
+              <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'date')} />
+              <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'type')} />
               <th className="px-4 py-3">Scope</th>
               {canConfigure && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={canConfigure ? 5 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
+            {isLoading && <tr><td colSpan={canConfigure ? 6 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
             {sortedRows.map((h) => (
               <tr key={h.id} className="border-b border-border/60">
+                {canConfigure && (
+                  <td className="px-4 py-3">
+                    <BulkSelectCheckbox
+                      checked={bulk.isSelected(h.id)}
+                      onChange={() => bulk.toggle(h.id)}
+                      ariaLabel={`Select ${h.name}`}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3 font-medium">{h.name}</td>
                 <td className="px-4 py-3">{fmtDate(h.date)}</td>
                 <td className="px-4 py-3">{h.type}</td>
@@ -118,7 +168,7 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       <button type="button" className="btn-outline btn-sm" onClick={() => setEditHoliday(h)}>Edit</button>
-                      <button type="button" className="btn-outline btn-sm text-red" onClick={() => deleteMu.mutate(h.id)}>Delete</button>
+                      <button type="button" className="btn-outline btn-sm text-red" onClick={() => setDeleteTarget({ id: h.id, name: h.name })}>Delete</button>
                     </div>
                   </td>
                 )}
@@ -151,6 +201,49 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
           }}
         />
       )}
+
+      <BulkConfirmModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete holiday?"
+        description={
+          deleteTarget ? (
+            <>
+              Remove holiday <strong>{deleteTarget.name}</strong>? This cannot be undone.
+            </>
+          ) : null
+        }
+        confirmLabel="Delete holiday"
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await deleteMu.mutateAsync(deleteTarget.id);
+        }}
+      />
+
+      <BulkConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Delete selected holidays?"
+        description={
+          <>
+            Delete <strong>{bulk.count}</strong> holiday{bulk.count !== 1 ? 's' : ''}? This cannot be undone.
+          </>
+        }
+        itemLabels={selectedHolidays.map((h) => `${h.name} (${fmtDate(h.date)})`)}
+        confirmLabel="Delete holidays"
+        onConfirm={async () => {
+          const result = await leaveApi.bulkDeleteHolidays(bulk.ids);
+          toast(
+            `Deleted ${result.succeeded} holiday${result.succeeded !== 1 ? 's' : ''}${
+              result.skipped ? `, ${result.skipped} skipped` : ''
+            }`,
+            result.succeeded > 0 ? 'success' : 'error'
+          );
+          qc.invalidateQueries({ queryKey: ['leave', 'holidays'] });
+          bulk.clear();
+          return result;
+        }}
+      />
 
       {importOpen && (
         <Modal

@@ -3,7 +3,7 @@ import mongoose, { Schema, type HydratedDocument, type InferSchemaType } from 'm
 const deviceSchema = new Schema(
   {
     deviceCode: { type: String, required: true },
-    serialNumber: { type: String, required: true, unique: true, index: true },
+    serialNumber: { type: String, required: true },
     vendor: { type: String, enum: ['eSSL', 'Hanvon'], default: 'eSSL', index: true },
     protocolMode: { type: String, enum: ['push', 'pull'], default: 'push' },
     integrationConfig: {
@@ -26,9 +26,17 @@ const deviceSchema = new Schema(
     lastSyncStatus: { type: String, enum: ['ok', 'error', 'pending', null], default: null },
     lastSyncError: { type: String, default: null },
     isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     notes: { type: String, default: null },
   },
   { timestamps: true }
+);
+
+deviceSchema.index(
+  { serialNumber: 1 },
+  { unique: true, partialFilterExpression: { isDeleted: false } }
 );
 
 export type DeviceDoc = HydratedDocument<InferSchemaType<typeof deviceSchema>>;

@@ -4,15 +4,19 @@ import { loadFeatureFlagOverrides } from './services/featureFlags.service.js';
 import { env } from './config/env.js';
 import { logger } from './utils/logger.js';
 import { backfillAllUsersRoleDefaultPermissions } from './services/userPermissionBackfill.service.js';
+import { syncSoftDeleteIndexes } from './services/softDeleteIndexes.service.js';
 import { startComplianceScheduler } from './services/complianceScheduler.service.js';
 import { startReportJobRunner } from './services/reportJobRunner.service.js';
+import { startRecycleBinPurgeScheduler } from './services/recycleBinPurge.service.js';
 
 async function main() {
   await connectDb();
   await loadFeatureFlagOverrides();
   await backfillAllUsersRoleDefaultPermissions();
+  await syncSoftDeleteIndexes();
   startComplianceScheduler();
   startReportJobRunner();
+  startRecycleBinPurgeScheduler();
   const app = buildApp();
   app.listen(env.PORT, () => {
     logger.info(`mams-server listening`, {

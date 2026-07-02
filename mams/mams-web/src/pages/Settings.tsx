@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsApi, settingsOrgNotificationAlerts, type Settings as SettingsT } from '../api/settings';
@@ -11,7 +11,6 @@ import { Badge } from '../components/ui/Badge';
 import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
 import type { ExportNamingSettings, OrgNotificationAlerts, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
-import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { TIME_FORMAT_LABELS } from '../lib/timeFormat';
 import { useTimeDisplay } from '../store/timeFormat';
 import {
@@ -38,8 +37,13 @@ import { AdminSectionCard } from '../components/ui/AdminSectionCard';
 import { SortableTh } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
 import { useTableSort } from '../lib/tableSort';
+import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 import { settingsTourScript } from '../lib/onboarding/scripts/settingsTourScript';
 import { AppearanceSection } from '../components/ui/ThemeToggle';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar } from '../components/ui/BulkActionBar';
+import { BulkConfirmModal } from '../components/ui/BulkConfirmModal';
+import { BulkSelectCheckbox } from '../components/ui/BulkSelectCheckbox';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -81,6 +85,8 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'read.compliance_activity': 'View compliance activity log',
   'write.employee_change': 'Submit employee add/edit/delete change requests',
   'approve.employee_change': 'Approve/reject employee change requests',
+  'manage.recycle_bin': 'View recycle bin, restore or permanently delete items',
+  'manage.bug_reports': 'Review and manage user-submitted bug reports',
 };
 
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
@@ -102,6 +108,8 @@ const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[]
       'manage.feature_flags',
       'read.system_health',
       'manage.export_naming',
+      'manage.recycle_bin',
+      'manage.bug_reports',
     ],
   },
 ];
@@ -469,7 +477,7 @@ function TimeDisplayCard({ settings, canManage }: { settings: SettingsT; canMana
       }
     >
       <p className="text-sm text-text-muted">
-        Applies to all HR and manager users across the app — how times are shown and entered (clocks, attendance, reports, regularization).
+        Applies to all HR and manager users across the app: how times are shown and entered (clocks, attendance, reports, regularization).
       </p>
       <div className="space-y-2 pt-1">
         {options.map((opt) => (
@@ -660,189 +668,42 @@ function ComplianceCard({ settings, canManage }: { settings: SettingsT; canManag
 
 function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: boolean }) {
   const { fmtHhmm } = useTimeDisplay();
-  const toast = useToast((s) => s.push);
-  const qc = useQueryClient();
-
-  type ShiftRow = SettingsT['realShifts'][number];
-  type EditingShift = { type: 'real' | 'compliance'; id: string; label: string; start: string; end: string };
-  const [editingShift, setEditingShift] = useState<EditingShift | null>(null);
-  const [weeklyOffDraft, setWeeklyOffDraft] = useState<string[] | null>(null);
-
-  const shiftMutation = useMutation({
-    mutationFn: (patch: { realShifts?: ShiftRow[]; complianceShifts?: ShiftRow[] }) =>
-      settingsApi.patch(patch),
-    onSuccess: () => {
-      toast('Shift updated', 'success');
-      qc.invalidateQueries({ queryKey: ['settings'] });
-      invalidateActivity(qc);
-      setEditingShift(null);
-    },
-    onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
-  });
-
-  const weeklyOffMutation = useMutation({
-    mutationFn: (days: string[]) => settingsApi.patch({ weeklyOffDefault: days }),
-    onSuccess: () => {
-      toast('Weekly off updated', 'success');
-      qc.invalidateQueries({ queryKey: ['settings'] });
-      invalidateActivity(qc);
-      setWeeklyOffDraft(null);
-    },
-    onError: (e: any) => toast(e?.message ?? 'Save failed', 'error'),
-  });
-
-  function saveShift() {
-    if (!editingShift) return;
-    const updated = (editingShift.type === 'real' ? settings.realShifts : settings.complianceShifts).map((s) =>
-      s.id === editingShift.id
-        ? { ...s, label: editingShift.label, start: editingShift.start, end: editingShift.end }
-        : s
-    );
-    shiftMutation.mutate(
-      editingShift.type === 'real' ? { realShifts: updated } : { complianceShifts: updated }
-    );
-  }
-
-  function renderShiftRow(s: ShiftRow, type: 'real' | 'compliance') {
-    const isEditing = editingShift?.id === s.id && editingShift?.type === type;
-    if (isEditing && editingShift) {
-      return (
-        <div key={s.id} className="py-2 border-b border-border last:border-0">
-          <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              className="input text-sm"
-              value={editingShift.label}
-              onChange={(e) => setEditingShift({ ...editingShift, label: e.target.value })}
-              placeholder="Label"
-            />
-            <div className="flex gap-2 items-center">
-              <input
-                type="time"
-                className="input text-sm font-mono"
-                value={editingShift.start}
-                onChange={(e) => setEditingShift({ ...editingShift, start: e.target.value })}
-              />
-              <span className="text-text-muted">–</span>
-              <input
-                type="time"
-                className="input text-sm font-mono"
-                value={editingShift.end}
-                onChange={(e) => setEditingShift({ ...editingShift, end: e.target.value })}
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn-primary btn-sm"
-                onClick={saveShift}
-                disabled={shiftMutation.isPending}
-              >
-                {shiftMutation.isPending ? 'Saving…' : 'Save'}
-              </button>
-              <button
-                type="button"
-                className="btn-outline btn-sm"
-                onClick={() => setEditingShift(null)}
-                disabled={shiftMutation.isPending}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-        <span className="font-medium">{s.label}</span>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm">{fmtHhmm(s.start)} – {fmtHhmm(s.end)}</span>
-          {canManage && (
-            <button
-              type="button"
-              className="shrink-0 inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 sm:p-1.5 rounded-md text-text-muted hover:text-primary hover:bg-surface2 touch-target-sm"
-              onClick={() => setEditingShift({ type, id: s.id, label: s.label, start: s.start, end: s.end })}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const isEditingWeeklyOff = weeklyOffDraft !== null;
-  const effectiveWeeklyOff = weeklyOffDraft ?? settings.weeklyOffDefault;
 
   return (
     <SectionCard title="Time Shifts">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="min-w-0">
           <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
-          {settings.realShifts.map((s) => renderShiftRow(s, 'real'))}
+          {settings.realShifts.map((s) => (
+            <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <span className="font-medium">{s.label}</span>
+              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
+            </div>
+          ))}
         </div>
         <div className="min-w-0 md:border-l md:border-border md:pl-4">
           <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
-          {settings.complianceShifts.map((s) => renderShiftRow(s, 'compliance'))}
+          {settings.complianceShifts.map((s) => (
+            <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <span className="font-medium">{s.label}</span>
+              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="pt-3 border-t border-border">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs uppercase tracking-wider text-text-subtle">Weekly off default</div>
-          {canManage && !isEditingWeeklyOff && (
-            <button
-              type="button"
-              className="text-xs text-primary hover:underline"
-              onClick={() => setWeeklyOffDraft([...settings.weeklyOffDefault])}
-            >
-              Edit
-            </button>
-          )}
-        </div>
+        <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
         <div className="flex gap-2 flex-wrap">
           {WEEKDAYS.map((d) => (
-            <button
-              key={d}
-              type="button"
-              disabled={!isEditingWeeklyOff}
-              onClick={() => {
-                if (!weeklyOffDraft) return;
-                setWeeklyOffDraft(
-                  weeklyOffDraft.includes(d)
-                    ? weeklyOffDraft.filter((x) => x !== d)
-                    : [...weeklyOffDraft, d]
-                );
-              }}
-              className={isEditingWeeklyOff ? 'cursor-pointer' : 'cursor-default'}
-            >
-              <Badge tone={effectiveWeeklyOff.includes(d) ? 'blue' : 'gray'}>{d}</Badge>
-            </button>
+            <Badge key={d} tone={settings.weeklyOffDefault.includes(d) ? 'blue' : 'gray'}>{d}</Badge>
           ))}
         </div>
-        {isEditingWeeklyOff && (
-          <div className="flex gap-2 mt-3">
-            <button
-              type="button"
-              className="btn-primary btn-sm"
-              onClick={() => weeklyOffMutation.mutate(weeklyOffDraft!)}
-              disabled={weeklyOffMutation.isPending}
-            >
-              {weeklyOffMutation.isPending ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              type="button"
-              className="btn-outline btn-sm"
-              onClick={() => setWeeklyOffDraft(null)}
-              disabled={weeklyOffMutation.isPending}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
       </div>
+      {canManage && (
+        <div className="text-xs text-text-subtle pt-2">
+          Inline edit for shifts and weekly-off coming in Phase 1 sprint 6. Schema and PATCH endpoint already support it.
+        </div>
+      )}
     </SectionCard>
   );
 }
@@ -1049,7 +910,7 @@ function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canMan
     >
       {!canManage && (
         <p className="text-xs text-text-muted -mt-1 mb-1">
-          Read-only — you do not have permission to change export filenames.
+          Read-only: you do not have permission to change export filenames.
         </p>
       )}
       <p className="text-xs text-text-muted">
@@ -1199,7 +1060,12 @@ export function UsersManagementPanel() {
   const [openAdd, setOpenAdd] = useState(false);
   const [editUser, setEditUser] = useState<UserSummary | null>(null);
   const [userPage, setUserPage] = useState(1);
+  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
   const sessionUser = useAuth((s) => s.user);
+  const toast = useToast((s) => s.push);
+  const qc = useQueryClient();
+  const bulk = useBulkSelection();
   const { data, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
 
   const items = data?.items ?? [];
@@ -1214,10 +1080,46 @@ export function UsersManagementPanel() {
   const total = sortedRows.length;
   const pageCount = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
   const paginatedItems = sortedRows.slice((userPage - 1) * USERS_PAGE_SIZE, userPage * USERS_PAGE_SIZE);
+  const pageIds = useMemo(() => paginatedItems.map((u) => u._id), [paginatedItems]);
+  const pageCheck = bulk.pageSelectionState(pageIds);
+  const selectedUsers = useMemo(
+    () => paginatedItems.filter((u) => bulk.isSelected(u._id)),
+    [paginatedItems, bulk]
+  );
 
   useEffect(() => {
     if (userPage > pageCount) setUserPage(pageCount);
   }, [userPage, pageCount]);
+
+  useEffect(() => {
+    bulk.clear();
+  }, [userPage, sortCol]);
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      usersApi.patch(id, { isActive }),
+    onMutate: ({ id }) => setTogglingUserId(id),
+    onSettled: () => setTogglingUserId(null),
+    onSuccess: (_, { isActive }) => {
+      toast(
+        isActive
+          ? 'User activated.'
+          : 'User deactivated. Previous sessions were ended; they must sign in again if reactivated.',
+        'success'
+      );
+      qc.invalidateQueries({ queryKey: ['users'] });
+      invalidateActivity(qc);
+    },
+    onError: (e: unknown) => {
+      if (e instanceof ApiError) toast(e.message, 'error');
+      else toast('Could not update user status', 'error');
+    },
+  });
+
+  const handleToggleActive = (u: UserSummary, next: boolean) => {
+    if (sessionUser?.id === u._id) return;
+    toggleActiveMutation.mutate({ id: u._id, isActive: next });
+  };
 
   return (
     <SectionCard
@@ -1226,16 +1128,36 @@ export function UsersManagementPanel() {
         <button className="btn-primary btn-sm" onClick={() => setOpenAdd(true)}>+ Add User</button>
       }
     >
+      <BulkActionBar
+        count={bulk.count}
+        overLimit={bulk.overLimit}
+        actionLabel="Deactivate selected"
+        onAction={() => setBulkDeactivateOpen(true)}
+        onClear={bulk.clear}
+      />
       <UserCardList
         items={paginatedItems}
         isLoading={isLoading}
         sessionUserId={sessionUser?.id}
+        selectable
+        isSelected={bulk.isSelected}
+        onToggleSelect={bulk.toggle}
+        togglingUserId={togglingUserId}
+        onToggleActive={handleToggleActive}
         onEdit={setEditUser}
       />
       <div className="tbl-scroll hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+              <th className="py-2 w-10">
+                <BulkSelectCheckbox
+                  checked={pageCheck.allSelected && pageIds.length > 0}
+                  indeterminate={pageCheck.someSelected}
+                  onChange={() => bulk.togglePage(pageIds)}
+                  ariaLabel="Select all users on this page"
+                />
+              </th>
               <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'name')} />
               <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'email')} />
               <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'role')} />
@@ -1244,13 +1166,29 @@ export function UsersManagementPanel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={5} className="py-4 text-center text-text-muted">Loading...</td></tr>}
+            {isLoading && <tr><td colSpan={6} className="py-4 text-center text-text-muted">Loading...</td></tr>}
             {!isLoading && paginatedItems.map((u) => (
               <tr key={u._id}>
+                <td className="py-2">
+                  <BulkSelectCheckbox
+                    checked={bulk.isSelected(u._id)}
+                    onChange={() => bulk.toggle(u._id)}
+                    ariaLabel={`Select ${u.name}`}
+                  />
+                </td>
                 <td className="py-2 font-medium">{u.name}</td>
                 <td className="py-2 text-xs">{u.email}</td>
                 <td className="py-2"><Badge tone="blue">{u.role}</Badge></td>
-                <td className="py-2"><Badge tone={u.isActive ? 'green' : 'red'}>{u.isActive ? 'Active' : 'Inactive'}</Badge></td>
+                <td className="py-2">
+                  <div className="flex items-center gap-2">
+                    <Toggle
+                      checked={u.isActive}
+                      onChange={(next) => handleToggleActive(u, next)}
+                      disabled={sessionUser?.id === u._id || togglingUserId === u._id}
+                    />
+                    <span className="text-xs text-text-muted">{u.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                </td>
                 <td className="py-2 text-right">
                   <button
                     type="button"
@@ -1281,6 +1219,32 @@ export function UsersManagementPanel() {
           onClose={() => setEditUser(null)}
         />
       )}
+      <BulkConfirmModal
+        open={bulkDeactivateOpen}
+        onClose={() => setBulkDeactivateOpen(false)}
+        title="Deactivate selected users?"
+        description={
+          <>
+            Deactivate <strong>{bulk.count}</strong> user{bulk.count !== 1 ? 's' : ''}? Their sessions will be
+            ended and they cannot sign in until reactivated.
+          </>
+        }
+        itemLabels={selectedUsers.map((u) => `${u.name} (${u.email})`)}
+        confirmLabel="Deactivate users"
+        onConfirm={async () => {
+          const result = await usersApi.bulkDeactivate(bulk.ids);
+          toast(
+            `Deactivated ${result.succeeded} user${result.succeeded !== 1 ? 's' : ''}${
+              result.skipped ? `, ${result.skipped} skipped` : ''
+            }`,
+            result.succeeded > 0 ? 'success' : 'error'
+          );
+          qc.invalidateQueries({ queryKey: ['users'] });
+          invalidateActivity(qc);
+          bulk.clear();
+          return result;
+        }}
+      />
     </SectionCard>
   );
 }
@@ -1493,7 +1457,6 @@ function EditUserModal({
   const [role, setRole] = useState<Role>('hr.admin');
   const [unmaskFieldGrants, setUnmaskFieldGrants] = useState<SensitiveUnmaskField[]>([]);
   const [selectedPerms, setSelectedPerms] = useState<Permission[]>([]);
-  const [isActive, setIsActive] = useState(true);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
@@ -1510,7 +1473,6 @@ function EditUserModal({
     setUnmaskFieldGrants(
       Array.isArray(user.unmaskFieldGrants) ? [...user.unmaskFieldGrants] : []
     );
-    setIsActive(user.isActive);
     setMustChangePassword(user.mustChangePassword ?? false);
   }, [user]);
 
@@ -1527,7 +1489,6 @@ function EditUserModal({
         permissions: permsForSave,
         unmaskFieldGrants:
           isUnmaskEnabled() && role === 'hr.admin' ? unmaskFieldGrants : [],
-        isActive,
         mustChangePassword,
       });
     },
@@ -1546,7 +1507,7 @@ function EditUserModal({
       toast(
         selfMode
           ? 'Profile updated.'
-          : 'User updated. Previous sessions for this user were ended — they must sign in again.',
+          : 'User updated. Previous sessions for this user were ended; they must sign in again.',
         'success'
       );
       qc.invalidateQueries({ queryKey: ['users'] });
@@ -1627,10 +1588,6 @@ function EditUserModal({
                 <option value="it.admin">IT Admin</option>
               </Select>
             </Field>
-            <div className="flex items-center justify-between gap-3 py-1">
-              <span className="text-sm font-medium">Active</span>
-              <Toggle checked={isActive} onChange={setIsActive} />
-            </div>
             <div className="flex items-center justify-between gap-3 py-1">
               <span className="text-sm font-medium">Force password change on next login</span>
               <Toggle checked={mustChangePassword} onChange={setMustChangePassword} />

@@ -749,6 +749,12 @@ input, select, textarea {
 }
 
 /* Page onboarding tours (driver.js) */
+html.mams-tour-scroll-lock,
+html.mams-tour-scroll-lock body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
 .mams-tour-target-locked,
 .mams-tour-target-locked * {
   pointer-events: none !important;
