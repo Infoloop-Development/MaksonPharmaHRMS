@@ -2,7 +2,7 @@ import { Doughnut } from 'react-chartjs-2';
 import { ChartEmptyState } from '../ui/ChartEmptyState';
 import { useTheme } from '../../hooks/useTheme';
 import { getChartColors } from '../../lib/chartColors';
-import { BAR_CHART_HEIGHT, DONUT_CHART_SIZE } from './useDashboardChartState';
+import { DONUT_CHART_SIZE } from './useDashboardChartState';
 import type { useDashboardChartState } from './useDashboardChartState';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../lib/format';
 
@@ -39,7 +39,7 @@ export function DashboardDonutChartCard({
 
   return (
     <div
-      className={`card p-4 md:p-6 h-full flex flex-col transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
+      className={`dash-chart-card transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
       data-tour-id="dashboard-donut-chart"
     >
       <h2 className="text-lg font-bold mb-1">
@@ -51,9 +51,7 @@ export function DashboardDonutChartCard({
           : '…'}
         {' · '}Click segments or legend to filter
       </p>
-      <div
-        className={`relative flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0 ${BAR_CHART_HEIGHT}`}
-      >
+      <div className="dash-chart-card-body flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0">
         {isInitialLoad && (
           <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm z-10">
             Loading chart…

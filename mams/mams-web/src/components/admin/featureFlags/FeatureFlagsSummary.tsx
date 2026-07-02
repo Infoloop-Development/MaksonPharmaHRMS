@@ -20,13 +20,12 @@ export function FeatureFlagsSummary({ summary }: { summary: FeatureFlagsSummary 
         return (
           <div
             key={key}
-            className={`dash-stat-card ${accentClass} !cursor-default pointer-events-none`.trim()}
+            className={`dash-stat-card ${accentClass} h-full !cursor-default pointer-events-none`.trim()}
             aria-label={`${label}: ${value}`}
           >
-            <div className="text-[10px] md:text-[11px] text-text-subtle font-semibold uppercase tracking-wider">
-              {label}
-            </div>
+            <div className="dash-stat-card-label">{label}</div>
             <div className="dash-stat-value text-2xl md:text-3xl font-bold my-1 md:my-1.5 leading-none">{value}</div>
+            <div className="dash-stat-card-sub">{'\u00A0'}</div>
           </div>
         );
       })}

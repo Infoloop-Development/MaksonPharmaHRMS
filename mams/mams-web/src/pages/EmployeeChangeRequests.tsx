@@ -6,6 +6,7 @@ import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { SelectField } from '../components/ui/SelectField';
+import { DashboardStatCard } from '../components/ui/DashboardStatCard';
 import { fmtDate } from '../lib/format';
 import { ApiError } from '../api/client';
 
@@ -85,21 +86,28 @@ export function EmployeeChangeRequests() {
       <div className="dash-stat-grid mb-6">
         {canApprove ? (
           (['Flagged', 'Reviewed'] as const).map((s) => (
-            <button
+            <DashboardStatCard
               key={s}
-              type="button"
-              onClick={() => { setStatusFilter(statusFilter === s ? '' : s); setPage(1); }}
-              className={`card p-4 text-left transition hover:shadow-md ${statusFilter === s ? 'ring-2 ring-primary' : ''}`}
-            >
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{s}</div>
-              <div className="text-3xl font-bold mt-1">{counts[s]}</div>
-            </button>
+              label={s}
+              value={String(counts[s])}
+              sub=""
+              accent={s === 'Flagged' ? 'amber' : 'green'}
+              selected={statusFilter === s}
+              onClick={() => {
+                setStatusFilter(statusFilter === s ? '' : s);
+                setPage(1);
+              }}
+            />
           ))
         ) : (
-          <div className="card p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">Total Changes</div>
-            <div className="text-3xl font-bold mt-1">{data?.total ?? 0}</div>
-          </div>
+          <DashboardStatCard
+            label="Total Changes"
+            value={String(data?.total ?? 0)}
+            sub=""
+            accent="primary"
+            selected={false}
+            onClick={() => {}}
+          />
         )}
       </div>
 

@@ -4,7 +4,7 @@ import type { AdminOverviewAnalyticsPayload, AdminOverviewWidget } from '@mams/t
 import { ChartEmptyState } from '../../../ui/ChartEmptyState';
 import { getChartTypeLabel, getMetricLabel } from '../../../../lib/adminOverviewChartRegistry';
 import { fmtNumber } from '../../../../lib/format';
-import { CHART_HEIGHT, DONUT_SIZE, useAdminAnalyticsChart } from './useAdminAnalyticsChart';
+import { DONUT_SIZE, useAdminAnalyticsChart } from './useAdminAnalyticsChart';
 import '../../../../lib/chartSetup';
 
 export function AdminChartWidget({
@@ -38,7 +38,7 @@ export function AdminChartWidget({
 
   return (
     <div
-      className={`card p-4 md:p-5 h-full flex flex-col relative ${isEditing ? 'ring-2 ring-primary/30 cursor-pointer' : ''}`}
+      className={`dash-chart-card relative ${isEditing ? 'ring-2 ring-primary/30 cursor-pointer' : ''}`}
       data-tour-id={tourAnchorId}
       onClick={handleCardClick}
       onKeyDown={(e) => {
@@ -69,7 +69,7 @@ export function AdminChartWidget({
         {analytics ? `${analytics.weekRange.start} – ${analytics.weekRange.end}` : 'Loading…'}
         {isEditing && <span className="ml-2 text-primary">· Tap to configure</span>}
       </p>
-      <div className={`relative flex-1 min-h-[180px] ${CHART_HEIGHT}`}>
+      <div className="dash-chart-card-body">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">
             Loading chart…

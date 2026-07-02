@@ -71,17 +71,13 @@ export function Layout() {
 
   const showMobileBottomNav = hasMobileBottomNav(user?.role);
   const useAdminSidebar = hasOrgAdminLikeAccess(user?.role ?? 'hr.admin');
+  const sidebarOffsetClass = sidebarCollapsed ? 'shell-offset-76' : 'shell-offset-250';
 
   return (
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
       <div
         className={`min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
       >
-        <TopBar
-          onOpenMenu={openSidebar}
-          companyName={settings?.companyName}
-          companyLogo={settings?.companyLogo}
-        />
         {useAdminSidebar ? (
           <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
         ) : (
@@ -100,14 +96,17 @@ export function Layout() {
             onClick={closeSidebar}
           />
         )}
-        <main
-          className={`app-shell-main app-shell-with-sidebar px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden${
-            showMobileBottomNav ? ' has-mobile-bottom-nav' : ''
-          }`}
+        <div
+          className={`app-content-column app-shell-with-sidebar${
+            useAdminSidebar ? '' : ` ${sidebarOffsetClass}`
+          }${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
         >
-          <Outlet />
-        </main>
-        <MobileBottomNav />
+          <TopBar onOpenMenu={openSidebar} />
+          <main className="app-shell-main px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden min-w-0">
+            <Outlet />
+          </main>
+          <MobileBottomNav />
+        </div>
         <ToastContainer />
       </div>
     </TimeFormatProvider>

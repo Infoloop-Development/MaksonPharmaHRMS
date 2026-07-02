@@ -5,7 +5,7 @@ import { DONUT_METRIC_LABELS } from '../../../lib/adminOverviewKpiRegistry';
 import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../../lib/format';
 import { useTheme } from '../../../hooks/useTheme';
 import { getChartColors } from '../../../lib/chartColors';
-import { BAR_CHART_HEIGHT, DONUT_CHART_SIZE } from './useAdminOverviewChartState';
+import { DONUT_CHART_SIZE } from './useAdminOverviewChartState';
 import type { useAdminOverviewChartState } from './useAdminOverviewChartState';
 
 type ChartState = ReturnType<typeof useAdminOverviewChartState>;
@@ -40,7 +40,7 @@ export function AdminOverviewDonutChartCard({
 
   return (
     <div
-      className={`card p-4 md:p-6 h-full flex flex-col transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
+      className={`dash-chart-card transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-1">
         <h2 className="text-lg font-bold">
@@ -64,9 +64,7 @@ export function AdminOverviewDonutChartCard({
           ? `${fmtDate(chartsData.weekPunctuality.date)} · ${fmtNumber(chartsData.weekPunctuality.totalActive)} active employees`
           : DONUT_METRIC_LABELS[donutMetric]}
       </p>
-      <div
-        className={`relative flex flex-1 flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0 ${BAR_CHART_HEIGHT}`}
-      >
+      <div className="dash-chart-card-body flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0">
         {isInitialLoad && (
           <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm z-10">
             Loading chart…

@@ -1,7 +1,6 @@
 import { Bar } from 'react-chartjs-2';
 import type { ChartData } from 'chart.js';
 import { ChartEmptyState } from '../ui/ChartEmptyState';
-import { BAR_CHART_HEIGHT } from './useDashboardChartState';
 import type { useDashboardChartState } from './useDashboardChartState';
 
 type ChartState = ReturnType<typeof useDashboardChartState>;
@@ -16,12 +15,12 @@ export function DashboardBarChartCard({
   const showEmpty = !isInitialLoad && (!barChart || !hasChartData);
 
   return (
-    <div className="card p-4 md:p-6 h-full flex flex-col" data-tour-id="dashboard-bar-chart">
+    <div className="dash-chart-card" data-tour-id="dashboard-bar-chart">
       <h2 className="text-lg font-bold mb-1">Weekly {barLabel} trend</h2>
       <p className="text-xs text-text-muted mb-4">
         Click tile above to switch metric. Click bar to select day.
       </p>
-      <div className={`relative ${BAR_CHART_HEIGHT}`}>
+      <div className="dash-chart-card-body">
         {isInitialLoad && (
           <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">
             Loading chart…

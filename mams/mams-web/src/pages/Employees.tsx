@@ -693,16 +693,12 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
 }
 
 function ResultStat({ label, value, tone }: { label: string; value: number; tone?: 'green' | 'amber' | 'red' }) {
-  const tones: Record<'green' | 'amber' | 'red', string> = {
-    green: 'bg-green-bg text-green-on-bg',
-    amber: 'bg-amber-bg text-amber',
-    red: 'bg-red-bg text-red',
-  };
-  const colour = tone ? tones[tone] : 'bg-surface2 text-text';
+  const accent = tone ?? 'primary';
   return (
-    <div className={`p-3 rounded ${colour}`}>
-      <div className="text-[10px] uppercase tracking-wider opacity-70">{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
+    <div className={`dash-stat-card accent-${accent} h-full !cursor-default pointer-events-none`}>
+      <div className="dash-stat-card-label">{label}</div>
+      <div className="dash-stat-value text-2xl md:text-3xl font-bold my-1 md:my-1.5 leading-none">{value}</div>
+      <div className="dash-stat-card-sub">{'\u00A0'}</div>
     </div>
   );
 }

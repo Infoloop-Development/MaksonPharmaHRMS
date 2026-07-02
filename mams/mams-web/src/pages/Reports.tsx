@@ -722,10 +722,10 @@ function LocationReport() {
         }}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden card-grid-stretch">
         {isLoading && <div className="text-text-muted">Loading...</div>}
         {sortedLocRows.map((r) => (
-          <div key={r.location} className="card p-5">
+          <div key={r.location} className="card p-5 h-full flex flex-col">
             <div className="font-bold mb-1">{r.location}</div>
             <div className="text-xs text-text-muted mb-3">{r.employeeCount} employees</div>
             <div className="grid grid-cols-2 gap-2 text-sm">

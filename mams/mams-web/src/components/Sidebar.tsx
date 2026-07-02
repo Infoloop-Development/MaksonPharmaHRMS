@@ -5,6 +5,7 @@ import { useAuth } from '../store/auth';
 import { settingsApi } from '../api/settings';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
+import { SidebarBrandHeader } from './SidebarBrandHeader';
 import { hasOrgAdminLikeAccess, type Role } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
@@ -69,7 +70,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
     staleTime: 60_000,
   });
 
-  const companyInitial = (settings?.companyName ?? 'Makson Group').charAt(0).toUpperCase();
+  const companyName = settings?.companyName ?? 'Makson Group';
 
   useEffect(() => {
     onClose();
@@ -81,60 +82,13 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
         open ? 'translate-x-0' : '-translate-x-full'
       } ${collapsed ? 'lg:w-[76px]' : 'lg:w-[250px]'}`}
     >
-      <div className="px-4 lg:px-6 py-4 lg:py-5 border-b sidebar-divider flex items-start justify-between gap-2">
-        <div className={collapsed ? 'lg:hidden' : ''}>
-          {settings?.companyLogo ? (
-            <img
-              src={settings.companyLogo}
-              alt="Company logo"
-              className="w-9 h-9 rounded-md object-contain sidebar-logo-bg p-0.5 mb-2"
-            />
-          ) : (
-            <div
-              className="w-9 h-9 rounded-md sidebar-logo-bg flex items-center justify-center font-bold text-sm mb-2 select-none"
-              aria-hidden
-            >
-              {companyInitial}
-            </div>
-          )}
-          <div className="text-[10px] tracking-[2px] uppercase sidebar-muted mb-1">Attendance System</div>
-          <h1 className="text-base font-bold">{settings?.companyName ?? 'Makson Group'}</h1>
-        </div>
-        {collapsed && (
-          settings?.companyLogo ? (
-            <img
-              src={settings.companyLogo}
-              alt="Company logo"
-              className="hidden lg:block w-9 h-9 rounded-md object-contain sidebar-logo-bg p-0.5 mx-auto"
-            />
-          ) : (
-            <div
-              className="hidden lg:flex w-9 h-9 rounded-md sidebar-logo-bg items-center justify-center font-bold text-sm mx-auto select-none"
-              aria-hidden
-            >
-              {companyInitial}
-            </div>
-          )
-        )}
-        <button
-          type="button"
-          className="sidebar-icon-btn hidden lg:flex w-8 h-8 rounded-md items-center justify-center shrink-0 touch-target-sm"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          onClick={onToggleCollapsed}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={collapsed ? 'rotate-180' : ''}>
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="sidebar-icon-btn lg:hidden w-10 h-10 rounded-md flex items-center justify-center shrink-0 touch-target"
-          aria-label="Close menu"
-          onClick={onClose}
-        >
-          ✕
-        </button>
-      </div>
+      <SidebarBrandHeader
+        companyName={companyName}
+        companyLogo={settings?.companyLogo}
+        collapsed={collapsed}
+        onClose={onClose}
+        onToggleCollapsed={onToggleCollapsed}
+      />
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
         {user && hasOrgAdminLikeAccess(user.role) && (
           <>

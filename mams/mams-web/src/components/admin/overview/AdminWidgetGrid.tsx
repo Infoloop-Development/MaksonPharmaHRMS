@@ -91,7 +91,7 @@ function AddChartTile({ onClick, disabled }: { onClick: () => void; disabled?: b
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="card p-4 md:p-5 h-full min-h-[260px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary hover:bg-primary-bg/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
+      className="dash-chart-card min-h-[var(--dash-chart-card-min-h)] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border hover:border-primary hover:bg-primary-bg/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
       aria-label="Add chart"
     >
       <span className="text-3xl text-primary">+</span>
@@ -142,7 +142,7 @@ export function AdminWidgetGrid({
   const canAdd = isEditing && widgets.length < ADMIN_OVERVIEW_WIDGET_MAX;
 
   const grid = (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6" data-tour-id="admin-overview-chart-grid">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 card-grid-stretch" data-tour-id="admin-overview-chart-grid">
       {widgets.map((widget, index) => (
         <SortableWidget
           key={widget.id}
