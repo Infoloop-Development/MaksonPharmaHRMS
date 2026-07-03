@@ -4,6 +4,8 @@ import { authApi } from '../api/auth';
 import { ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
+import { AuthBrandHeader } from '../components/AuthBrandHeader';
+import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
 
 const PASSWORD_MIN = 10;
 const PASSWORD_MAX = 128;
@@ -43,6 +45,7 @@ export function ChangePassword() {
   const setAuth = useAuth((s) => s.setAuth);
   const toast = useToast((s) => s.push);
   const navigate = useNavigate();
+  const { companyName, companyLogo } = usePublicOrgBranding();
 
   if (!user || !accessToken || !refreshToken) {
     return null;
@@ -74,9 +77,10 @@ export function ChangePassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0D1540] via-primary to-primary-light p-4">
+    <div className="min-h-screen flex items-center justify-center auth-shell-bg p-4">
       <div className="bg-surface rounded-2xl p-6 sm:p-10 w-full max-w-[420px] shadow-2xl border border-border">
-        <h1 className="text-2xl font-bold text-primary mb-1">Set a new password</h1>
+        <AuthBrandHeader companyName={companyName} companyLogo={companyLogo} />
+        <h1 className="text-2xl font-bold text-text mb-1">Set a new password</h1>
         <p className="text-text-muted text-sm mb-6">
           Hi {user.name}, you must change your password before using MAMS.
         </p>

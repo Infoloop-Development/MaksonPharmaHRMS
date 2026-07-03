@@ -7,6 +7,13 @@ import {
   canManageBugReports,
 } from '@mams/types';
 import { toScreenshotDataUrl } from '../src/services/bugReporting.service.js';
+import {
+  validateBugReportVideoMime,
+  validateBugReportVideoSize,
+  MAX_BUG_REPORT_VIDEO_BYTES,
+  normalizeBugReportVideoMime,
+} from '../src/services/bugReportMedia.storage.js';
+import { ApiError } from '../src/middleware/error.js';
 
 describe('BugReportCreateBodySchema', () => {
   it('accepts a minimal valid payload', () => {
@@ -68,5 +75,32 @@ describe('toScreenshotDataUrl', () => {
   it('returns null when data is missing', () => {
     expect(toScreenshotDataUrl('image/jpeg', null)).toBeNull();
     expect(toScreenshotDataUrl(null, Buffer.from('x'))).toBeNull();
+  });
+});
+
+describe('bug report video storage validation', () => {
+  it('accepts webm and mp4 mime types', () => {
+    expect(() => validateBugReportVideoMime('video/webm')).not.toThrow();
+    expect(() => validateBugReportVideoMime('video/mp4')).not.toThrow();
+  });
+
+  it('accepts browser MediaRecorder mime types with codec suffix', () => {
+    expect(() => validateBugReportVideoMime('video/webm;codecs=vp9,opus')).not.toThrow();
+    expect(normalizeBugReportVideoMime('video/webm;codecs=vp9,opus')).toBe('video/webm');
+  });
+
+  it('infers webm from filename when mime is generic', () => {
+    expect(normalizeBugReportVideoMime('application/octet-stream', 'recording.webm')).toBe(
+      'video/webm'
+    );
+  });
+
+  it('rejects unsupported mime types', () => {
+    expect(() => validateBugReportVideoMime('video/avi')).toThrow(ApiError);
+  });
+
+  it('enforces max video size', () => {
+    expect(() => validateBugReportVideoSize(1024)).not.toThrow();
+    expect(() => validateBugReportVideoSize(MAX_BUG_REPORT_VIDEO_BYTES + 1)).toThrow(ApiError);
   });
 });

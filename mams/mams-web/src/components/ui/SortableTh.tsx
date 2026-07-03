@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { InfoTip } from './Tooltip';
 
+/** Readable on surface2 in light and dark mode (Tailwind dark: variant). */
+export const TABLE_HEADER_TH_CLASS = 'text-slate-600 dark:text-slate-200';
+
 export function SortableTh({
   label,
   sortKey,
@@ -37,9 +40,11 @@ export function SortableTh({
     </>
   );
 
+  const tone = `${TABLE_HEADER_TH_CLASS} ${className}`.trim();
+
   if (!sortable || !sortKey || !onSort) {
     return (
-      <th className={`px-4 py-3 font-semibold ${className}`.trim()}>
+      <th className={`px-4 py-3 font-semibold ${tone}`.trim()}>
         {headerContent}
       </th>
     );
@@ -47,7 +52,7 @@ export function SortableTh({
 
   return (
     <th
-      className={`sortable-th ${activeCol === sortKey ? 'sorted' : ''} ${className}`.trim()}
+      className={`sortable-th ${activeCol === sortKey ? 'sorted' : ''} ${tone}`.trim()}
       onClick={() => onSort(sortKey)}
     >
       {headerContent}

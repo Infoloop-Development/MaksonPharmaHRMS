@@ -404,11 +404,11 @@ function OrgNotificationAlertsCard({ settings, canManage }: { settings: Settings
         {rows.map((row) => (
           <div
             key={row.key}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-border bg-surface2/40 px-3 py-3"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-border bg-surface2 px-3 py-3"
           >
             <div className="min-w-0">
-              <div className="text-sm font-medium">{row.label}</div>
-              <div className="text-xs text-text-muted mt-0.5">{row.description}</div>
+              <div className="text-sm font-medium text-text">{row.label}</div>
+              <div className="text-xs text-text-muted mt-0.5 leading-relaxed">{row.description}</div>
             </div>
             <Toggle
               checked={draft.orgNotificationAlerts[row.key]}
@@ -1150,7 +1150,7 @@ export function UsersManagementPanel() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <th className="py-2 w-10">
+              <th className="px-4 py-3 w-10 align-middle">
                 <BulkSelectCheckbox
                   checked={pageCheck.allSelected && pageIds.length > 0}
                   indeterminate={pageCheck.someSelected}
@@ -1158,28 +1158,28 @@ export function UsersManagementPanel() {
                   ariaLabel="Select all users on this page"
                 />
               </th>
-              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'name')} />
-              <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'email')} />
-              <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'role')} />
-              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="py-2" tooltip={tableColumnTooltip('settings', 'status')} />
-              <th className="py-2 text-right">Actions</th>
+              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('settings', 'name')} />
+              <SortableTh label="Email" sortKey="email" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('settings', 'email')} />
+              <SortableTh label="Role" sortKey="role" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('settings', 'role')} />
+              <SortableTh label="Status" sortKey="status" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('settings', 'status')} />
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {isLoading && <tr><td colSpan={6} className="py-4 text-center text-text-muted">Loading...</td></tr>}
+            {isLoading && <tr><td colSpan={6} className="px-4 py-4 text-center text-text-muted">Loading...</td></tr>}
             {!isLoading && paginatedItems.map((u) => (
-              <tr key={u._id}>
-                <td className="py-2">
+              <tr key={u._id} className="hover:bg-surface2/50 transition">
+                <td className="px-4 py-3 align-middle">
                   <BulkSelectCheckbox
                     checked={bulk.isSelected(u._id)}
                     onChange={() => bulk.toggle(u._id)}
                     ariaLabel={`Select ${u.name}`}
                   />
                 </td>
-                <td className="py-2 font-medium">{u.name}</td>
-                <td className="py-2 text-xs">{u.email}</td>
-                <td className="py-2"><Badge tone="blue">{u.role}</Badge></td>
-                <td className="py-2">
+                <td className="px-4 py-3 font-medium align-middle">{u.name}</td>
+                <td className="px-4 py-3 text-xs align-middle">{u.email}</td>
+                <td className="px-4 py-3 align-middle"><Badge tone="blue">{u.role}</Badge></td>
+                <td className="px-4 py-3 align-middle">
                   <div className="flex items-center gap-2">
                     <Toggle
                       checked={u.isActive}
@@ -1189,7 +1189,7 @@ export function UsersManagementPanel() {
                     <span className="text-xs text-text-muted">{u.isActive ? 'Active' : 'Inactive'}</span>
                   </div>
                 </td>
-                <td className="py-2 text-right">
+                <td className="px-4 py-3 text-right align-middle">
                   <button
                     type="button"
                     className="btn-outline text-xs px-3 py-2 min-h-[44px] sm:min-h-0 sm:py-1"

@@ -30,6 +30,7 @@ const EnvSchema = z.object({
     .string()
     .optional()
     .transform((v) => v !== 'false' && v !== '0'),
+  BUG_REPORT_MEDIA_DIR: z.string().default('./data/bug-reports'),
 });
 
 export const env = EnvSchema.parse(process.env);

@@ -71,6 +71,18 @@ export function brandingCssVars(
   const isLightSidebar = primaryText !== '#FFFFFF';
   const linkColor =
     resolvedTheme === 'dark' ? linkColorOnDarkSurface(primary) : linkColorOnSurface(primary);
+  const primaryBg =
+    resolvedTheme === 'dark'
+      ? relativeLuminance(primary) < 0.25
+        ? `color-mix(in srgb, ${linkColor} 18%, #252b3d)`
+        : `color-mix(in srgb, ${primary} 22%, #252b3d)`
+      : `color-mix(in srgb, ${primary} 12%, #f1f3f7)`;
+  const primaryOnBg =
+    resolvedTheme === 'dark'
+      ? linkColor
+      : relativeLuminance(primary) < 0.45
+        ? primary.toUpperCase()
+        : '#1A2878';
 
   return {
     '--color-brand-primary': primary,
@@ -81,6 +93,8 @@ export function brandingCssVars(
     '--color-brand-secondary': secondary,
     '--color-brand-secondary-rgb': rgbChannels(secondary),
     '--color-link': linkColor,
+    '--color-primary-bg': primaryBg,
+    '--color-primary-on-bg': primaryOnBg,
     '--sidebar-text': primaryText,
     '--sidebar-text-muted': isLightSidebar ? 'rgba(26, 31, 54, 0.72)' : 'rgba(255, 255, 255, 0.72)',
     '--sidebar-border': isLightSidebar ? 'rgba(26, 31, 54, 0.12)' : 'rgba(255, 255, 255, 0.12)',

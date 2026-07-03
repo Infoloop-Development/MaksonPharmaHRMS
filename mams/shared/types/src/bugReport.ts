@@ -57,6 +57,15 @@ export const BugReportContextSchema = z.object({
   appVersion: z.string().max(50).optional(),
 });
 
+export const BugReportVideoSchema = z.object({
+  filePath: z.string().max(500),
+  mimeType: z.string().max(100),
+  size: z.number().int().min(0),
+  durationMs: z.number().int().min(0).optional(),
+});
+
+export type BugReportVideo = z.infer<typeof BugReportVideoSchema>;
+
 export const BugReportCreateBodySchema = z.object({
   title: z.string().trim().min(3).max(200),
   description: z.string().trim().min(10).max(8000),
@@ -119,6 +128,7 @@ export interface BugReportListItem {
   route: string;
   reporter: BugReportReporter;
   assignee: BugReportAssignee | null;
+  hasVideo: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -136,4 +146,6 @@ export interface BugReportDetail extends BugReportListItem {
   failedRequests: z.infer<typeof BugReportFailedRequestSchema>[];
   context: z.infer<typeof BugReportContextSchema>;
   screenshotDataUrl: string | null;
+  videoUrl: string | null;
+  videoFilePath: string | null;
 }

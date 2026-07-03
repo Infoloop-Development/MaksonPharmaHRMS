@@ -16,6 +16,7 @@ import { Badge } from '../../components/ui/Badge';
 import { fmtIstDate } from '../../lib/format';
 import { formatBugReportSummary } from '../../lib/bugReport/formatBugReportSummary';
 import { statusLabel } from '../../components/admin/BugReportingTabBar';
+import { BugReportVideoPlayer } from '../../components/bugReport/BugReportVideoPlayer';
 
 function severityTone(severity: string): 'green' | 'amber' | 'red' | 'blue' {
   if (severity === 'critical') return 'red';
@@ -154,6 +155,15 @@ export function AdminBugReportDetail() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="card p-4 mb-4">
+        <h2 className="font-semibold text-sm mb-3">Screen recording</h2>
+        {data.hasVideo ? (
+          <BugReportVideoPlayer reportId={data.id} />
+        ) : (
+          <p className="text-sm text-text-muted">No screen recording attached.</p>
+        )}
       </div>
 
       <div className="card p-4 mb-4">

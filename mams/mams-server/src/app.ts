@@ -8,6 +8,7 @@ import { apiRouter } from './routes/index.js';
 import esslRouter from './routes/essl.routes.js';
 import hanvonRouter from './routes/hanvon.routes.js';
 import publicVisitorRouter from './routes/publicVisitor.routes.js';
+import publicOrgRouter from './routes/publicOrg.routes.js';
 import { errorHandler } from './middleware/error.js';
 import { requestContext } from './middleware/requestContext.js';
 
@@ -74,6 +75,9 @@ export function buildApp() {
 
   // Public visitor forms (no authentication).
   app.use('/api/public/visitor-forms', publicVisitorRouter);
+
+  // Public org branding for login and other unauthenticated surfaces.
+  app.use('/api/public/org', publicOrgRouter);
 
   // Authenticated REST API.
   app.use('/api', apiRouter);

@@ -20,7 +20,7 @@ import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { employeesTourScript } from '../lib/onboarding/scripts/employeesTourScript';
 import type { TourPageApi } from '../lib/onboarding/tourTypes';
 import type { EmployeeMasked } from '@mams/types';
-import { SortableTh } from '../components/ui/SortableTh';
+import { SortableTh, TABLE_HEADER_TH_CLASS } from '../components/ui/SortableTh';
 import { TablePagination } from '../components/ui/TablePagination';
 import { nextSortState, sortArrowFor, type SortDir } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
@@ -206,7 +206,7 @@ export function Employees() {
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px] xl:min-w-0">
             <thead className="bg-surface2">
-              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+              <tr className="text-left text-xs uppercase tracking-wider">
                 {canEdit && (
                   <th className="px-4 py-3 w-10">
                     <BulkSelectCheckbox
@@ -218,15 +218,15 @@ export function Employees() {
                   </th>
                 )}
                 <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
-                <th className="px-4 py-3 font-semibold">Biometric ID</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-200">Biometric ID</th>
                 <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
                 <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'department')} />
-                <th className="px-4 py-3 font-semibold">Location</th>
-                <th className="px-4 py-3 font-semibold">Shift</th>
-                {!isCompliant && <th className="px-4 py-3 font-semibold hidden xl:table-cell">Comp</th>}
+                <th className={`px-4 py-3 font-semibold ${TABLE_HEADER_TH_CLASS}`}>Location</th>
+                <th className={`px-4 py-3 font-semibold ${TABLE_HEADER_TH_CLASS}`}>Shift</th>
+                {!isCompliant && <th className={`px-4 py-3 font-semibold hidden xl:table-cell ${TABLE_HEADER_TH_CLASS}`}>Comp</th>}
                 <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('employees', 'joinDate')} />
                 <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'status')} />
-                {canEdit && <th className="px-4 py-3 font-semibold text-right">Actions</th>}
+                {canEdit && <th className={`px-4 py-3 font-semibold text-right ${TABLE_HEADER_TH_CLASS}`}>Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

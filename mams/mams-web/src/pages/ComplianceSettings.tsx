@@ -17,7 +17,7 @@ export function ComplianceSettings(){
             </div>
 
             <div className="card p-5 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center font-bold text-base text-primary shrink-0">
+                <div className="w-12 h-12 rounded-md bg-primary-bg flex items-center justify-center font-bold text-base text-primary-on-bg shrink-0">
                     {user.name.split(' ').map((s) => s[0]).slice(0, 2).join('')}
                 </div>
                 <div className="min-w-0 flex-1">

@@ -13,7 +13,10 @@ const baseReport = {
   updatedAt: '2026-06-30T12:05:00.000Z',
   reporter: { id: '1', name: 'Test User', email: 't@x.com', role: 'hr.admin' },
   assignee: null,
+  hasVideo: false,
   screenshotDataUrl: null,
+  videoUrl: null,
+  videoFilePath: null,
   breadcrumbs: [{ action: 'click:Save', ts: '2026-06-30T11:59:00.000Z' }],
   consoleLog: [{ level: 'error' as const, message: 'API 500', ts: '2026-06-30T11:59:01.000Z' }],
   failedRequests: [{ method: 'POST', path: '/employees', status: 500, ts: '2026-06-30T11:59:01.000Z' }],
@@ -51,6 +54,17 @@ describe('formatBugReportSummary', () => {
       screenshotDataUrl: 'data:image/jpeg;base64,abc',
     });
     expect(text).toContain('Screenshot attached:** Yes');
+  });
+
+  it('notes when video walkthrough is attached with file path', () => {
+    const text = formatBugReportSummary({
+      ...baseReport,
+      hasVideo: true,
+      videoFilePath: 'report-123/recording.webm',
+      videoUrl: '/admin/bug-reporting/report-123/video',
+    });
+    expect(text).toContain('Video walkthrough attached:** Yes');
+    expect(text).toContain('report-123/recording.webm');
   });
 
   it('includes assignee details when assigned', () => {

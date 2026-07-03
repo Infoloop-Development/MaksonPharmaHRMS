@@ -16,7 +16,7 @@ export function AdminSectionCard({
   return (
     <div className={`card p-5 h-full flex flex-col min-h-0 ${className}`.trim()}>
       <div className="flex items-center justify-between gap-2 mb-4 shrink-0">
-        <h2 className="text-base font-bold">{title}</h2>
+        <h2 className="text-base font-bold text-text">{title}</h2>
         {headerRight}
       </div>
       <div className="space-y-0 flex-1 min-h-0">{children}</div>

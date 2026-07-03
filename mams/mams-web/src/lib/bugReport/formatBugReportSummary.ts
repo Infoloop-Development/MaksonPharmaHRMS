@@ -51,6 +51,7 @@ export function formatBugReportSummary(report: BugReportDetail): string {
 - **Module:** ${report.module}
 - **Route:** ${report.route}
 - **Screenshot attached:** ${report.screenshotDataUrl ? 'Yes (available in the bug report detail view)' : 'No'}
+- **Video walkthrough attached:** ${report.hasVideo ? `Yes — file at \`${report.videoFilePath ?? 'unknown path'}\` (view in bug report detail)` : 'No'}
 - **Reported at:** ${report.createdAt}
 - **Last updated:** ${report.updatedAt}
 

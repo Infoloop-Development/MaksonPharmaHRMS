@@ -133,6 +133,7 @@ export function AdminBugReporting() {
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
                 <SortableTh label="Title" sortKey="title" activeCol={sortBy} sortArrow={(c) => sortArrowFor(c, sortBy, sortDir)} onSort={toggleSort} />
+                <th className="px-4 py-3 font-semibold">Video</th>
                 <SortableTh label="Module" sortKey="module" activeCol={sortBy} sortArrow={(c) => sortArrowFor(c, sortBy, sortDir)} onSort={toggleSort} />
                 <SortableTh label="Severity" sortKey="severity" activeCol={sortBy} sortArrow={(c) => sortArrowFor(c, sortBy, sortDir)} onSort={toggleSort} />
                 <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={(c) => sortArrowFor(c, sortBy, sortDir)} onSort={toggleSort} />
@@ -143,14 +144,14 @@ export function AdminBugReporting() {
             <tbody className="divide-y divide-border">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-text-muted">
+                  <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
                     Loading…
                   </td>
                 </tr>
               )}
               {!isLoading && items.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-text-muted">
+                  <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
                     No bug reports found.
                   </td>
                 </tr>
@@ -162,6 +163,7 @@ export function AdminBugReporting() {
                   onClick={() => navigate(`/admin/bug-reporting/${row.id}`)}
                 >
                   <td className="px-4 py-3 font-medium max-w-xs truncate">{row.title}</td>
+                  <td className="px-4 py-3 text-xs">{row.hasVideo ? 'Yes' : '—'}</td>
                   <td className="px-4 py-3 text-xs">{row.module}</td>
                   <td className="px-4 py-3">
                     <Badge tone={severityTone(row.severity)}>{BUG_REPORT_SEVERITY_LABELS[row.severity]}</Badge>
@@ -185,7 +187,10 @@ export function AdminBugReporting() {
             onClick={() => navigate(`/admin/bug-reporting/${row.id}`)}
           >
             <div className="font-medium">{row.title}</div>
-            <div className="text-xs text-text-muted mt-1">{row.module} · {row.reporter.name}</div>
+            <div className="text-xs text-text-muted mt-1">
+              {row.module} · {row.reporter.name}
+              {row.hasVideo ? ' · Video' : ''}
+            </div>
             <div className="flex gap-2 mt-2">
               <Badge tone={severityTone(row.severity)}>{BUG_REPORT_SEVERITY_LABELS[row.severity]}</Badge>
               <span className="text-xs">{statusLabel(row.status)}</span>

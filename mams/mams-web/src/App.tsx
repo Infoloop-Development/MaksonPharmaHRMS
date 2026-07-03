@@ -30,7 +30,7 @@ import { AdminRecycleBin } from './pages/admin/AdminRecycleBin';
 import { AdminBugReporting } from './pages/admin/AdminBugReporting';
 import { AdminBugReportDetail } from './pages/admin/AdminBugReportDetail';
 import { BugReportInstrumentationProvider } from './components/bugReport/BugReportInstrumentationProvider';
-import { BugReportFab } from './components/bugReport/BugReportFab';
+import { BugReportProvider } from './components/bugReport/BugReportContext';
 import { isAutogenDemoEnabled } from './config/featureFlags';
 import { AutogenerationDemo } from './pages/AutogenerationDemo';
 import { ComplianceAttendanceLog } from './pages/ComplianceAttendanceLog';
@@ -80,6 +80,7 @@ function HomeRedirect() {
 export function App() {
   return (
     <BugReportInstrumentationProvider>
+      <BugReportProvider>
       <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/visit/:slug" element={<PublicVisitorForm />} />
@@ -146,7 +147,7 @@ export function App() {
       </Route>
       <Route path="*" element={<HomeRedirect />} />
       </Routes>
-      <BugReportFab />
+      </BugReportProvider>
     </BugReportInstrumentationProvider>
   );
 }

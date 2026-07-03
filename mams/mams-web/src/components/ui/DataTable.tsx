@@ -47,7 +47,7 @@ export function DataTable<T>({
         <div className={scrollClassName}>
           <table className={tableClassName}>
             <thead className="bg-surface2">
-              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+              <tr className="text-left text-xs uppercase tracking-wider">
                 {columns.map((col) => (
                   <SortableTh
                     key={col.id}

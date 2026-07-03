@@ -8,6 +8,7 @@ import { MobileBottomNav } from '../MobileBottomNav';
 import { ToastContainer } from '../ui/Toast';
 import { settingsApi } from '../../api/settings';
 import { TimeFormatProvider } from '../../store/timeFormat';
+import { BugReportMobileTrigger } from '../bugReport/BugReportSidebarFooter';
 import { hasMobileBottomNav } from '../../lib/mobileBottomNav';
 import { useState, useCallback, useEffect } from 'react';
 
@@ -71,6 +72,7 @@ export function AdminLayout() {
           <MobileBottomNav />
         </div>
         <ToastContainer />
+        <BugReportMobileTrigger suppressed={sidebarOpen} />
       </div>
     </TimeFormatProvider>
   );

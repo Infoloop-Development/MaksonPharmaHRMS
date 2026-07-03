@@ -7,6 +7,8 @@ import { setFirstLoginSession } from '../lib/onboarding/session';
 import { useAuth } from '../store/auth';
 import { defaultHomePath } from '@mams/types';
 import { resetSessionStart } from '../lib/bugReport';
+import { AuthBrandHeader } from '../components/AuthBrandHeader';
+import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
 
 export function Login() {
   const [email, setEmail] = useState('org.admin@makson-group.com');
@@ -16,6 +18,7 @@ export function Login() {
   const setAuth = useAuth((s) => s.setAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { companyName, companyLogo } = usePublicOrgBranding();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +41,10 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0D1540] via-primary to-primary-light">
-      <div className="bg-surface rounded-2xl p-6 sm:p-12 w-full max-w-[420px] mx-4 shadow-2xl border border-border">
-        <div className="text-[11px] tracking-[3px] uppercase text-red font-semibold mb-6">
-          Makson Group of Companies
-        </div>
-        <h1 className="text-2xl font-bold text-primary mb-1">Attendance Management</h1>
+    <div className="min-h-screen flex items-center justify-center auth-shell-bg p-4">
+      <div className="bg-surface rounded-2xl p-6 sm:p-12 w-full max-w-[420px] shadow-2xl border border-border">
+        <AuthBrandHeader companyName={companyName} companyLogo={companyLogo} />
+        <h1 className="text-2xl font-bold text-text mb-1">Attendance Management</h1>
         <p className="text-text-muted text-sm mb-7">Sign in to continue</p>
 
         <form onSubmit={submit} className="space-y-4">
@@ -75,23 +76,27 @@ export function Login() {
           </button>
         </form>
 
-        <div className="mt-6 p-3 bg-surface2 rounded-md text-[11px] text-text-subtle leading-relaxed">
-          <strong>Demo credentials</strong> (password <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">makson2026</code>):
+        <div className="mt-6 p-3 bg-surface2 rounded-md text-[11px] text-text-muted leading-relaxed">
+          <strong className="text-text">Demo credentials</strong> (password{' '}
+          <code className="auth-inline-code">makson2026</code>):
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">org.admin@makson-group.com</code>: Admin Console
+          <code className="auth-inline-code">org.admin@makson-group.com</code>: Admin Console
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">it.admin@makson-group.com</code>: IT Admin (Admin Console + Recycle bin)
+          <code className="auth-inline-code">it.admin@makson-group.com</code>: IT Admin (Admin Console + Recycle bin)
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.admin@makson-group.com</code>: HR (real / 12-hour view)
+          <code className="auth-inline-code">hr.admin@makson-group.com</code>: HR (real / 12-hour view)
           <br />
-          <code className="bg-border px-1.5 py-0.5 rounded text-[10px] font-mono">hr.compliance@makson-group.com</code>: Compliance (8-hour view)
+          <code className="auth-inline-code">hr.compliance@makson-group.com</code>: Compliance (8-hour view)
           <br />
-          <span className="text-text-muted">First time or login fails? From the <code className="bg-border px-1 rounded">mams</code> folder run: <code className="bg-border px-1 rounded">npm run seed:users</code></span>
+          <span className="text-text-muted">
+            First time or login fails? From the <code className="auth-inline-code">mams</code> folder run:{' '}
+            <code className="auth-inline-code">npm run seed:users</code>
+          </span>
         </div>
 
-        <div className="text-center mt-6 text-[11px] text-text-subtle">
+        <div className="text-center mt-6 text-[11px] text-text-muted">
           Powered by{' '}
-          <a href="https://www.infoloop.co" className="text-primary-light font-semibold no-underline" target="_blank" rel="noreferrer">
+          <a href="https://www.infoloop.co" className="text-link font-semibold no-underline hover:underline" target="_blank" rel="noreferrer">
             Infoloop Technologies
           </a>
         </div>

@@ -96,7 +96,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
               aria-label={user?.name ? `Account menu for ${user.name}` : 'Account menu'}
               className="flex items-center px-1"
             >
-              <span className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center font-bold text-[10px] text-primary shrink-0">
+              <span className="w-7 h-7 rounded-md bg-primary-bg flex items-center justify-center font-bold text-[10px] text-primary-on-bg shrink-0">
                 {(user?.name ?? '??')
                   .split(' ')
                   .map((s) => s[0])

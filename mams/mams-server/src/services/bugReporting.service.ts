@@ -13,6 +13,13 @@ import { BugReportModel } from '../models/BugReport.js';
 import { UserModel } from '../models/User.js';
 import type { BugReportDoc } from '../models/BugReport.js';
 import { ApiError } from '../middleware/error.js';
+import {
+  deleteBugReportVideo,
+  saveBugReportVideo,
+  bugReportVideoExists,
+  resolveBugReportVideoPath,
+  normalizeBugReportVideoMime,
+} from './bugReportMedia.storage.js';
 
 const MAX_SCREENSHOT_BYTES = 1_500_000;
 
@@ -93,6 +100,7 @@ function serializeListItem(
     assignee: assignee
       ? { id: assignee.id, name: assignee.name, email: assignee.email }
       : null,
+    hasVideo: Boolean(doc.video?.filePath),
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
@@ -171,6 +179,8 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
     failedRequests: (doc.failedRequests ?? []) as BugReportDetail['failedRequests'],
     context: (doc.context ?? {}) as BugReportDetail['context'],
     screenshotDataUrl: toScreenshotDataUrl(doc.screenshot?.mimeType, doc.screenshot?.data),
+    videoUrl: doc.video?.filePath ? `/admin/bug-reporting/${id}/video` : null,
+    videoFilePath: doc.video?.filePath ?? null,
   };
 }
 
@@ -194,4 +204,74 @@ export async function patchBugReport(id: string, body: BugReportPatchBody) {
 export async function listBugReportModules(): Promise<string[]> {
   const rows = await BugReportModel.distinct('module');
   return rows.sort();
+}
+
+export async function attachBugReportVideo(
+  reportId: string,
+  userId: string,
+  permissions: string[],
+  file: { buffer: Buffer; mimetype: string; size: number; originalname?: string },
+  durationMs?: number
+): Promise<void> {
+  if (!Types.ObjectId.isValid(reportId)) {
+    throw new ApiError(404, 'not_found', 'Bug report not found');
+  }
+
+  const doc = await BugReportModel.findById(reportId);
+  if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
+
+  const isReporter = String(doc.reporterId) === userId;
+  const canManage = permissions.includes('manage.bug_reports');
+  if (!isReporter && !canManage) {
+    throw new ApiError(403, 'forbidden', 'Not allowed to upload video for this report');
+  }
+  if (doc.video?.filePath) {
+    throw new ApiError(409, 'conflict', 'This bug report already has a video');
+  }
+
+  let relativePath: string | null = null;
+  try {
+    relativePath = await saveBugReportVideo(
+      reportId,
+      file.buffer,
+      file.mimetype,
+      file.originalname
+    );
+    const normalizedMime = normalizeBugReportVideoMime(file.mimetype, file.originalname);
+    doc.video = {
+      filePath: relativePath,
+      mimeType: normalizedMime,
+      size: file.size,
+      durationMs: durationMs ?? null,
+    };
+    await doc.save();
+  } catch (err) {
+    if (relativePath) await deleteBugReportVideo(relativePath);
+    throw err;
+  }
+}
+
+export async function streamBugReportVideo(reportId: string): Promise<{
+  absolutePath: string;
+  mimeType: string;
+  size: number;
+}> {
+  if (!Types.ObjectId.isValid(reportId)) {
+    throw new ApiError(404, 'not_found', 'Bug report not found');
+  }
+  const doc = await BugReportModel.findById(reportId).select('video').lean();
+  if (!doc?.video?.filePath) {
+    throw new ApiError(404, 'not_found', 'Video not found');
+  }
+
+  const exists = await bugReportVideoExists(doc.video.filePath);
+  if (!exists) {
+    throw new ApiError(404, 'not_found', 'Video file missing on disk');
+  }
+
+  return {
+    absolutePath: resolveBugReportVideoPath(doc.video.filePath),
+    mimeType: doc.video.mimeType ?? 'video/webm',
+    size: doc.video.size ?? 0,
+  };
 }

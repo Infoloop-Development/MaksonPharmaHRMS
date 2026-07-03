@@ -6,6 +6,7 @@ import { settingsApi } from '../api/settings';
 import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
 import { SidebarBrandHeader } from './SidebarBrandHeader';
+import { BugReportSidebarFooter } from './bugReport/BugReportSidebarFooter';
 import { hasOrgAdminLikeAccess, type Role } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
@@ -158,6 +159,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
           </NavLink>
         )}
       </nav>
+      <BugReportSidebarFooter collapsed={collapsed} />
     </aside>
   );
 }

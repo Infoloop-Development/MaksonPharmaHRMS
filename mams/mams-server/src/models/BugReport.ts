@@ -8,6 +8,16 @@ const bugReportScreenshotSchema = new Schema(
   { _id: false }
 );
 
+const bugReportVideoSchema = new Schema(
+  {
+    filePath: { type: String, default: null },
+    mimeType: { type: String, default: null },
+    size: { type: Number, default: null },
+    durationMs: { type: Number, default: null },
+  },
+  { _id: false }
+);
+
 const bugReportSchema = new Schema(
   {
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -33,6 +43,7 @@ const bugReportSchema = new Schema(
     breadcrumbs: { type: [Schema.Types.Mixed], default: [] },
     failedRequests: { type: [Schema.Types.Mixed], default: [] },
     screenshot: { type: bugReportScreenshotSchema, default: null },
+    video: { type: bugReportVideoSchema, default: null },
   },
   { timestamps: true }
 );

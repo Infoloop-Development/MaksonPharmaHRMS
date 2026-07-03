@@ -21,7 +21,7 @@ export function Field({ label, hint, labelTooltip, error, required, children }: 
         </span>
       </label>
       {children}
-      {hint && !error && <div className="text-[11px] text-text-subtle mt-1">{hint}</div>}
+      {hint && !error && <div className="text-[11px] text-text-muted mt-1">{hint}</div>}
       {error && <div className="text-[11px] text-red mt-1">{error}</div>}
     </div>
   );
@@ -89,15 +89,17 @@ export function Toggle({
       className={`flex items-center gap-2 group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <span
-        className={`w-10 h-6 rounded-full relative transition ${checked ? 'bg-primary' : 'bg-border'}`}
+        className={`toggle-track w-10 h-6 rounded-full relative shrink-0 transition-colors ${
+          checked ? 'toggle-track--on' : 'toggle-track--off'
+        }`}
       >
         <span
-          className={`absolute top-0.5 w-5 h-5 rounded-full bg-surface shadow transition-all ${
+          className={`toggle-knob absolute top-0.5 w-5 h-5 rounded-full transition-all ${
             checked ? 'left-[18px]' : 'left-0.5'
           }`}
         />
       </span>
-      {label && <span className="text-sm">{label}</span>}
+      {label && <span className="text-sm text-text">{label}</span>}
     </button>
   );
 }

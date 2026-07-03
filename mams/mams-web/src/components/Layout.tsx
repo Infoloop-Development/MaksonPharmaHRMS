@@ -12,6 +12,7 @@ import { useAuth } from '../store/auth';
 import { hasOrgAdminLikeAccess } from '@mams/types';
 import { hasMobileBottomNav } from '../lib/mobileBottomNav';
 import { TimeFormatProvider } from '../store/timeFormat';
+import { BugReportMobileTrigger } from './bugReport/BugReportSidebarFooter';
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -108,6 +109,7 @@ export function Layout() {
           <MobileBottomNav />
         </div>
         <ToastContainer />
+        <BugReportMobileTrigger suppressed={sidebarOpen} />
       </div>
     </TimeFormatProvider>
   );

@@ -26,3 +26,13 @@ export {
   moduleFromRoute,
 } from './sessionContext.js';
 export { captureViewportScreenshot } from './captureScreenshot.js';
+export { submitBugReport, type SubmitBugReportProgress } from './submitBugReport.js';
+export { uploadBugReportVideoXHR } from './uploadBugReportVideo.js';
+export {
+  useBugReportRecorder,
+  isBugReportRecordingSupported,
+  type BugReportRecorder,
+  type RecordingMode,
+  type RecordingPhase,
+} from './useBugReportRecorder.js';
+export { formatBugReportSummary } from './formatBugReportSummary.js';
