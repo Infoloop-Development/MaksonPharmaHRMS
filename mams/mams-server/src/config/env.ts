@@ -31,6 +31,11 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => v !== 'false' && v !== '0'),
   BUG_REPORT_MEDIA_DIR: z.string().default('./data/bug-reports'),
+  BUG_REPORT_TRANSCRIPTION_TEMP_DIR: z.string().default('./data/transcription-temp'),
+  VOSK_SERVICE_URL: z.string().default('http://127.0.0.1:8765'),
+  VOSK_MODELS_DIR: z.string().default('./vosk-models'),
+  FFMPEG_PATH: z.string().default('ffmpeg'),
+  VOSK_TRANSCRIBE_TIMEOUT_MS: z.coerce.number().int().min(1000).default(180_000),
 });
 
 export const env = EnvSchema.parse(process.env);

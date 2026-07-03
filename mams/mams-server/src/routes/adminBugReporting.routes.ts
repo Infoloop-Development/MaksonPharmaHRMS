@@ -10,6 +10,7 @@ import {
   patchBugReport,
   streamBugReportVideo,
 } from '../services/bugReporting.service.js';
+import { transcribeBugReportVideo } from '../services/bugReportTranscription.service.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -69,6 +70,40 @@ router.get('/:id/video', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     res.json(await getBugReportDetail(req.params.id ?? ''));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/transcribe', async (req, res, next) => {
+  try {
+    const id = req.params.id ?? '';
+    const regenerate = req.body?.regenerate === true;
+    const languageRaw = typeof req.body?.language === 'string' ? req.body.language : 'auto';
+    const language =
+      languageRaw === 'en' || languageRaw === 'hi' || languageRaw === 'gu' ? languageRaw : 'auto';
+    const updated = await transcribeBugReportVideo(id, { regenerate, language });
+    await audit(
+      'bug_report_transcribed',
+      {
+        userId: req.auth!.sub,
+        ipAddress: req.clientIp ?? null,
+        userAgent: req.header('user-agent') ?? null,
+      },
+      {
+        entityType: 'bug_report',
+        entityId: id,
+        payload: {
+          regenerate,
+          language,
+          status: updated.transcriptionStatus,
+          detectedLanguage: updated.detectedLanguage,
+          confidence: updated.transcriptionConfidence,
+          error: updated.transcriptionError,
+        },
+      }
+    );
+    res.json(updated);
   } catch (err) {
     next(err);
   }

@@ -20,7 +20,9 @@
     "test": "npm --workspace mams-server run test",
     "typecheck": "npm --workspaces --if-present run typecheck",
     "lint": "npm --workspaces --if-present run lint",
-    "validate": "npm run typecheck && npm run lint && npm run test"
+    "validate": "npm run typecheck && npm run lint && npm run test",
+    "vosk:models": "node mams-server/scripts/download-vosk-models.mjs",
+    "dev:vosk": "cd mams-server/vosk-service && python -m uvicorn app:app --host 127.0.0.1 --port 8765"
   },
   "engines": {
     "node": ">=20.0.0",

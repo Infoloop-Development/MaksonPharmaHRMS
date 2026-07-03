@@ -15,3 +15,7 @@ npm-debug.log*
 coverage/
 .vite/
 data/bug-reports/
+mams-server/data/
+mams-server/vosk-models/
+mams-server/data/transcription-temp/
+**/__pycache__/

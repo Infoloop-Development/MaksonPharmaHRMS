@@ -29,6 +29,14 @@ const baseReport = {
     viewport: '1920x1080',
     sessionDurationMs: 60000,
   },
+  transcriptionText: null,
+  detectedLanguage: null,
+  transcriptionStatus: null,
+  transcriptionError: null,
+  transcriptionConfidence: null,
+  transcriptionGeneratedAt: null,
+  videoAvailableOnDisk: true,
+  videoHasAudio: true,
 };
 
 describe('formatBugReportSummary', () => {

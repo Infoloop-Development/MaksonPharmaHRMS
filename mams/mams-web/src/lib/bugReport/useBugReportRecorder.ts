@@ -41,6 +41,7 @@ export function useBugReportRecorder() {
 
   const displayStreamRef = useRef<MediaStream | null>(null);
   const webcamStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
@@ -51,11 +52,12 @@ export function useBugReportRecorder() {
   const durationMsRef = useRef(0);
 
   const stopAllTracks = useCallback(() => {
-    for (const stream of [displayStreamRef.current, webcamStreamRef.current]) {
+    for (const stream of [displayStreamRef.current, webcamStreamRef.current, micStreamRef.current]) {
       stream?.getTracks().forEach((t) => t.stop());
     }
     displayStreamRef.current = null;
     webcamStreamRef.current = null;
+    micStreamRef.current = null;
     setWebcamPreviewStream(null);
   }, []);
 
@@ -84,18 +86,24 @@ export function useBugReportRecorder() {
     pauseStartedRef.current = null;
   }, [clearPreviewUrl, stopAllTracks]);
 
-  const buildCombinedStream = useCallback((display: MediaStream, webcam: MediaStream | null) => {
-    const combined = new MediaStream();
-    for (const track of display.getVideoTracks()) combined.addTrack(track);
-    for (const track of display.getAudioTracks()) combined.addTrack(track);
-    if (webcam) {
-      for (const track of webcam.getVideoTracks()) combined.addTrack(track);
-      if (display.getAudioTracks().length === 0) {
-        for (const track of webcam.getAudioTracks()) combined.addTrack(track);
+  const buildCombinedStream = useCallback(
+    (display: MediaStream, webcam: MediaStream | null, mic: MediaStream | null) => {
+      const combined = new MediaStream();
+      for (const track of display.getVideoTracks()) combined.addTrack(track);
+      for (const track of display.getAudioTracks()) combined.addTrack(track);
+      if (webcam) {
+        for (const track of webcam.getVideoTracks()) combined.addTrack(track);
+        if (display.getAudioTracks().length === 0) {
+          for (const track of webcam.getAudioTracks()) combined.addTrack(track);
+        }
       }
-    }
-    return combined;
-  }, []);
+      if (display.getAudioTracks().length === 0 && combined.getAudioTracks().length === 0 && mic) {
+        for (const track of mic.getAudioTracks()) combined.addTrack(track);
+      }
+      return combined;
+    },
+    []
+  );
 
   const finalizeBlob = useCallback(() => {
     const pausedExtra =
@@ -162,17 +170,32 @@ export function useBugReportRecorder() {
         displayStreamRef.current = display;
 
         let webcam: MediaStream | null = null;
+        let mic: MediaStream | null = null;
         if (recordingMode === 'screen_webcam') {
           webcam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           webcamStreamRef.current = webcam;
           setWebcamPreviewStream(webcam);
+        } else {
+          try {
+            mic = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            micStreamRef.current = mic;
+          } catch {
+            setErrorMessage(
+              'Microphone access was denied. The recording will have no audio and cannot be transcribed.'
+            );
+          }
         }
 
         display.getVideoTracks()[0]?.addEventListener('ended', () => {
           stopRecording();
         });
 
-        const combined = buildCombinedStream(display, webcam);
+        const combined = buildCombinedStream(display, webcam, mic);
+        if (combined.getAudioTracks().length === 0) {
+          setErrorMessage(
+            'No audio in this recording. Allow microphone access (or share tab audio) so the video can be transcribed.'
+          );
+        }
         mimeTypeRef.current = pickRecorderMimeType();
         const recorder = new MediaRecorder(combined, { mimeType: mimeTypeRef.current });
         recorderRef.current = recorder;
