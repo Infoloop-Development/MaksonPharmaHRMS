@@ -26,7 +26,7 @@ export function BugReportSidebarFooter({ collapsed = false }: Props) {
   return (
     <div
       data-bug-report-ignore
-      className="bug-report-sidebar-footer shrink-0 border-t border-sidebar-border p-2 lg:p-3 space-y-2"
+      className="bug-report-sidebar-footer shrink-0 p-2 lg:p-3 space-y-2"
     >
       {showWebcamPip && isRecordingUi && (
         <BugReportRecordingPip stream={recorder.webcamPreviewStream} inline />

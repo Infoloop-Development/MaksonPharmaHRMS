@@ -18,13 +18,13 @@ export function ComplianceAttendanceLog() {
   const total = data?.total ?? 0;
 
   const headerActions = (
-    <button type="button" className="btn-outline btn-sm shrink-0" onClick={() => setReportOpen(true)}>
+    <button type="button" className="btn-primary btn-sm shrink-0" onClick={() => setReportOpen(true)}>
       Generate report
     </button>
   );
 
   const mobileReportButton = (
-    <button type="button" className="btn-outline btn-sm shrink-0" onClick={() => setReportOpen(true)}>
+    <button type="button" className="btn-primary btn-sm shrink-0" onClick={() => setReportOpen(true)}>
       Report
     </button>
   );

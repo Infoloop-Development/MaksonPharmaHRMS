@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { getChartColors } from '../../lib/chartColors';
 import { DONUT_CHART_SIZE } from './useDashboardChartState';
 import type { useDashboardChartState } from './useDashboardChartState';
-import { fmtDate, fmtNumber, fmtWeekdayShort } from '../../lib/format';
+import { fmtDate, fmtNumber, fmtWeekdayFull } from '../../lib/format';
 
 type ChartState = ReturnType<typeof useDashboardChartState>;
 
@@ -14,6 +14,7 @@ export function DashboardDonutChartCard({
   donutChart,
   donutMeta,
   selectedDate,
+  asOfDate,
   punctualityTotal,
   hasChartData,
   clickLegend,
@@ -31,25 +32,27 @@ export function DashboardDonutChartCard({
   | 'clickLegend'
   | 'statusFilter'
   | 'chartsData'
->) {
+> & { asOfDate?: string }) {
   const { resolvedTheme } = useTheme();
   const CHART_COLORS = getChartColors(resolvedTheme === 'dark');
 
   const showEmpty = !isInitialLoad && (!hasChartData || punctualityTotal === 0 || !donutChart);
+  const isToday = !selectedDate || selectedDate === asOfDate;
+  const donutTitle = selectedDate && !isToday
+    ? `${fmtWeekdayFull(selectedDate)}'s Breakdown`
+    : "Today's Breakdown";
 
   return (
     <div
       className={`dash-chart-card transition-opacity duration-150 ${donutRefreshing ? 'opacity-70' : ''}`}
       data-tour-id="dashboard-donut-chart"
     >
-      <h2 className="text-lg font-bold mb-1">
-        {selectedDate ? `${fmtWeekdayShort(selectedDate)}'s breakdown` : "Day's breakdown"}
-      </h2>
+      <h2 className="text-lg font-bold mb-1">{donutTitle}</h2>
       <p className="text-xs text-text-muted mb-4">
         {chartsData
           ? `${fmtDate(chartsData.weekPunctuality.date)} · ${fmtNumber(chartsData.weekPunctuality.totalActive)} active employees`
           : '…'}
-        {' · '}Click segments or legend to filter
+        {' · '}Click to filter
       </p>
       <div className="dash-chart-card-body flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 min-h-0">
         {isInitialLoad && (

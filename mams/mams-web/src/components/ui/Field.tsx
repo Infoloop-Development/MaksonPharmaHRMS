@@ -52,15 +52,22 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
 );
 
 export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
-  function Select({ children, ...props }, ref) {
+  function Select({ children, className, ...props }, ref) {
     return (
-      <select
-        ref={ref}
-        {...props}
-        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition ${props.className ?? ''}`}
-      >
-        {children}
-      </select>
+      <div className={`relative${className ? ` ${className}` : ''}`}>
+        <select
+          ref={ref}
+          {...props}
+          className="w-full appearance-none px-3 py-2 pr-8 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+        >
+          {children}
+        </select>
+        <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-text-muted">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+      </div>
     );
   }
 );

@@ -1,11 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
+import type { LeaveStatus } from '@mams/types';
 import { leaveApi } from '../../api/leave';
 import { Modal } from '../ui/Modal';
-import { Badge } from '../ui/Badge';
 import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { leaveTypeLabel, leaveStatusTone } from './leaveUtils';
 
-export function LeaveDetailModal({ applicationId, onClose }: { applicationId: string; onClose: () => void }) {
+const PILL_STYLES: Record<LeaveStatus, string> = {
+  Pending:   'bg-amber text-white',
+  Approved:  'bg-green text-white',
+  Rejected:  'border border-red text-red',
+  Cancelled: 'border border-border text-text-muted',
+};
+
+function StatusPill({ status }: { status: LeaveStatus }) {
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${PILL_STYLES[status]}`}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      {status}
+    </span>
+  );
+}
+
+export function LeaveDetailModal({
+  applicationId,
+  canApprove,
+  onClose,
+  onApprove,
+  onReject,
+}: {
+  applicationId: string;
+  canApprove?: boolean;
+  onClose: () => void;
+  onApprove?: () => void;
+  onReject?: () => void;
+}) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['leave', 'application', applicationId],
     queryFn: () => leaveApi.getApplication(applicationId),
@@ -18,74 +48,110 @@ export function LeaveDetailModal({ applicationId, onClose }: { applicationId: st
     occurredAt: string;
   }>;
 
+  const showActions = canApprove && data?.status === 'Pending' && onApprove && onReject;
+
+  const footer = showActions ? (
+    <>
+      <button type="button" className="btn-outline" onClick={onReject}>Reject</button>
+      <button type="button" className="btn-primary" onClick={onApprove}>Approve</button>
+    </>
+  ) : undefined;
+
   return (
-    <Modal open title="Leave application detail" onClose={onClose} size="md">
+    <Modal open title="Leave application detail" onClose={onClose} size="md" footer={footer}>
       {isLoading && <p className="text-sm text-text-muted py-4">Loading…</p>}
       {isError && <p className="text-sm text-red py-4">Could not load leave details.</p>}
       {data && (
-        <div className="space-y-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Badge tone={leaveStatusTone(data.status)}>{data.status}</Badge>
-            <span className="text-text-muted font-mono text-xs">{data._id}</span>
+        <div className="text-sm space-y-6">
+
+          {/* Status pill — sits slightly above the first grid, left-aligned */}
+          <div style={{ marginTop: '-6px', marginLeft: '-2px' }}>
+            <StatusPill status={data.status} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Employee + Leave type */}
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide">Employee</div>
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Employee</div>
               <div className="font-medium">{data.employeeId?.name ?? EMPTY_CELL}</div>
-              <div className="font-mono text-xs text-text-muted">{data.employeeId?.empCode}</div>
+              <div className="font-mono text-xs text-text-muted mt-0.5">{data.employeeId?.empCode}</div>
             </div>
             <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide">Leave type</div>
-              <div>{leaveTypeLabel(data)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide">Dates</div>
-              <div>{fmtDate(data.fromDate)} to {fmtDate(data.toDate)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide">Total days</div>
-              <div className="font-mono font-semibold">{data.totalDays}</div>
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Leave type</div>
+              <div className="font-medium">{leaveTypeLabel(data)}</div>
             </div>
           </div>
 
+          {/* Dates + Total days */}
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Dates</div>
+              <div className="font-medium">
+                {fmtDate(data.fromDate)}
+                {data.fromDate !== data.toDate && <> to {fmtDate(data.toDate)}</>}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Total days</div>
+              <div className="font-medium">{data.totalDays} {data.totalDays === 1 ? 'day' : 'days'}</div>
+            </div>
+          </div>
+
+          {/* Reason */}
           <div>
-            <div className="text-xs text-text-subtle uppercase tracking-wide mb-1">Reason</div>
-            <p className="text-text bg-surface2 p-3 rounded-md border border-border">{data.reason}</p>
+            <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-2">Reason</div>
+            <div className="border border-border rounded-lg p-3 bg-surface2 text-text leading-relaxed min-h-[48px]">
+              {data.reason}
+            </div>
           </div>
 
+          {/* Approver note */}
           {data.approverNote && (
             <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide mb-1">Approver note</div>
-              <p className="text-text-muted">{data.approverNote}</p>
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-2">Approver note</div>
+              <div className="border border-border rounded-lg p-3 bg-surface2 text-text-muted leading-relaxed">
+                {data.approverNote}
+              </div>
             </div>
           )}
 
+          {/* Excluded holidays */}
           {data.excludedHolidayDates && data.excludedHolidayDates.length > 0 && (
             <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide mb-1">Excluded holidays</div>
-              <p className="text-text-muted">{data.excludedHolidayDates.map((d) => fmtDate(d)).join(', ')}</p>
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-2">Excluded holidays</div>
+              <div className="flex flex-wrap gap-1.5">
+                {data.excludedHolidayDates.map((d) => (
+                  <span key={d} className="px-2 py-0.5 rounded-md bg-surface2 text-text-muted text-xs font-mono border border-border">
+                    {fmtDate(d)}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
+          {/* Quota ledger */}
           {ledger.length > 0 && (
             <div>
-              <div className="text-xs text-text-subtle uppercase tracking-wide mb-2">Quota ledger</div>
-              <div className="border border-border rounded-md overflow-hidden">
+              <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-2">Quota ledger</div>
+              <div className="border border-border rounded-lg overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-surface2 text-left">
-                      <th className="px-3 py-2">Delta</th>
-                      <th className="px-3 py-2">Balance</th>
-                      <th className="px-3 py-2">Reason</th>
+                    <tr className="bg-surface2 text-left text-text-subtle">
+                      <th className="px-4 py-3 font-semibold uppercase tracking-wide">Delta</th>
+                      <th className="px-4 py-3 font-semibold uppercase tracking-wide">Balance</th>
+                      <th className="px-4 py-3 font-semibold uppercase tracking-wide">Reason</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border/60">
                     {ledger.map((row, i) => (
-                      <tr key={i} className="border-t border-border/60">
-                        <td className="px-3 py-2 font-mono">{row.delta > 0 ? `+${row.delta}` : row.delta}</td>
-                        <td className="px-3 py-2 font-mono">{row.balanceAfter}</td>
-                        <td className="px-3 py-2 text-text-muted">{row.reason}</td>
+                      <tr key={i} className="hover:bg-surface2/50">
+                        <td className="px-4 py-3 font-mono font-semibold">
+                          <span className={row.delta > 0 ? 'text-green-on-bg' : 'text-red'}>
+                            {row.delta > 0 ? `+${row.delta}` : row.delta}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono">{row.balanceAfter}</td>
+                        <td className="px-4 py-3 text-text-muted">{row.reason}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -93,6 +159,7 @@ export function LeaveDetailModal({ applicationId, onClose }: { applicationId: st
               </div>
             </div>
           )}
+
         </div>
       )}
     </Modal>

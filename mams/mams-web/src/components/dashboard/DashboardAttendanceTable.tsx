@@ -17,7 +17,7 @@ import { brandingFromSettings } from '../../lib/companyBranding';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
-import { EMPTY_CELL, fmtHours, fmtWeekdayShort } from '../../lib/format';
+import { EMPTY_CELL, fmtDate, fmtHours, fmtWeekdayFull } from '../../lib/format';
 import { useTableSort } from '../../lib/tableSort';
 import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
 import {
@@ -283,7 +283,7 @@ export function DashboardAttendanceTable({
   };
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
+  const weekday = selectedDate ? fmtWeekdayFull(selectedDate) : '';
   const filterDefaults = { department: '', shift: 'All' as ShiftFilter, status: 'All' as StatusFilter };
   const activeCount = countActiveFilters({ department, shift, status }, filterDefaults);
 
@@ -358,7 +358,7 @@ export function DashboardAttendanceTable({
     <div className="dash-table-card" data-tour-id={cardTourId ?? 'dashboard-attendance-table'}>
       <div className="dash-table-header">
         <h3>
-          Attendance - {selectedDate}
+          Attendance — {fmtDate(selectedDate)}
           {weekday !== '-' && ` (${weekday})`}
         </h3>
         <MobileFilterBar
@@ -581,7 +581,7 @@ export function DashboardAttendanceTable({
             </span>
           )}
         </div>
-        <span>{selectedDate}</span>
+        <span>{fmtDate(selectedDate)}</span>
       </div>
     </div>
   );

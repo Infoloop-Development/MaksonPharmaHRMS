@@ -16,9 +16,9 @@ export function DashboardBarChartCard({
 
   return (
     <div className="dash-chart-card" data-tour-id="dashboard-bar-chart">
-      <h2 className="text-lg font-bold mb-1">Weekly {barLabel} trend</h2>
+      <h2 className="text-lg font-bold mb-1">Weekly {barLabel.toLowerCase()} trend</h2>
       <p className="text-xs text-text-muted mb-4">
-        Click tile above to switch metric. Click bar to select day.
+        Click a bar to select day.
       </p>
       <div className="dash-chart-card-body">
         {isInitialLoad && (

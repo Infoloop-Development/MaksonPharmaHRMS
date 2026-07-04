@@ -41,6 +41,7 @@ export function LeaveRequestsTab({
   onAddLeave: () => void;
   onGoToSettings: () => void;
 }) {
+  const [activeTile, setActiveTile] = useState<'all' | 'today' | 'pending' | 'upcoming' | 'month'>('all');
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | 'All'>('All');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -85,7 +86,36 @@ export function LeaveRequestsTab({
     filterDefaults
   );
 
+  const toYMD = (d: Date) => d.toISOString().slice(0, 10);
+
+  const clickTile = (tile: typeof activeTile) => {
+    const next = activeTile === tile ? 'all' : tile;
+    setActiveTile(next);
+    setStatusFilter('All');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+    if (next === 'today') {
+      const t = toYMD(new Date());
+      setStartDate(t);
+      setEndDate(t);
+    } else if (next === 'pending') {
+      setStatusFilter('Pending');
+    } else if (next === 'upcoming') {
+      const today = new Date();
+      const from = new Date(today); from.setDate(from.getDate() + 1);
+      const to = new Date(today); to.setDate(to.getDate() + 7);
+      setStartDate(toYMD(from));
+      setEndDate(toYMD(to));
+    } else if (next === 'month') {
+      const today = new Date();
+      setStartDate(toYMD(new Date(today.getFullYear(), today.getMonth(), 1)));
+      setEndDate(toYMD(new Date(today.getFullYear(), today.getMonth() + 1, 0)));
+    }
+  };
+
   const clearFilters = () => {
+    setActiveTile('all');
     setStatusFilter('All');
     setTypeFilter('');
     setStartDate('');
@@ -191,9 +221,9 @@ export function LeaveRequestsTab({
           label="Leaves Today"
           value={String(summary?.leavesToday ?? 0)}
           accent="primary"
-          sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : ''}
-          selected={false}
-          onClick={() => {}}
+          sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : 'active today'}
+          selected={activeTile === 'today'}
+          onClick={() => clickTile('today')}
           tooltip={
             summary?.leavesTodayNames?.length
               ? `${STAT_CARD_TOOLTIPS.leave.leavesToday} ${summary.leavesTodayNames.join(', ')}`
@@ -204,27 +234,27 @@ export function LeaveRequestsTab({
           label="Pending Approvals"
           value={String(summary?.pendingApprovals ?? 0)}
           accent="amber"
-          sub=""
-          selected={statusFilter === 'Pending'}
-          onClick={() => { setStatusFilter('Pending'); setPage(1); }}
+          sub="awaiting review"
+          selected={activeTile === 'pending'}
+          onClick={() => clickTile('pending')}
           tooltip={STAT_CARD_TOOLTIPS.leave.pendingApprovals}
         />
         <DashboardStatCard
           label="Upcoming (7 days)"
           value={String(summary?.upcomingLeaves7Days ?? 0)}
           accent="green"
-          sub=""
-          selected={false}
-          onClick={() => {}}
+          sub="starting soon"
+          selected={activeTile === 'upcoming'}
+          onClick={() => clickTile('upcoming')}
           tooltip={STAT_CARD_TOOLTIPS.leave.upcoming7Days}
         />
         <DashboardStatCard
           label="Leaves This Month"
           value={String(summary?.leavesThisMonth ?? 0)}
           accent="primary"
-          sub="Total days consumed"
-          selected={false}
-          onClick={() => {}}
+          sub="total days consumed"
+          selected={activeTile === 'month'}
+          onClick={() => clickTile('month')}
           tooltip={STAT_CARD_TOOLTIPS.leave.leavesThisMonth}
         />
       </div>
@@ -234,6 +264,8 @@ export function LeaveRequestsTab({
         activeCount={activeCount}
         onClear={clearFilters}
         desktopClassName="hidden md:flex flex-wrap gap-3 items-center"
+        noCard
+        className="mb-3"
         actions={
           <>
             {exportButton}
@@ -277,7 +309,7 @@ export function LeaveRequestsTab({
               <SortableTh label="Days" sortKey="totalDays" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'totalDays')} />
               <th className="px-4 py-3">Reason</th>
               <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'status')} />
-              <th className="px-4 py-3">Actions</th>
+              <th className="py-3 w-24 text-center text-xs font-semibold text-slate-600 dark:text-slate-200">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -286,14 +318,13 @@ export function LeaveRequestsTab({
             )}
             {!isLoading && items.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
-                  No leave applications match your filters.
-                  {canApply && (
-                    <>
-                      {' '}
-                      <button type="button" className="text-link underline" onClick={onAddLeave}>Add leave</button>
-                    </>
-                  )}
+                <td colSpan={7} className="px-4 py-16 text-center">
+                  <div className="flex flex-col items-center gap-3 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-25">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <p className="text-sm">No leave applications match your filters.{canApply && <> <button type="button" className="text-link underline" onClick={onAddLeave}>Add leave</button></>}</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -332,13 +363,19 @@ export function LeaveRequestsTab({
                     )}
                   </td>
                   <td className="px-4 py-3"><Badge tone={leaveStatusTone(row.status)}>{row.status}</Badge></td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      <button type="button" className="btn-outline btn-sm" onClick={() => onView(row)}>View</button>
+                  <td className="py-3 w-24">
+                    <div className="flex items-center justify-center gap-0.5">
+                      <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-bg transition-colors" title="View" onClick={() => onView(row)}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      </button>
                       {canApprove && row.status === 'Pending' && (
                         <>
-                          <button type="button" className="btn-primary btn-sm" onClick={() => onApprove(row)}>Approve</button>
-                          <button type="button" className="btn-outline btn-sm text-red" onClick={() => onReject(row)}>Reject</button>
+                          <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-green hover:bg-green-bg transition-colors" title="Approve" onClick={() => onApprove(row)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                          </button>
+                          <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-red hover:bg-red/10 transition-colors" title="Reject" onClick={() => onReject(row)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
                         </>
                       )}
                     </div>

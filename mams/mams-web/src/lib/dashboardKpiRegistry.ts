@@ -26,14 +26,15 @@ export type KpiDayValues = {
   dayShiftPresent: number;
   nightShiftPresent: number;
   weekday: string;
+  isToday?: boolean;
 };
 
 type Accent = 'primary' | 'green' | 'red' | 'amber';
 
 const METRIC_LABELS: Record<DashboardKpiMetricId, (v: KpiDayValues) => string> = {
   total_active: () => 'Total Active',
-  present: (v) => (v.weekday && v.weekday !== '-' ? `Present ${v.weekday}` : 'Present Today'),
-  absent: (v) => (v.weekday && v.weekday !== '-' ? `Absent ${v.weekday}` : 'Absent Today'),
+  present: (v) => (v.isToday || !v.weekday || v.weekday === '-' ? 'Present Today' : `Present ${v.weekday}`),
+  absent: (v) => (v.isToday || !v.weekday || v.weekday === '-' ? 'Absent Today' : `Absent ${v.weekday}`),
   late: () => 'Late Arrivals',
   on_time: () => 'On Time',
   attendance_rate: () => 'Attendance %',
@@ -98,9 +99,9 @@ export function getMetricSub(id: DashboardKpiMetricId, v: KpiDayValues): string 
     case 'total_active':
       return 'across active employees';
     case 'present':
-      return v.total > 0 ? `${((v.present / v.total) * 100).toFixed(1)}% attendance` : '';
+      return v.total > 0 ? `${Number(((v.present / v.total) * 100).toFixed(1))}% attendance` : '';
     case 'absent':
-      return v.total > 0 ? `${((v.absent / v.total) * 100).toFixed(1)}% absence` : '';
+      return v.total > 0 ? `${Number(((v.absent / v.total) * 100).toFixed(1))}% absence` : '';
     case 'late':
       return 'after shift start';
     case 'on_time':

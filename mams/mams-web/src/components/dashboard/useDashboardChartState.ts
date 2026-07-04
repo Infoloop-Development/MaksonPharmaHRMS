@@ -157,8 +157,8 @@ export function useDashboardChartState({
               label: 'Present',
               data: present,
               backgroundColor: (ctx: ScriptableContext<'bar'>) =>
-                isHighlighted(ctx.dataIndex) ? CHART_COLORS.navy : CHART_COLORS.presentInactive,
-              hoverBackgroundColor: CHART_COLORS.navy,
+                isHighlighted(ctx.dataIndex) ? CHART_COLORS.green : dimColor(CHART_COLORS.green, 0.3),
+              hoverBackgroundColor: CHART_COLORS.green,
               borderWidth: 0,
               borderRadius: ROUNDED_ALL,
             },
@@ -172,7 +172,7 @@ export function useDashboardChartState({
               labels: present.map((p) => fmtNumber(p)),
               selectedIndex: selectedDayIndex,
               hoveredIndex: hoveredDayIndex,
-              navy: CHART_COLORS.navy,
+              navy: CHART_COLORS.green,
               text: CHART_COLORS.text,
             },
             tooltip: {

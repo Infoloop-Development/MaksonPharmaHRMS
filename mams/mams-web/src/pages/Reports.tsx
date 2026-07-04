@@ -38,38 +38,40 @@ export function Reports() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
+      <div className="mb-5 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Reports</h1>
-          <div className="text-sm text-text-muted">
-            View mode: <Badge tone={isCompliant ? 'amber' : 'blue'}>{isCompliant ? 'COMPLIANT (8-hour)' : 'REAL (12-hour)'}</Badge>
-          </div>
+          <p className="text-sm text-text-muted mt-0.5">Attendance records and summaries</p>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
 
-      <div className="card mb-4 p-1.5 inline-flex gap-1 flex-wrap" data-tour-id="reports-tabs">
-        {[
-          ['daily', 'Daily Attendance'],
-          ['monthly', 'Monthly Summary'],
-          ['department', 'Department-wise'],
-          ['location', 'Location-wise'],
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => {
-              const next = key as Tab;
-              setTab(next);
-              logReportsAction('ui.reports.filter', { tab: next });
-            }}
-            className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-              tab === key ? 'bg-primary text-white' : 'text-text-muted hover:bg-surface2'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-        <span className="sr-only" data-tour-id="reports-monthly-hint" aria-hidden="true" />
+      <div className="card mb-6 overflow-hidden" data-tour-id="reports-tabs">
+        <div className="flex flex-wrap border-b border-border">
+          {[
+            ['daily', 'Daily Attendance'],
+            ['monthly', 'Monthly Summary'],
+            ['department', 'Department-wise'],
+            ['location', 'Location-wise'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => {
+                const next = key as Tab;
+                setTab(next);
+                logReportsAction('ui.reports.filter', { tab: next });
+              }}
+              className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === key
+                  ? 'tab-link--active'
+                  : 'border-transparent text-text-muted hover:text-text hover:bg-surface2'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <span className="sr-only" data-tour-id="reports-monthly-hint" aria-hidden="true" />
+        </div>
       </div>
 
       {tab === 'daily' && <DailyReport isCompliant={isCompliant} />}
@@ -233,20 +235,21 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       </div>
 
       <div data-tour-id="reports-results">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1 flex-1">
+          <span className="font-medium text-text">{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
           {data && (
             <>
+              <span className="hidden sm:block w-px h-4 bg-border" />
               <Badge tone="green">{data.summary.present} present</Badge>
               <Badge tone="red">{data.summary.absent} absent</Badge>
               <Badge tone="gray">{data.summary.weeklyOff} weekly off</Badge>
             </>
           )}
         </div>
-        <div className="flex gap-2 w-full sm:w-auto no-print" data-tour-id="reports-export">
-          <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
-          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadExcel}>Download Excel</button>
+        <div className="flex gap-2 w-full sm:w-auto no-print shrink-0" data-tour-id="reports-export">
+          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
+          <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onDownloadExcel}>Download Excel</button>
         </div>
       </div>
 
@@ -280,7 +283,13 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
                 <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">Loading…</td></tr>
               )}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">No records for this date range.</td></tr>
+                <tr><td colSpan={isCompliant ? 9 : 10} className="py-14 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span className="text-sm font-medium">No records found</span>
+                    <span className="text-xs">Try widening the date range or adjusting the filters</span>
+                  </div>
+                </td></tr>
               )}
               {displayDailyRows.map((r, i) => {
                 const emp = r.employeeId;
@@ -468,7 +477,13 @@ function MonthlyReport() {
             <tbody className="divide-y divide-border">
               {isLoading && <tr><td colSpan={9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
+                <tr><td colSpan={9} className="py-14 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span className="text-sm font-medium">No records found</span>
+                    <span className="text-xs">Try selecting a different month or adjusting the filters</span>
+                  </div>
+                </td></tr>
               )}
               {sortedMonthlyRows.map((r) => (
                 <tr key={r.employeeId} className="hover:bg-surface2/50">
@@ -602,7 +617,13 @@ function DepartmentReport() {
           <tbody className="divide-y divide-border">
             {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
             {!isLoading && !data?.rows.length && (
-              <tr><td colSpan={7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
+              <tr><td colSpan={7} className="py-14 text-center">
+                <div className="flex flex-col items-center gap-2 text-text-muted">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span className="text-sm font-medium">No department data</span>
+                  <span className="text-xs">Try selecting a different month</span>
+                </div>
+              </td></tr>
             )}
             {sortedDeptRows.map((r) => (
               <tr key={r.department} className="hover:bg-surface2/50">
@@ -768,7 +789,13 @@ function LocationReport() {
             <tbody className="divide-y divide-border">
               {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
+                <tr><td colSpan={7} className="py-14 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span className="text-sm font-medium">No location data</span>
+                    <span className="text-xs">Try selecting a different month</span>
+                  </div>
+                </td></tr>
               )}
               {sortedLocRows.map((r) => (
                 <tr key={r.location} className="hover:bg-surface2/50">
@@ -801,15 +828,15 @@ function ReportExportBar({
   onDownloadExcel: () => void | Promise<void>;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-      <div className="text-sm text-text-muted">
-        {isLoading ? 'Loading...' : `${recordCount ?? 0} records`}
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <div className="text-sm flex-1">
+        <span className="font-medium text-text">{isLoading ? 'Loading...' : `${recordCount ?? 0} records`}</span>
       </div>
-      <div className="flex gap-2 w-full sm:w-auto no-print">
-        <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>
+      <div className="flex gap-2 w-full sm:w-auto no-print shrink-0">
+        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onPrint}>
           Print to PDF
         </button>
-        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={() => void onDownloadExcel()}>
+        <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={() => void onDownloadExcel()}>
           Download Excel
         </button>
       </div>

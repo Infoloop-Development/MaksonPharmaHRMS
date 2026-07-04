@@ -83,9 +83,9 @@ export function EmployeeChangeRequests() {
       </div>
 
       {/* Stat tiles */}
-      <div className="dash-stat-grid mb-6">
-        {canApprove ? (
-          (['Flagged', 'Reviewed'] as const).map((s) => (
+      {canApprove ? (
+        <div className="dash-stat-grid mb-6">
+          {(['Flagged', 'Reviewed'] as const).map((s) => (
             <DashboardStatCard
               key={s}
               label={s}
@@ -98,8 +98,10 @@ export function EmployeeChangeRequests() {
                 setPage(1);
               }}
             />
-          ))
-        ) : (
+          ))}
+        </div>
+      ) : (
+        <div className="mb-6 max-w-[220px]">
           <DashboardStatCard
             label="Total Changes"
             value={String(data?.total ?? 0)}
@@ -108,8 +110,8 @@ export function EmployeeChangeRequests() {
             selected={false}
             onClick={() => {}}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="card overflow-hidden">
@@ -153,18 +155,20 @@ export function EmployeeChangeRequests() {
                     {req.initiatedAt ? fmtDate(req.initiatedAt.slice(0, 10)) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge tone={STATUS_TONE[req.status]}>
+                    <Badge tone={canApprove ? STATUS_TONE[req.status] : 'green'}>
                       {canApprove ? req.status : 'Processed'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      className="btn-outline btn-sm"
-                      onClick={() => setReviewRequest(req)}
-                    >
-                      {req.status === 'Flagged' ? 'Review' : 'View'}
-                    </button>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        className="btn-outline btn-sm"
+                        onClick={() => setReviewRequest(req)}
+                      >
+                        {req.status === 'Flagged' ? 'Review' : 'View'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -249,20 +253,30 @@ function ReviewModal({
   const proposed = request.proposedData ?? {};
   const previous = request.previousData ?? {};
 
+  function fmtValue(val: unknown): string {
+    if (val == null) return '—';
+    const str = String(val);
+    if (/^\d{4}-\d{2}-\d{2}(T.*)?$/.test(str)) return fmtDate(str.slice(0, 10));
+    return str || '—';
+  }
+
   function DataRow({ label, prev, next }: { label: string; prev?: unknown; next?: unknown }) {
-    const prevStr = prev != null ? String(prev) : '—';
-    const nextStr = next != null ? String(next) : '—';
-    const changed = prev != null && next != null && prevStr !== nextStr;
+    const prevStr = fmtValue(prev);
+    const nextStr = fmtValue(next);
+    const changed = prev != null && next != null && String(prev) !== String(next);
     return (
-      <tr className={changed ? 'bg-amber-bg/40' : ''}>
-        <td className="px-3 py-1.5 text-text-muted text-xs font-medium w-32">{label}</td>
+      <tr className={changed ? 'bg-amber-bg' : ''}>
+        <td className={`px-3 py-2 text-xs w-32 font-medium ${changed ? 'text-amber' : 'text-text-muted'}`}>
+          {changed && <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber mr-1.5 align-middle mb-0.5" />}
+          {label}
+        </td>
         {request.changeType === 'update' ? (
           <>
-            <td className="px-3 py-1.5 text-xs">{prevStr}</td>
-            <td className="px-3 py-1.5 text-xs font-medium">{nextStr}</td>
+            <td className="px-3 py-2 text-xs text-text-muted">{prevStr}</td>
+            <td className={`px-3 py-2 text-xs ${changed ? 'font-semibold text-text' : 'text-text-muted'}`}>{nextStr}</td>
           </>
         ) : (
-          <td className="px-3 py-1.5 text-xs font-medium" colSpan={2}>{nextStr || prevStr}</td>
+          <td className="px-3 py-2 text-xs font-medium text-text" colSpan={2}>{nextStr || prevStr}</td>
         )}
       </tr>
     );
@@ -332,15 +346,27 @@ function ReviewModal({
   }
     >
       <div className="space-y-5 text-sm">
-        <div className="flex flex-wrap gap-4 text-xs text-text-muted">
-          <span><span className="font-semibold text-text">Employee:</span> {employeeDisplayName(request)} ({employeeDisplayCode(request)})</span>
-          <span><span className="font-semibold text-text">Submitted by:</span> {request.initiatedBy?.name}</span>
-          <span><span className="font-semibold text-text">Date:</span> {request.initiatedAt ? fmtDate(request.initiatedAt.slice(0, 10)) : '—'}</span>
+        {/* Meta grid */}
+        <div className="grid grid-cols-3 gap-6 text-sm">
+          <div>
+            <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Employee</div>
+            <div className="font-medium">{employeeDisplayName(request)}</div>
+            <div className="font-mono text-xs text-text-muted mt-0.5">{employeeDisplayCode(request)}</div>
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Submitted by</div>
+            <div className="font-medium">{request.initiatedBy?.name ?? '—'}</div>
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Date</div>
+            <div className="font-medium">{request.initiatedAt ? fmtDate(request.initiatedAt.slice(0, 10)) : '—'}</div>
+          </div>
         </div>
 
-        <div className="rounded-md border border-border bg-surface2/40 px-4 py-3">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Reason</div>
-          <p className="text-sm">{request.reason}</p>
+        {/* Reason */}
+        <div>
+          <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-2">Reason</div>
+          <div className="border border-border rounded-lg px-4 py-3 bg-surface2 text-sm text-text leading-relaxed">{request.reason}</div>
         </div>
 
         {isCreate && employeeIsDeleted && (
@@ -363,10 +389,10 @@ function ReviewModal({
 
         {!isDelete && (
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
-              {isUpdate ? 'Proposed changes (highlighted = changed)' : 'New employee data'}
+            <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-2">
+              {isUpdate ? 'Proposed changes' : 'New employee data'}
             </div>
-            <div className="border border-border rounded overflow-auto max-h-64">
+            <div className="border border-border rounded-lg overflow-auto max-h-80">
               <table className="w-full">
                 <thead className="bg-surface2 sticky top-0">
                   <tr className="text-left text-[10px] uppercase tracking-wider text-text-muted">

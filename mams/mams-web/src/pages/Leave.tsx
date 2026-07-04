@@ -40,7 +40,7 @@ export function Leave() {
 
   const [tab, setTab] = useState<LeaveTab>('requests');
   const [applyOpen, setApplyOpen] = useState(false);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<LeaveApplicationItem | null>(null);
   const [decideItem, setDecideItem] = useState<{ item: LeaveApplicationItem; action: 'approve' | 'reject' } | null>(null);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function Leave() {
   pageApiRef.current = {
     closeModals: () => {
       setApplyOpen(false);
-      setDetailId(null);
+      setDetailItem(null);
       setDecideItem(null);
     },
   };
@@ -130,7 +130,7 @@ export function Leave() {
           canConfigure={canConfigure}
           summary={summary}
           types={types?.items ?? []}
-          onView={(item) => setDetailId(item._id)}
+          onView={(item) => setDetailItem(item)}
           onApprove={(item) => setDecideItem({ item, action: 'approve' })}
           onReject={(item) => setDecideItem({ item, action: 'reject' })}
           onAddLeave={openApply}
@@ -153,7 +153,23 @@ export function Leave() {
         />
       )}
 
-      {detailId && <LeaveDetailModal applicationId={detailId} onClose={() => setDetailId(null)} />}
+      {detailItem && (
+        <LeaveDetailModal
+          applicationId={detailItem._id}
+          canApprove={canApprove}
+          onClose={() => setDetailItem(null)}
+          onApprove={() => {
+            const item = detailItem;
+            setDetailItem(null);
+            setDecideItem({ item, action: 'approve' });
+          }}
+          onReject={() => {
+            const item = detailItem;
+            setDetailItem(null);
+            setDecideItem({ item, action: 'reject' });
+          }}
+        />
+      )}
 
       {decideItem && (
         <LeaveDecideModal

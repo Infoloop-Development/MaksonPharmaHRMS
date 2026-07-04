@@ -218,6 +218,7 @@ export function Dashboard() {
             donutChart={chartState.donutChart}
             donutMeta={chartState.donutMeta}
             selectedDate={chartState.selectedDate}
+            asOfDate={asOfDate}
             punctualityTotal={chartState.punctualityTotal}
             hasChartData={chartState.hasChartData}
             clickLegend={chartState.clickLegend}
@@ -251,6 +252,8 @@ export function Dashboard() {
     return charts.data.last7Days.dates.indexOf(selectedDate);
   }, [charts.data, selectedDate]);
 
+  const asOfDate = stats.data?.asOfDate ?? charts.data?.asOfDate ?? '';
+
   const kpiValues = useMemo(() => {
     const total = charts.data?.last7Days.totalEmployees ?? stats.data?.employees.active ?? 0;
     const idx =
@@ -260,6 +263,8 @@ export function Dashboard() {
           ? charts.data.last7Days.dates.length - 1
           : -1;
     const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
+    const currentAsOfDate = stats.data?.asOfDate ?? charts.data?.asOfDate ?? '';
+    const isToday = !selectedDate || selectedDate === currentAsOfDate;
     return {
       total,
       present: idx >= 0 ? (charts.data?.last7Days.present[idx] ?? 0) : 0,
@@ -271,10 +276,9 @@ export function Dashboard() {
       dayShiftPresent: idx >= 0 ? (charts.data?.last7Days.dayShiftPresent[idx] ?? 0) : 0,
       nightShiftPresent: idx >= 0 ? (charts.data?.last7Days.nightShiftPresent[idx] ?? 0) : 0,
       weekday,
+      isToday,
     };
   }, [charts.data, stats.data, dayIdx, selectedDate]);
-
-  const asOfDate = stats.data?.asOfDate ?? charts.data?.asOfDate ?? '';
   const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
   const isModified =
     statusFilter !== 'All' ||
@@ -332,26 +336,36 @@ export function Dashboard() {
 
   return (
     <div className="2xl:max-w-[1600px] 2xl:mx-auto">
-      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3" data-tour-id="dashboard-header">
+      <div className="mb-6 flex items-start justify-between gap-2 sm:gap-3" data-tour-id="dashboard-header">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
-          <div className="text-xs text-text-muted">As of {fmtDate(s.asOfDate)}</div>
+          <div className="text-sm text-text-muted">As of {fmtDate(s.asOfDate)}</div>
       </div>
         <div className="flex items-center gap-2 shrink-0 mt-0.5">
           <GiveMeATourButton onClick={tour.onReplayTour} />
-        {!isCompliant && !isEditingKpi && !isEditingLayout && (
-          <button
-            type="button"
-            className="dash-kpi-edit-btn shrink-0"
-            aria-label="Customize KPI cards"
-            data-tour-id="dashboard-kpi-edit"
-            onClick={startEditKpi}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        )}
+          {!isCompliant && !isEditingKpi && !isEditingLayout && (
+            <>
+              <button
+                type="button"
+                className="dash-kpi-edit-btn shrink-0"
+                aria-label="Customize KPI cards"
+                data-tour-id="dashboard-kpi-edit"
+                onClick={startEditKpi}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="btn-outline btn-sm shrink-0"
+                data-tour-id="dashboard-layout-edit"
+                onClick={startEditLayout}
+              >
+                Edit layout
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -384,33 +398,21 @@ export function Dashboard() {
         isSaving={saveKpiMutation.isPending}
       />
 
-      <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-3 dash-layout-toolbar" data-tour-id="dashboard-layout-toolbar">
-        {isEditingLayout ? (
-          <>
-            <button type="button" className="btn-outline btn-sm dash-layout-toolbar-btn" onClick={cancelEditLayout}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn-primary btn-sm dash-layout-toolbar-btn"
-              onClick={saveEditLayout}
-              disabled={!layoutChanged || saveLayoutMutation.isPending}
-            >
-              {saveLayoutMutation.isPending ? 'Saving…' : 'Save'}
-            </button>
-          </>
-        ) : (
+      {isEditingLayout && (
+        <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2 mb-3 dash-layout-toolbar" data-tour-id="dashboard-layout-toolbar">
+          <button type="button" className="btn-outline btn-sm dash-layout-toolbar-btn" onClick={cancelEditLayout}>
+            Cancel
+          </button>
           <button
             type="button"
-            className="btn-outline btn-sm dash-layout-toolbar-btn"
-            data-tour-id="dashboard-layout-edit"
-            onClick={startEditLayout}
-            disabled={isEditingKpi}
+            className="btn-primary btn-sm dash-layout-toolbar-btn"
+            onClick={saveEditLayout}
+            disabled={!layoutChanged || saveLayoutMutation.isPending}
           >
-            Edit layout
+            {saveLayoutMutation.isPending ? 'Saving…' : 'Save'}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {chartState.chartsError ? (
         <div className="text-red text-sm mb-4">Failed to load charts.</div>
