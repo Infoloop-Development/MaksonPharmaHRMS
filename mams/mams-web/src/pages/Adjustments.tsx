@@ -17,8 +17,6 @@ const ORG_ADMIN_SHIFT_LABELS = {
   C: 'Night Shift',
 };
 
-const REPORT_DEFAULT_MONTH = '2026-05';
-
 export function Adjustments() {
   const user = useAuth((s) => s.user);
   const canView = user?.permissions.includes('read.compliant') ?? false;
@@ -77,10 +75,7 @@ export function Adjustments() {
       )}
 
       {financialOpen && (
-        <FinancialReportModal
-          initialYearMonth={REPORT_DEFAULT_MONTH}
-          onClose={() => setFinancialOpen(false)}
-        />
+        <FinancialReportModal onClose={() => setFinancialOpen(false)} />
       )}
     </div>
   );

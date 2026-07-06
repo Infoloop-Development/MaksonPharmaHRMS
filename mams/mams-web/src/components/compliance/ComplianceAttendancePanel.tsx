@@ -1,4 +1,4 @@
-import { useState, useCallback, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
 import {
@@ -78,6 +78,7 @@ export type ComplianceAttendancePanelProps = {
   tableToolbar?: ReactNode | ((ctx: { shiftFilter: ShiftFilter }) => ReactNode);
   onEditRow?: (row: ComplianceAttendanceRow) => void;
   emptyDefaultMessage?: string;
+  onTotalChange?: (total: number | null) => void;
 };
 
 export function ComplianceAttendancePanel({
@@ -89,6 +90,7 @@ export function ComplianceAttendancePanel({
   tableToolbar,
   onEditRow,
   emptyDefaultMessage = 'No attendance records yet. Use Generate or wait for nightly autogen at 00:00 IST.',
+  onTotalChange,
 }: ComplianceAttendancePanelProps) {
   const { fmtTime } = useTimeDisplay();
   const qc = useQueryClient();
@@ -101,7 +103,7 @@ export function ComplianceAttendancePanel({
   const pageSize = 50;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['compliance-attendance', { search, date, shiftFilter, page, sortBy, sortDir }],
+    queryKey: ['compliance-attendance', { search, date, shiftFilter, page, sortBy, sortDir, pageSize }],
     queryFn: () =>
       complianceAttendanceApi.list({
         search: search.trim() || undefined,
@@ -113,6 +115,10 @@ export function ComplianceAttendancePanel({
         sortDir,
       }),
   });
+
+  useEffect(() => {
+    onTotalChange?.(isLoading ? null : (data?.total ?? 0));
+  }, [onTotalChange, isLoading, data?.total]);
 
   const toggleSort = useCallback((col: string) => {
     setSortBy((prev) => {

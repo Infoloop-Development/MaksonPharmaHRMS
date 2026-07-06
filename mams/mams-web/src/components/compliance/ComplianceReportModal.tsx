@@ -22,7 +22,8 @@ interface OverrideRow extends ComplianceReportOverride {
 }
 
 function defaultYearMonth() {
-  return '2026-05';
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export function ComplianceReportModal({
@@ -87,6 +88,8 @@ export function ComplianceReportModal({
     for (const row of overrides) {
       if (!Number.isFinite(row.totalHours) || row.totalHours < 0) {
         errors.push(`${row.empCode}: enter a valid hours value`);
+      } else if (row.totalHours > BASELINE_HOURS) {
+        errors.push(`${row.empCode}: hours can't exceed the ${BASELINE_HOURS} h baseline`);
       }
     }
     return errors;
@@ -207,8 +210,9 @@ export function ComplianceReportModal({
                     <Input
                       type="number"
                       min={0}
+                      max={BASELINE_HOURS}
                       step={0.5}
-                      className="w-28 font-mono"
+                      className={`w-28 font-mono ${row.totalHours > BASELINE_HOURS ? 'border-red text-red' : ''}`}
                       value={row.totalHours}
                       onChange={(e) => updateHours(row.employeeId, Number(e.target.value))}
                     />

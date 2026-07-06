@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
 import {
@@ -31,6 +31,21 @@ export function ComplianceOverrideModal({
   const [hoursWorked, setHoursWorked] = useState(String(row.hoursWorked));
   const [alternateShift, setAlternateShift] = useState<ComplianceShift>(row.alternateShift);
   const [adjustmentNote, setAdjustmentNote] = useState('');
+  const skipAutoHours = useRef(true);
+
+  // Keep hours worked in sync with clock-in/out so a saved record can't have
+  // contradictory times and hours; HR can still fine-tune the hours afterward.
+  useEffect(() => {
+    if (skipAutoHours.current) {
+      skipAutoHours.current = false;
+      return;
+    }
+    const inDate = new Date(checkInAt);
+    const outDate = new Date(checkOutAt);
+    if (Number.isNaN(inDate.getTime()) || Number.isNaN(outDate.getTime()) || outDate <= inDate) return;
+    const hours = (outDate.getTime() - inDate.getTime()) / (1000 * 60 * 60);
+    setHoursWorked(hours.toFixed(2));
+  }, [checkInAt, checkOutAt]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -102,7 +117,7 @@ export function ComplianceOverrideModal({
           <Input type="datetime-local" value={checkOutAt} onChange={(e) => setCheckOutAt(e.target.value)} />
         </Field>
 
-        <Field label="Hours worked" required>
+        <Field label="Hours worked" required hint="Auto-fills from clock-in/out; adjust manually only for unpaid breaks">
           <Input
             type="number"
             min={0}
