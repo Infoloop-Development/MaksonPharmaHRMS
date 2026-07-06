@@ -21,6 +21,7 @@ import type { RecordingMode } from '../../lib/bugReport/useBugReportRecorder';
 import { BugReportImageIcon, BugReportRecordIcon, BugReportVideoIcon } from './BugReportIcons';
 import { BugReportRecordingModePicker } from './BugReportRecordingModePicker';
 import { BugReportSubmitProgress } from './BugReportSubmitProgress';
+import { BugReportExtraFilesPicker } from './BugReportExtraFilesPicker';
 
 type FormState = {
   title: string;
@@ -77,6 +78,7 @@ export function BugReportModal({
   const toast = useToast((s) => s.push);
   const [showModeChoice, setShowModeChoice] = useState(false);
   const [submitProgress, setSubmitProgress] = useState<SubmitBugReportProgress | null>(null);
+  const [extraFiles, setExtraFiles] = useState<File[]>([]);
 
   const { title, description, severity } = form;
   const setTitle = (v: string) => onFormChange({ ...form, title: v });
@@ -98,12 +100,14 @@ export function BugReportModal({
         },
         recorder.videoBlob,
         recorder.durationMs,
+        extraFiles,
         setSubmitProgress
       ),
     onSuccess: () => {
       toast('Bug report submitted. Thank you.', 'success');
       onFormChange({ title: '', description: '', severity: 'medium' });
       recorder.removeVideo();
+      setExtraFiles([]);
       setSubmitProgress(null);
       setShowModeChoice(false);
       onCloseSession();
@@ -131,6 +135,7 @@ export function BugReportModal({
   if (!sessionOpen) return null;
 
   const hasVideo = Boolean(recorder.videoBlob && recorder.videoBlob.size > 0);
+  const hasAttachments = extraFiles.length > 0;
   const isSubmitting = submitMu.isPending;
 
   return (
@@ -167,6 +172,7 @@ export function BugReportModal({
         <BugReportSubmitProgress
           progress={submitProgress ?? { stage: 'metadata', percent: 0 }}
           hasVideo={hasVideo}
+          hasAttachments={hasAttachments}
         />
       )}
 
@@ -285,6 +291,11 @@ export function BugReportModal({
             </AttachmentCard>
           </div>
         )}
+        <BugReportExtraFilesPicker
+          files={extraFiles}
+          onChange={setExtraFiles}
+          disabled={isSubmitting || recorder.isActive}
+        />
       </div>
 
       <div className="space-y-4">

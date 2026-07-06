@@ -1,8 +1,6 @@
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import { NotificationListQuerySchema } from '@mams/types';
 import { requireAuth } from '../middleware/auth.js';
-import { ApiError } from '../middleware/error.js';
 import {
   listForUser,
   markAllRead,
@@ -12,16 +10,6 @@ import {
 
 const router = Router();
 router.use(requireAuth);
-
-function requireOrgAdmin(req: Request, _res: Response, next: NextFunction) {
-  if (!req.auth || req.auth.role !== 'org.admin') {
-    next(new ApiError(403, 'forbidden', 'Org admin only'));
-    return;
-  }
-  next();
-}
-
-router.use(requireOrgAdmin);
 
 router.get('/', async (req, res, next) => {
   try {

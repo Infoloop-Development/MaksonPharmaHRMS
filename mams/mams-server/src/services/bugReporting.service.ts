@@ -1,8 +1,10 @@
 import { Types } from 'mongoose';
 import {
+  BUG_REPORT_ASSIGNEE_UNASSIGNED,
   BugReportCreateBodySchema,
   BugReportListQuerySchema,
   BugReportPatchBodySchema,
+  type BugReportAttachment,
   type BugReportCreateBody,
   type BugReportDetail,
   type BugReportListQuery,
@@ -15,12 +17,27 @@ import type { BugReportDoc } from '../models/BugReport.js';
 import { ApiError } from '../middleware/error.js';
 import {
   deleteBugReportVideo,
+  deleteBugReportAttachment,
   saveBugReportVideo,
+  saveBugReportAttachment,
   bugReportVideoExists,
+  resolveBugReportMediaPath,
   resolveBugReportVideoPath,
   normalizeBugReportVideoMime,
+  normalizeBugReportAttachmentMime,
+  validateBugReportAttachmentMime,
+  validateBugReportAttachmentSize,
+  MAX_BUG_REPORT_ATTACHMENTS,
+  MAX_BUG_REPORT_ATTACHMENTS_TOTAL_BYTES,
 } from './bugReportMedia.storage.js';
 import { videoHasAudioStream } from './bugReportMedia.probe.js';
+import { getDefaultPhaseId, loadPhaseMap } from './bugPhase.service.js';
+import {
+  buildBugAssignedNotification,
+  buildBugResolvedNotification,
+  notifyUser,
+} from './notification.service.js';
+import type { BugReportStatus } from '@mams/types';
 
 const MAX_SCREENSHOT_BYTES = 1_500_000;
 
@@ -77,19 +94,43 @@ async function loadUserMap(ids: Types.ObjectId[]): Promise<Map<string, { id: str
   return map;
 }
 
+function serializeAttachments(doc: { attachments?: Array<{
+  _id?: { toString(): string };
+  filePath: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: Date | string;
+}> }): BugReportAttachment[] {
+  return (doc.attachments ?? []).map((a) => ({
+    id: String(a._id),
+    filePath: a.filePath,
+    originalName: a.originalName,
+    mimeType: a.mimeType,
+    size: a.size,
+    uploadedAt: new Date(a.uploadedAt).toISOString(),
+  }));
+}
+
 function serializeListItem(
   doc: BugReportDoc | (BugReportDoc & { createdAt: Date; updatedAt: Date }),
-  userMap: Map<string, { id: string; name: string; email: string; role: string }>
+  userMap: Map<string, { id: string; name: string; email: string; role: string }>,
+  phaseMap: Map<string, { id: string; label: string; legacyKey: string | null; isResolvedState: boolean }>
 ) {
   if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
   const reporter = userMap.get(String(doc.reporterId));
   const assignee = doc.assigneeId ? userMap.get(String(doc.assigneeId)) : null;
+  const phase = doc.phaseId ? phaseMap.get(String(doc.phaseId)) : undefined;
+  const legacyStatus = (phase?.legacyKey ?? doc.status ?? 'new') as BugReportStatus;
+
   return {
     id: String(doc._id),
     title: doc.title,
     description: doc.description,
     severity: doc.severity,
-    status: doc.status,
+    status: legacyStatus,
+    phaseId: phase?.id ?? (doc.phaseId ? String(doc.phaseId) : ''),
+    phaseLabel: phase?.label ?? 'Unknown',
     module: doc.module,
     route: doc.route,
     reporter: reporter ?? {
@@ -101,7 +142,10 @@ function serializeListItem(
     assignee: assignee
       ? { id: assignee.id, name: assignee.name, email: assignee.email }
       : null,
+    deadline: doc.deadline ? new Date(doc.deadline).toISOString().slice(0, 10) : null,
     hasVideo: Boolean(doc.video?.filePath),
+    hasAttachments: (doc.attachments?.length ?? 0) > 0,
+    attachmentCount: doc.attachments?.length ?? 0,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
@@ -110,12 +154,14 @@ function serializeListItem(
 export async function createBugReport(reporterId: string, body: BugReportCreateBody) {
   const parsed = BugReportCreateBodySchema.parse(body);
   const screenshot = parseScreenshot(parsed.screenshotBase64);
+  const defaultPhaseId = await getDefaultPhaseId();
   const doc = await BugReportModel.create({
     reporterId: new Types.ObjectId(reporterId),
     title: parsed.title,
     description: parsed.description,
     severity: parsed.severity,
     status: 'new',
+    phaseId: defaultPhaseId,
     module: parsed.context.module,
     route: parsed.context.route,
     context: parsed.context,
@@ -129,12 +175,24 @@ export async function createBugReport(reporterId: string, body: BugReportCreateB
 
 export async function listBugReports(query: BugReportListQuery): Promise<BugReportListResponse> {
   const q = BugReportListQuerySchema.parse(query);
+  const phaseMap = await loadPhaseMap();
   const filter: Record<string, unknown> = {};
   if (q.module) filter.module = q.module;
   if (q.severity) filter.severity = q.severity;
-  if (q.status) filter.status = q.status;
+  if (q.phaseId && Types.ObjectId.isValid(q.phaseId)) {
+    filter.phaseId = new Types.ObjectId(q.phaseId);
+  } else if (q.status) {
+    const phase = [...phaseMap.values()].find((p) => p.legacyKey === q.status);
+    if (phase) filter.phaseId = new Types.ObjectId(phase.id);
+    else filter.status = q.status;
+  }
   if (q.reporterId && Types.ObjectId.isValid(q.reporterId)) {
     filter.reporterId = new Types.ObjectId(q.reporterId);
+  }
+  if (q.assigneeId === BUG_REPORT_ASSIGNEE_UNASSIGNED) {
+    filter.assigneeId = null;
+  } else if (q.assigneeId && Types.ObjectId.isValid(q.assigneeId)) {
+    filter.assigneeId = new Types.ObjectId(q.assigneeId);
   }
   if (q.search?.trim()) {
     filter.title = { $regex: q.search.trim(), $options: 'i' };
@@ -156,7 +214,9 @@ export async function listBugReports(query: BugReportListQuery): Promise<BugRepo
   const userMap = await loadUserMap(userIds);
 
   return {
-    items: rows.map((r) => serializeListItem(r as BugReportDoc & { createdAt: Date; updatedAt: Date }, userMap)),
+    items: rows.map((r) =>
+      serializeListItem(r as BugReportDoc & { createdAt: Date; updatedAt: Date }, userMap, phaseMap)
+    ),
     total,
     page: q.page,
     pageSize: q.pageSize,
@@ -171,7 +231,12 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
   const userMap = await loadUserMap(
     [doc.reporterId, doc.assigneeId].filter(Boolean) as Types.ObjectId[]
   );
-  const base = serializeListItem(doc as BugReportDoc & { createdAt: Date; updatedAt: Date }, userMap);
+  const phaseMap = await loadPhaseMap();
+  const base = serializeListItem(
+    doc as BugReportDoc & { createdAt: Date; updatedAt: Date },
+    userMap,
+    phaseMap
+  );
 
   const videoFilePath = doc.video?.filePath ?? null;
   const videoAvailableOnDisk = videoFilePath
@@ -201,23 +266,91 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
     transcriptionGeneratedAt: doc.transcriptionGeneratedAt
       ? new Date(doc.transcriptionGeneratedAt).toISOString()
       : null,
+    attachments: serializeAttachments(doc),
   };
 }
 
-export async function patchBugReport(id: string, body: BugReportPatchBody) {
+export async function patchBugReport(
+  id: string,
+  body: BugReportPatchBody,
+  actorUserId?: string
+) {
   if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Bug report not found');
   const parsed = BugReportPatchBodySchema.parse(body);
   const doc = await BugReportModel.findById(id);
   if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
 
-  if (parsed.status !== undefined) doc.status = parsed.status;
+  const phaseMap = await loadPhaseMap();
+  const prevPhaseId = doc.phaseId ? String(doc.phaseId) : null;
+  const prevAssigneeId = doc.assigneeId ? String(doc.assigneeId) : null;
+
+  if (parsed.phaseId !== undefined) {
+    if (!Types.ObjectId.isValid(parsed.phaseId)) {
+      throw new ApiError(400, 'validation_error', 'Invalid phase id');
+    }
+    const phase = phaseMap.get(parsed.phaseId);
+    if (!phase) throw new ApiError(404, 'not_found', 'Phase not found');
+    doc.phaseId = new Types.ObjectId(parsed.phaseId);
+    if (phase.legacyKey) doc.status = phase.legacyKey as BugReportStatus;
+  } else if (parsed.status !== undefined) {
+    doc.status = parsed.status;
+    const phase = [...phaseMap.values()].find((p) => p.legacyKey === parsed.status);
+    if (phase) doc.phaseId = new Types.ObjectId(phase.id);
+  }
+
   if (parsed.assigneeId !== undefined) {
     if (parsed.assigneeId && !Types.ObjectId.isValid(parsed.assigneeId)) {
       throw new ApiError(400, 'validation_error', 'Invalid assignee id');
     }
     doc.assigneeId = parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null;
   }
+
+  if (parsed.deadline !== undefined) {
+    doc.deadline = parsed.deadline ? new Date(`${parsed.deadline}T00:00:00.000Z`) : null;
+  }
+
   await doc.save();
+
+  const newPhaseId = doc.phaseId ? String(doc.phaseId) : null;
+  const newAssigneeId = doc.assigneeId ? String(doc.assigneeId) : null;
+
+  if (
+    newPhaseId &&
+    newPhaseId !== prevPhaseId &&
+    phaseMap.get(newPhaseId)?.isResolvedState
+  ) {
+    const phase = phaseMap.get(newPhaseId)!;
+    await notifyUser(
+      String(doc.reporterId),
+      buildBugResolvedNotification({
+        title: doc.title,
+        phaseLabel: phase.label,
+        entityId: id,
+      })
+    );
+  }
+
+  if (
+    newAssigneeId &&
+    newAssigneeId !== prevAssigneeId &&
+    newAssigneeId !== actorUserId
+  ) {
+    const assignee = await UserModel.findById(newAssigneeId).select('role name').lean();
+    if (assignee?.role === 'it.admin') {
+      const actor = actorUserId
+        ? await UserModel.findById(actorUserId).select('name').lean()
+        : null;
+      await notifyUser(
+        newAssigneeId,
+        buildBugAssignedNotification({
+          title: doc.title,
+          assignerName: actor?.name ?? 'Someone',
+          entityId: id,
+        })
+      );
+    }
+  }
+
   return getBugReportDetail(id);
 }
 
@@ -293,5 +426,112 @@ export async function streamBugReportVideo(reportId: string): Promise<{
     absolutePath: resolveBugReportVideoPath(doc.video.filePath),
     mimeType: doc.video.mimeType ?? 'video/webm',
     size: doc.video.size ?? 0,
+  };
+}
+
+export async function attachBugReportFiles(
+  reportId: string,
+  userId: string,
+  permissions: string[],
+  files: Array<{ buffer: Buffer; mimetype: string; size: number; originalname?: string }>
+): Promise<void> {
+  if (!Types.ObjectId.isValid(reportId)) {
+    throw new ApiError(404, 'not_found', 'Bug report not found');
+  }
+  if (!files.length) {
+    throw new ApiError(400, 'validation_error', 'No files uploaded');
+  }
+
+  const doc = await BugReportModel.findById(reportId);
+  if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
+
+  const isReporter = String(doc.reporterId) === userId;
+  const canManage = permissions.includes('manage.bug_reports');
+  if (!isReporter && !canManage) {
+    throw new ApiError(403, 'forbidden', 'Not allowed to upload files for this report');
+  }
+
+  const existingCount = doc.attachments?.length ?? 0;
+  if (existingCount + files.length > MAX_BUG_REPORT_ATTACHMENTS) {
+    throw new ApiError(
+      400,
+      'validation_error',
+      `Maximum ${MAX_BUG_REPORT_ATTACHMENTS} attachments per bug report`
+    );
+  }
+
+  const existingBytes = (doc.attachments ?? []).reduce((sum, a) => sum + (a.size ?? 0), 0);
+  const incomingBytes = files.reduce((sum, f) => sum + f.size, 0);
+  if (existingBytes + incomingBytes > MAX_BUG_REPORT_ATTACHMENTS_TOTAL_BYTES) {
+    throw new ApiError(400, 'file_too_large', 'Total attachment size exceeds 30MB per bug report');
+  }
+
+  const savedPaths: string[] = [];
+  const newEntries: Array<{
+    filePath: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+    uploadedAt: Date;
+  }> = [];
+  try {
+    for (const file of files) {
+      validateBugReportAttachmentMime(file.mimetype, file.originalname);
+      validateBugReportAttachmentSize(file.size);
+      const originalName = (file.originalname ?? 'attachment').replace(/[^\w.\- ()[\]]+/g, '_').slice(0, 200) || 'attachment';
+      const relativePath = await saveBugReportAttachment(
+        reportId,
+        file.buffer,
+        file.mimetype,
+        originalName
+      );
+      savedPaths.push(relativePath);
+      const normalizedMime = normalizeBugReportAttachmentMime(file.mimetype, file.originalname);
+      newEntries.push({
+        filePath: relativePath,
+        originalName,
+        mimeType: normalizedMime,
+        size: file.size,
+        uploadedAt: new Date(),
+      });
+    }
+    doc.attachments.push(...newEntries);
+    await doc.save();
+  } catch (err) {
+    for (const p of savedPaths) await deleteBugReportAttachment(p);
+    throw err;
+  }
+}
+
+export async function streamBugReportAttachment(
+  reportId: string,
+  attachmentId: string
+): Promise<{
+  absolutePath: string;
+  mimeType: string;
+  size: number;
+  originalName: string;
+}> {
+  if (!Types.ObjectId.isValid(reportId)) {
+    throw new ApiError(404, 'not_found', 'Bug report not found');
+  }
+  const doc = await BugReportModel.findById(reportId).select('attachments').lean();
+  if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
+
+  const attachment = (doc.attachments ?? []).find((a) => String(a._id) === attachmentId);
+  if (!attachment?.filePath) {
+    throw new ApiError(404, 'not_found', 'Attachment not found');
+  }
+
+  const exists = await bugReportVideoExists(attachment.filePath);
+  if (!exists) {
+    throw new ApiError(404, 'not_found', 'Attachment file missing on disk');
+  }
+
+  return {
+    absolutePath: resolveBugReportMediaPath(attachment.filePath),
+    mimeType: attachment.mimeType ?? 'application/octet-stream',
+    size: attachment.size ?? 0,
+    originalName: attachment.originalName ?? 'attachment',
   };
 }

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
-import { canManageBugReports } from '@mams/types';
-import { useAuth } from '../../store/auth';
+import { useSearchParams } from 'react-router-dom';
 import {
   BugReportingBoardPanel,
   BugReportingFilters,
@@ -9,13 +7,11 @@ import {
 import { useBugReportingBoard } from '../../components/admin/bugReporting/useBugReportingBoard';
 import { BugReportDetailModal } from '../../components/bugReport/BugReportDetailModal';
 
-export function AdminBugReporting() {
-  const user = useAuth((s) => s.user);
-  const canAccess = canManageBugReports(user?.permissions ?? []);
+export function AdminBugReportingBoard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
-  const board = useBugReportingBoard(canAccess);
+  const board = useBugReportingBoard(true);
 
   useEffect(() => {
     const openId = searchParams.get('open');
@@ -40,11 +36,10 @@ export function AdminBugReporting() {
     });
   };
 
-  if (!canAccess) return <Navigate to="/admin" replace />;
-
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col p-3 sm:p-4">
       <BugReportingBoardPanel
+        chromeless
         phases={board.phases}
         phasesLoading={board.phasesLoading}
         columns={board.columns}
@@ -53,6 +48,7 @@ export function AdminBugReporting() {
         onMove={board.onMove}
         filtersSlot={
           <BugReportingFilters
+            compact
             search={board.filters.search}
             onSearchChange={board.setSearch}
             module={board.filters.module}

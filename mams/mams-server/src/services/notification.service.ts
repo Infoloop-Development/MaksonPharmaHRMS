@@ -17,6 +17,8 @@ export interface NotifyOrgAdminsInput {
   payload?: Record<string, unknown>;
 }
 
+export type NotifyUserInput = NotifyOrgAdminsInput;
+
 function toNotificationItem(doc: {
   _id: Types.ObjectId;
   kind: string;
@@ -76,6 +78,32 @@ export async function notifyOrgAdmins(input: NotifyOrgAdminsInput): Promise<void
     );
   } catch (err) {
     logger.warn('Failed to notify org admins', { err, kind: input.kind });
+  }
+}
+
+export async function notifyUser(userId: string, input: NotifyUserInput): Promise<void> {
+  if (!Types.ObjectId.isValid(userId)) return;
+  try {
+    const entityId =
+      input.entityId == null
+        ? null
+        : typeof input.entityId === 'string'
+          ? new Types.ObjectId(input.entityId)
+          : input.entityId;
+
+    await NotificationModel.create({
+      userId: new Types.ObjectId(userId),
+      kind: input.kind,
+      title: input.title,
+      message: input.message,
+      href: input.href ?? null,
+      entityType: input.entityType ?? null,
+      entityId,
+      payload: input.payload ?? {},
+      readAt: null,
+    });
+  } catch (err) {
+    logger.warn('Failed to notify user', { err, kind: input.kind, userId });
   }
 }
 
@@ -180,5 +208,53 @@ export function buildDeviceRegisteredNotification(opts: {
       model: opts.model,
       vendor: opts.vendor,
     },
+  };
+}
+
+export function buildBugAssignedNotification(opts: {
+  title: string;
+  assignerName: string;
+  entityId: Types.ObjectId | string;
+}): NotifyUserInput {
+  return {
+    kind: 'bug_assigned',
+    title: 'Bug assigned to you',
+    message: `${opts.assignerName} assigned "${opts.title}" to you`,
+    href: `/admin/bug-reporting?open=${opts.entityId}`,
+    entityType: 'bug_report',
+    entityId: opts.entityId,
+    payload: { title: opts.title },
+  };
+}
+
+export function buildBugMentionedNotification(opts: {
+  title: string;
+  authorName: string;
+  entityId: Types.ObjectId | string;
+}): NotifyUserInput {
+  return {
+    kind: 'bug_mentioned',
+    title: 'Mentioned on bug report',
+    message: `${opts.authorName} mentioned you on "${opts.title}"`,
+    href: `/admin/bug-reporting?open=${opts.entityId}`,
+    entityType: 'bug_report',
+    entityId: opts.entityId,
+    payload: { title: opts.title },
+  };
+}
+
+export function buildBugResolvedNotification(opts: {
+  title: string;
+  phaseLabel: string;
+  entityId: Types.ObjectId | string;
+}): NotifyUserInput {
+  return {
+    kind: 'bug_resolved',
+    title: 'Your bug report was resolved',
+    message: `"${opts.title}" was moved to ${opts.phaseLabel}`,
+    href: null,
+    entityType: 'bug_report',
+    entityId: opts.entityId,
+    payload: { title: opts.title, phaseLabel: opts.phaseLabel },
   };
 }

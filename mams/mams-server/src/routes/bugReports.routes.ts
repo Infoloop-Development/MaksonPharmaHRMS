@@ -4,8 +4,12 @@ import multer from 'multer';
 import { BugReportCreateBodySchema } from '@mams/types';
 import { requireAuth } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
-import { attachBugReportVideo, createBugReport } from '../services/bugReporting.service.js';
-import { MAX_BUG_REPORT_VIDEO_BYTES } from '../services/bugReportMedia.storage.js';
+import { attachBugReportVideo, attachBugReportFiles, createBugReport } from '../services/bugReporting.service.js';
+import {
+  MAX_BUG_REPORT_VIDEO_BYTES,
+  MAX_BUG_REPORT_ATTACHMENT_BYTES,
+  MAX_BUG_REPORT_ATTACHMENTS,
+} from '../services/bugReportMedia.storage.js';
 
 const router = Router();
 
@@ -21,6 +25,11 @@ const submitLimiter = rateLimit({
 const videoUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_BUG_REPORT_VIDEO_BYTES },
+});
+
+const attachmentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BUG_REPORT_ATTACHMENT_BYTES },
 });
 
 router.post('/', requireAuth, submitLimiter, async (req, res, next) => {
@@ -76,6 +85,39 @@ router.post(
         req.auth!.permissions,
         { buffer: file.buffer, mimetype: file.mimetype, size: file.size, originalname: file.originalname },
         Number.isFinite(durationMs) ? durationMs : undefined
+      );
+
+      res.status(200).json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  '/:id/attachments',
+  requireAuth,
+  submitLimiter,
+  attachmentUpload.array('files', MAX_BUG_REPORT_ATTACHMENTS),
+  async (req, res, next) => {
+    try {
+      const reportId = req.params.id ?? '';
+      const files = req.files;
+      if (!files || !Array.isArray(files) || files.length === 0) {
+        res.status(400).json({ error: 'missing_file', message: 'No files uploaded' });
+        return;
+      }
+
+      await attachBugReportFiles(
+        reportId,
+        req.auth!.sub,
+        req.auth!.permissions,
+        files.map((f) => ({
+          buffer: f.buffer,
+          mimetype: f.mimetype,
+          size: f.size,
+          originalname: f.originalname,
+        }))
       );
 
       res.status(200).json({ ok: true });

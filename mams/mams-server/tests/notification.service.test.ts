@@ -4,6 +4,9 @@ import {
   buildDeviceRegisteredNotification,
   buildLeaveAppliedNotification,
   buildVisitorSubmittedNotification,
+  buildBugAssignedNotification,
+  buildBugMentionedNotification,
+  buildBugResolvedNotification,
 } from '../src/services/notification.service.js';
 import { isNotificationKindEnabled, resolveOrgNotificationAlerts } from '@mams/types';
 
@@ -73,5 +76,37 @@ describe('notification builders', () => {
     expect(n.href).toBe('/devices');
     expect(n.message).toContain('Gate A');
     expect(n.message).toContain('SN-001');
+  });
+
+  it('buildBugAssignedNotification', () => {
+    const n = buildBugAssignedNotification({
+      title: 'Save button broken',
+      assignerName: 'Alex',
+      entityId,
+    });
+    expect(n.kind).toBe('bug_assigned');
+    expect(n.href).toContain('open=');
+    expect(n.message).toContain('Alex');
+  });
+
+  it('buildBugMentionedNotification', () => {
+    const n = buildBugMentionedNotification({
+      title: 'Login issue',
+      authorName: 'Sam',
+      entityId,
+    });
+    expect(n.kind).toBe('bug_mentioned');
+    expect(n.message).toContain('Sam');
+  });
+
+  it('buildBugResolvedNotification', () => {
+    const n = buildBugResolvedNotification({
+      title: 'Typo on dashboard',
+      phaseLabel: 'Pushed to Live',
+      entityId,
+    });
+    expect(n.kind).toBe('bug_resolved');
+    expect(n.href).toBeNull();
+    expect(n.message).toContain('Pushed to Live');
   });
 });

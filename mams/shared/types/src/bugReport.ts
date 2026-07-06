@@ -27,6 +27,40 @@ export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
   closed: 'Closed',
 };
 
+/** Kanban board column labels mapped to existing status values (display only). */
+export const BUG_REPORT_KANBAN_COLUMNS: ReadonlyArray<{ status: BugReportStatus; label: string }> = [
+  { status: 'new', label: 'Raised' },
+  { status: 'acknowledged', label: 'Acknowledged' },
+  { status: 'in_progress', label: 'Under Development' },
+  { status: 'resolved', label: 'Developed' },
+  { status: 'closed', label: 'Pushed to Live' },
+];
+
+export const BUG_REPORT_ASSIGNEE_UNASSIGNED = 'unassigned' as const;
+
+export const BugReportAttachmentSchema = z.object({
+  id: z.string(),
+  filePath: z.string().max(500),
+  originalName: z.string().max(255),
+  mimeType: z.string().max(100),
+  size: z.number().int().min(0),
+  uploadedAt: z.string(),
+});
+
+export type BugReportAttachment = z.infer<typeof BugReportAttachmentSchema>;
+
+export const MAX_BUG_REPORT_ATTACHMENTS = 5;
+export const MAX_BUG_REPORT_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_BUG_REPORT_ATTACHMENTS_TOTAL_BYTES = 30 * 1024 * 1024;
+
+export const BUG_REPORT_ATTACHMENT_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+] as const;
+
 export const BugReportConsoleEntrySchema = z.object({
   level: z.enum(['log', 'warn', 'error']),
   message: z.string().max(2000),
@@ -96,8 +130,12 @@ export const BugReportListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
   module: z.string().max(120).optional(),
   severity: BugReportSeveritySchema.optional(),
+  /** @deprecated use phaseId */
   status: BugReportStatusSchema.optional(),
+  phaseId: z.string().optional(),
   reporterId: z.string().optional(),
+  /** User id or `unassigned` to filter reports with no assignee. */
+  assigneeId: z.string().max(64).optional(),
   search: z.string().max(200).optional(),
   sortBy: z.enum(['createdAt', 'severity', 'status', 'module', 'title']).default('createdAt'),
   sortDir: z.enum(['asc', 'desc']).default('desc'),
@@ -107,13 +145,21 @@ export type BugReportListQuery = z.infer<typeof BugReportListQuerySchema>;
 
 export const BugReportPatchBodySchema = z
   .object({
+    /** @deprecated use phaseId */
     status: BugReportStatusSchema.optional(),
+    phaseId: z.string().optional(),
     assigneeId: z.string().nullable().optional(),
+    deadline: z.string().date().nullable().optional(),
   })
   .strict()
-  .refine((v) => v.status !== undefined || v.assigneeId !== undefined, {
-    message: 'Provide status or assigneeId',
-  });
+  .refine(
+    (v) =>
+      v.status !== undefined ||
+      v.phaseId !== undefined ||
+      v.assigneeId !== undefined ||
+      v.deadline !== undefined,
+    { message: 'Provide status, phaseId, assigneeId, or deadline' }
+  );
 
 export type BugReportPatchBody = z.infer<typeof BugReportPatchBodySchema>;
 
@@ -135,12 +181,18 @@ export interface BugReportListItem {
   title: string;
   description: string;
   severity: BugReportSeverity;
+  /** @deprecated derived from phase legacyKey when present */
   status: BugReportStatus;
+  phaseId: string;
+  phaseLabel: string;
   module: string;
   route: string;
   reporter: BugReportReporter;
   assignee: BugReportAssignee | null;
+  deadline: string | null;
   hasVideo: boolean;
+  hasAttachments: boolean;
+  attachmentCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -170,4 +222,5 @@ export interface BugReportDetail extends BugReportListItem {
   transcriptionError: string | null;
   transcriptionConfidence: number | null;
   transcriptionGeneratedAt: string | null;
+  attachments: BugReportAttachment[];
 }

@@ -77,10 +77,70 @@ async function rawRequest<T>(method: string, path: string, body?: unknown, retri
   return (await res.json()) as T;
 }
 
+async function rawFormRequest<T>(
+  method: string,
+  path: string,
+  formData: FormData,
+  retried = false
+): Promise<T> {
+  const { accessToken, refreshToken, setAuth, clear } = useAuth.getState();
+  const headers: Record<string, string> = {};
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { method, headers, body: formData });
+  } catch (e) {
+    const msg = e instanceof TypeError ? networkErrorMessage() : String(e);
+    throw new ApiError(0, 'network_error', msg);
+  }
+
+  if (res.status === 401 && !retried && refreshToken) {
+    let refreshed: Response;
+    try {
+      refreshed = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch (e) {
+      const msg = e instanceof TypeError ? networkErrorMessage() : String(e);
+      throw new ApiError(0, 'network_error', msg);
+    }
+    if (refreshed.ok) {
+      const data = await refreshed.json();
+      setAuth(data);
+      return rawFormRequest<T>(method, path, formData, true);
+    }
+    clear();
+  }
+
+  if (!res.ok) {
+    let payload: any = null;
+    try {
+      payload = await res.json();
+    } catch {
+      /* ignore */
+    }
+    if (res.status >= 400) {
+      recordFailedRequest({ method, path, status: res.status, body: payload });
+    }
+    throw new ApiError(
+      res.status,
+      payload?.error ?? 'http_error',
+      payload?.message ?? res.statusText,
+      payload
+    );
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
 export const api = {
   get: <T,>(p: string) => rawRequest<T>('GET', p),
   post: <T,>(p: string, b?: unknown) => rawRequest<T>('POST', p, b),
+  postForm: <T,>(p: string, formData: FormData) => rawFormRequest<T>('POST', p, formData),
   put: <T,>(p: string, b?: unknown) => rawRequest<T>('PUT', p, b),
   patch: <T,>(p: string, b?: unknown) => rawRequest<T>('PATCH', p, b),
-  delete: <T,>(p: string) => rawRequest<T>('DELETE', p),
+  delete: <T,>(p: string, b?: unknown) => rawRequest<T>('DELETE', p, b),
 };

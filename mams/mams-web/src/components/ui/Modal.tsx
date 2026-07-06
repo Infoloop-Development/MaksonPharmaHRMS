@@ -5,7 +5,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'board';
   footer?: React.ReactNode;
 }
 
@@ -14,6 +14,7 @@ const SIZE_MAP = {
   md: 'max-w-xl',
   lg: 'max-w-3xl',
   xl: 'max-w-5xl',
+  board: 'max-w-[80vw] w-[80vw]',
 };
 
 export function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {

@@ -18,6 +18,17 @@ const bugReportVideoSchema = new Schema(
   { _id: false }
 );
 
+const bugReportAttachmentSchema = new Schema(
+  {
+    filePath: { type: String, required: true },
+    originalName: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const bugReportSchema = new Schema(
   {
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -35,7 +46,9 @@ const bugReportSchema = new Schema(
       default: 'new',
       index: true,
     },
+    phaseId: { type: Schema.Types.ObjectId, ref: 'BugPhase', default: null, index: true },
     assigneeId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    deadline: { type: Date, default: null },
     module: { type: String, required: true, index: true },
     route: { type: String, required: true },
     context: { type: Schema.Types.Mixed, default: {} },
@@ -44,6 +57,7 @@ const bugReportSchema = new Schema(
     failedRequests: { type: [Schema.Types.Mixed], default: [] },
     screenshot: { type: bugReportScreenshotSchema, default: null },
     video: { type: bugReportVideoSchema, default: null },
+    attachments: { type: [bugReportAttachmentSchema], default: [] },
     transcriptionText: { type: String, default: null },
     detectedLanguage: { type: String, enum: ['en', 'hi', 'gu'], default: null },
     transcriptionStatus: {
@@ -59,6 +73,7 @@ const bugReportSchema = new Schema(
 );
 
 bugReportSchema.index({ status: 1, createdAt: -1 });
+bugReportSchema.index({ phaseId: 1, createdAt: -1 });
 bugReportSchema.index({ createdAt: -1 });
 
 export type BugReportDoc = InferSchemaType<typeof bugReportSchema> & {

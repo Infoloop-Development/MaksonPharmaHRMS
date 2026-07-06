@@ -28,6 +28,9 @@ import { AdminSystemHealth } from './pages/admin/AdminSystemHealth';
 import { AdminFeatureFlags } from './pages/admin/AdminFeatureFlags';
 import { AdminRecycleBin } from './pages/admin/AdminRecycleBin';
 import { AdminBugReporting } from './pages/admin/AdminBugReporting';
+import { AdminBugReportingBoard } from './pages/admin/AdminBugReportingBoard';
+import { AdminBugReportingPhaseSettings } from './pages/admin/AdminBugReportingPhaseSettings';
+import { BugReportingBoardChromelessLayout } from './components/admin/bugReporting/BugReportingBoardChromelessLayout';
 import { AdminBugReportDetail } from './pages/admin/AdminBugReportDetail';
 import { BugReportInstrumentationProvider } from './components/bugReport/BugReportInstrumentationProvider';
 import { BugReportProvider } from './components/bugReport/BugReportContext';
@@ -109,7 +112,18 @@ export function App() {
         <Route path="feature-flags" element={<AdminFeatureFlags />} />
         <Route path="recycle-bin" element={<AdminRecycleBin />} />
         <Route path="bug-reporting" element={<AdminBugReporting />} />
+        <Route path="bug-reporting/settings" element={<AdminBugReportingPhaseSettings />} />
         <Route path="bug-reporting/:id" element={<AdminBugReportDetail />} />
+      </Route>
+      <Route
+        path="/admin/bug-reporting/board"
+        element={
+          <RequireAuth>
+            <BugReportingBoardChromelessLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<AdminBugReportingBoard />} />
       </Route>
       <Route
         path="/"
