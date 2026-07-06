@@ -44,6 +44,16 @@ const bugReportSchema = new Schema(
     failedRequests: { type: [Schema.Types.Mixed], default: [] },
     screenshot: { type: bugReportScreenshotSchema, default: null },
     video: { type: bugReportVideoSchema, default: null },
+    transcriptionText: { type: String, default: null },
+    detectedLanguage: { type: String, enum: ['en', 'hi', 'gu'], default: null },
+    transcriptionStatus: {
+      type: String,
+      enum: ['processing', 'completed', 'failed'],
+      default: null,
+    },
+    transcriptionError: { type: String, default: null },
+    transcriptionConfidence: { type: Number, default: null },
+    transcriptionGeneratedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -66,6 +66,18 @@ export const BugReportVideoSchema = z.object({
 
 export type BugReportVideo = z.infer<typeof BugReportVideoSchema>;
 
+export const BugReportTranscriptionStatusSchema = z.enum(['processing', 'completed', 'failed']);
+export type BugReportTranscriptionStatus = z.infer<typeof BugReportTranscriptionStatusSchema>;
+
+export const BugReportDetectedLanguageSchema = z.enum(['en', 'hi', 'gu']);
+export type BugReportDetectedLanguage = z.infer<typeof BugReportDetectedLanguageSchema>;
+
+export const BUG_REPORT_DETECTED_LANGUAGE_LABELS: Record<BugReportDetectedLanguage, string> = {
+  en: 'English',
+  hi: 'Hindi',
+  gu: 'Gujarati',
+};
+
 export const BugReportCreateBodySchema = z.object({
   title: z.string().trim().min(3).max(200),
   description: z.string().trim().min(10).max(8000),
@@ -148,4 +160,14 @@ export interface BugReportDetail extends BugReportListItem {
   screenshotDataUrl: string | null;
   videoUrl: string | null;
   videoFilePath: string | null;
+  /** False when MongoDB has video metadata but the file is not on this server's disk. */
+  videoAvailableOnDisk: boolean;
+  /** False when the recording has no audio track (transcription not possible). */
+  videoHasAudio: boolean;
+  transcriptionText: string | null;
+  detectedLanguage: BugReportDetectedLanguage | null;
+  transcriptionStatus: BugReportTranscriptionStatus | null;
+  transcriptionError: string | null;
+  transcriptionConfidence: number | null;
+  transcriptionGeneratedAt: string | null;
 }

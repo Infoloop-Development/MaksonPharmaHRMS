@@ -1,18 +1,16 @@
-# Render — MAMS API (mams-server)
+# Render — MAMS API (mams-server) with Docker (Node + Python Vosk + ffmpeg)
 # https://render.com/docs/blueprint-spec
 
 services:
   - type: web
     name: mams-api
-    runtime: node
+    runtime: docker
     rootDir: mams
-    buildCommand: npm install --include=dev && npm run build:server
-    startCommand: npm run start:server
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NODE_VERSION
-        value: "20"
       - key: TZ
         value: Asia/Kolkata
       - key: LOG_LEVEL
@@ -35,5 +33,13 @@ services:
         value: "https://maksonhrms.netlify.app"
       - key: PUBLIC_APP_URL
         value: "https://maksonhrms.netlify.app"
+      - key: BUG_REPORT_MEDIA_DIR
+        value: /var/data/bug-reports
+      - key: BUG_REPORT_TRANSCRIPTION_TEMP_DIR
+        value: /tmp/mams-transcription
+      - key: VOSK_SERVICE_URL
+        value: http://127.0.0.1:8765
+      - key: VOSK_MODELS_DIR
+        value: /app/mams/mams-server/vosk-models
       # Set these in the Render dashboard (secrets):
       # MONGO_URI, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET

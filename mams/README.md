@@ -38,6 +38,39 @@ npm run dev:web      # http://localhost:5173
 # APP_PUBLIC_URL must match the URL users open in the browser (e.g. http://localhost:5173).
 ```
 
+## Bug report video transcription (offline Vosk)
+
+Admin bug report detail can transcribe screen recordings offline (English, Hindi, Gujarati). No cloud speech APIs.
+
+**Prerequisites**
+
+- [ffmpeg](https://ffmpeg.org/) on `PATH` (or set `FFMPEG_PATH` in `mams-server/.env`)
+- Python 3.11+ with pip
+- Vosk models (~165 MB total):
+
+```bash
+npm run vosk:models
+pip install -r mams-server/vosk-service/requirements.txt
+```
+
+**Local dev (three terminals)**
+
+```bash
+npm run dev:vosk      # Python Vosk service on http://127.0.0.1:8765
+npm run dev:server    # Node API (uses VOSK_SERVICE_URL from .env)
+npm run dev:web
+```
+
+In Admin → Bug Reporting → open a report with a screen recording → **Get Transcription**.
+
+**Production (Render Docker)**
+
+The API image bundles Node 20, Python 3.11, ffmpeg, and Vosk models. `docker-entrypoint.sh` starts the Vosk microservice, then the Node server. See `Dockerfile` and `render.yaml`.
+
+**On-prem (PM2)**
+
+`ops/pm2/ecosystem.config.cjs` includes `mams-vosk` alongside `mams-server`. Create a venv at `/opt/mams/vosk-venv`, install `mams-server/vosk-service/requirements.txt`, run `npm run vosk:models` into `mams-server/vosk-models/`, then `pm2 start ecosystem.config.cjs`.
+
 ## Repo layout
 
 ```

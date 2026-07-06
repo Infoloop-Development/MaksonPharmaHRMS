@@ -89,5 +89,12 @@ ${networkSection}
 - **Route at capture:** ${report.context.route}
 - **Module at capture:** ${report.context.module}
 - **App version:** ${report.context.appVersion ?? 'not recorded'}
-`;
+${report.transcriptionText ? `
+## Video transcription (offline, auto-detected)
+- **Detected language:** ${report.detectedLanguage ?? 'unknown'}
+- **Confidence:** ${report.transcriptionConfidence != null ? `${Math.round(report.transcriptionConfidence * 100)}%` : 'n/a'}
+- **Generated at:** ${report.transcriptionGeneratedAt ?? 'n/a'}
+
+${report.transcriptionText}
+` : ''}`;
 }

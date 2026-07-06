@@ -17,5 +17,13 @@ export const adminBugReportingApi = {
   getOne: (id: string) => api.get<BugReportDetail>(`/admin/bug-reporting/${id}`),
   patch: (id: string, body: BugReportPatchBody) =>
     api.patch<BugReportDetail>(`/admin/bug-reporting/${id}`, body),
+  transcribe: (
+    id: string,
+    options?: { regenerate?: boolean; language?: 'auto' | 'en' | 'hi' | 'gu' }
+  ) =>
+    api.post<BugReportDetail>(`/admin/bug-reporting/${id}/transcribe`, {
+      regenerate: options?.regenerate === true,
+      language: options?.language ?? 'auto',
+    }),
   modules: () => api.get<{ modules: string[] }>('/admin/bug-reporting/modules'),
 };

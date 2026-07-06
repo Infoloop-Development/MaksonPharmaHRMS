@@ -20,6 +20,7 @@ import {
   resolveBugReportVideoPath,
   normalizeBugReportVideoMime,
 } from './bugReportMedia.storage.js';
+import { videoHasAudioStream } from './bugReportMedia.probe.js';
 
 const MAX_SCREENSHOT_BYTES = 1_500_000;
 
@@ -172,6 +173,15 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
   );
   const base = serializeListItem(doc as BugReportDoc & { createdAt: Date; updatedAt: Date }, userMap);
 
+  const videoFilePath = doc.video?.filePath ?? null;
+  const videoAvailableOnDisk = videoFilePath
+    ? await bugReportVideoExists(videoFilePath)
+    : false;
+  const videoHasAudio =
+    videoAvailableOnDisk && videoFilePath
+      ? await videoHasAudioStream(resolveBugReportVideoPath(videoFilePath))
+      : false;
+
   return {
     ...base,
     consoleLog: (doc.consoleLog ?? []) as BugReportDetail['consoleLog'],
@@ -179,8 +189,18 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
     failedRequests: (doc.failedRequests ?? []) as BugReportDetail['failedRequests'],
     context: (doc.context ?? {}) as BugReportDetail['context'],
     screenshotDataUrl: toScreenshotDataUrl(doc.screenshot?.mimeType, doc.screenshot?.data),
-    videoUrl: doc.video?.filePath ? `/admin/bug-reporting/${id}/video` : null,
-    videoFilePath: doc.video?.filePath ?? null,
+    videoUrl: videoFilePath ? `/admin/bug-reporting/${id}/video` : null,
+    videoFilePath,
+    videoAvailableOnDisk,
+    videoHasAudio,
+    transcriptionText: doc.transcriptionText ?? null,
+    detectedLanguage: (doc.detectedLanguage as BugReportDetail['detectedLanguage']) ?? null,
+    transcriptionStatus: (doc.transcriptionStatus as BugReportDetail['transcriptionStatus']) ?? null,
+    transcriptionError: doc.transcriptionError ?? null,
+    transcriptionConfidence: doc.transcriptionConfidence ?? null,
+    transcriptionGeneratedAt: doc.transcriptionGeneratedAt
+      ? new Date(doc.transcriptionGeneratedAt).toISOString()
+      : null,
   };
 }
 
