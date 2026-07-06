@@ -291,7 +291,7 @@ export function DashboardAttendanceTable({
     <>
       <button
         type="button"
-        className="btn-outline shrink-0"
+        className="btn-outline shrink-0 min-h-[44px] sm:min-h-0"
         onClick={() => void onExportExcel()}
         disabled={exporting !== null || isInitialLoad}
       >

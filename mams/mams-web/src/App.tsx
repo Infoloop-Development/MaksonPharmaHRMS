@@ -71,6 +71,11 @@ function SettingsGate(){
   return viewMode === 'compliant' ? <ComplianceSettings /> : <Settings />;
 }
 
+function AttendanceGate(){
+  const viewMode = useAuth((s) => s.user?.viewMode);
+  return viewMode === 'compliant' ? <ComplianceAttendanceLog /> : <AttendanceLog />;
+}
+
 function HomeRedirect() {
   const user = useAuth((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
@@ -123,7 +128,7 @@ export function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="employees" element={<Employees />} />
         <Route path="employees/:id" element={<EmployeeDetail />} />
-        <Route path="attendance" element={<AttendanceLog />} />
+        <Route path="attendance" element={<AttendanceGate />} />
         <Route path="compliance-attendance" element={<ComplianceAttendanceLog />} />
         <Route path="reports" element={<Reports />} />
         {isAutogenDemoEnabled() && (

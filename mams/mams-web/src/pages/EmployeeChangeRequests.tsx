@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { SelectField } from '../components/ui/SelectField';
 import { DashboardStatCard } from '../components/ui/DashboardStatCard';
+import { TablePagination } from '../components/ui/TablePagination';
 import { fmtDate } from '../lib/format';
 import { ApiError } from '../api/client';
 
@@ -51,7 +52,9 @@ export function EmployeeChangeRequests() {
   const user = useAuth((s) => s.user);
   const canApprove = user?.permissions.includes('approve.employee_change') ?? false;
 
-  const [statusFilter, setStatusFilter] = useState<'Flagged' | 'Reviewed' | ''>('Flagged');
+  const [statusFilter, setStatusFilter] = useState<'Flagged' | 'Reviewed' | ''>(
+    canApprove ? 'Flagged' : '',
+  );
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const [reviewRequest, setReviewRequest] = useState<ChangeRequest | null>(null);
@@ -118,13 +121,13 @@ export function EmployeeChangeRequests() {
         <div className="tbl-scroll">
           <table className="w-full text-sm">
             <thead className="bg-surface2">
-              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-4 py-3 font-semibold">Type</th>
-                <th className="px-4 py-3 font-semibold">Employee</th>
-                <th className="px-4 py-3 font-semibold hidden md:table-cell">Submitted by</th>
-                <th className="px-4 py-3 font-semibold hidden md:table-cell">Date</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+              <tr className="text-xs uppercase tracking-wider text-text-muted">
+                <th className="px-4 py-3 font-semibold !text-center">Type</th>
+                <th className="px-4 py-3 font-semibold !text-center">Employee</th>
+                <th className="px-4 py-3 font-semibold !text-center hidden md:table-cell">Submitted by</th>
+                <th className="px-4 py-3 font-semibold !text-center hidden md:table-cell">Date</th>
+                <th className="px-4 py-3 font-semibold !text-center">Status</th>
+                <th className="px-4 py-3 font-semibold !text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -139,36 +142,34 @@ export function EmployeeChangeRequests() {
               )}
               {items.map((req) => (
                 <tr key={req._id} className="hover:bg-surface2/50 transition">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <Badge tone={TYPE_TONE[req.changeType]}>
                       {req.changeType.charAt(0).toUpperCase() + req.changeType.slice(1)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <div className="font-medium">{employeeDisplayName(req)}</div>
                     <div className="text-xs text-text-muted font-mono">{employeeDisplayCode(req)}</div>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-text-muted">
+                  <td className="px-4 py-3 hidden md:table-cell text-center text-text-muted">
                     {req.initiatedBy?.name ?? '—'}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-text-muted text-xs">
+                  <td className="px-4 py-3 hidden md:table-cell text-center text-text-muted text-xs">
                     {req.initiatedAt ? fmtDate(req.initiatedAt.slice(0, 10)) : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-center">
                     <Badge tone={canApprove ? STATUS_TONE[req.status] : 'green'}>
                       {canApprove ? req.status : 'Processed'}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        className="btn-outline btn-sm"
-                        onClick={() => setReviewRequest(req)}
-                      >
-                        {req.status === 'Flagged' ? 'Review' : 'View'}
-                      </button>
-                    </div>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      className="btn-outline btn-sm"
+                      onClick={() => setReviewRequest(req)}
+                    >
+                      {canApprove && req.status === 'Flagged' ? 'Review' : 'View'}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -178,13 +179,12 @@ export function EmployeeChangeRequests() {
       </div>
 
       {data && data.total > pageSize && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <div className="text-text-muted">Page {page} of {Math.ceil(data.total / pageSize)}</div>
-          <div className="flex gap-2">
-            <button className="btn-outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
-            <button className="btn-outline" onClick={() => setPage((p) => p + 1)} disabled={page * pageSize >= data.total}>Next</button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          totalPages={Math.ceil(data.total / pageSize)}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       )}
 
       {reviewRequest && (
@@ -287,7 +287,7 @@ function ReviewModal({
     { label: 'Dept', key: 'department' },
     { label: 'Designation', key: 'designation' },
     { label: 'Location', key: 'location' },
-    { label: 'Comp. shift', key: 'alternateShift' },
+    { label: canApprove ? 'Comp. shift' : 'Shift', key: 'alternateShift' },
     { label: 'Weekly off', key: 'weeklyOff' },
     { label: 'Gender', key: 'gender' },
     { label: 'Join date', key: 'joinDate' },
@@ -295,11 +295,13 @@ function ReviewModal({
     { label: 'Biometric ID', key: 'biometricId' },
   ];
 
+  const changeTypeLabel = request.changeType.charAt(0).toUpperCase() + request.changeType.slice(1);
+
   return (
     <Modal
       open
       onClose={onClose}
-      title={`Review: ${request.changeType.charAt(0).toUpperCase() + request.changeType.slice(1)}`}
+      title={canApprove ? `Review: ${changeTypeLabel}` : `Change details: ${changeTypeLabel}`}
       size="xl"
       footer={
         <>
@@ -369,19 +371,19 @@ function ReviewModal({
           <div className="border border-border rounded-lg px-4 py-3 bg-surface2 text-sm text-text leading-relaxed">{request.reason}</div>
         </div>
 
-        {isCreate && employeeIsDeleted && (
+        {canApprove && isCreate && employeeIsDeleted && (
           <div className="rounded-md border border-amber/30 bg-amber-bg px-4 py-3 text-sm text-amber">
             This employee has been deleted. You can only acknowledge this record — handle the Delete record first.
           </div>
         )}
 
-        {isUpdate && employeeIsDeleted && (
+        {canApprove && isUpdate && employeeIsDeleted && (
           <div className="rounded-md border border-amber/30 bg-amber-bg px-4 py-3 text-sm text-amber">
             This employee has been deleted. You cannot revert this update — handle the Delete record first.
           </div>
         )}
 
-        {isDelete && (
+        {canApprove && isDelete && (
           <div className="rounded-md border border-red/30 bg-red-bg px-4 py-3 text-sm text-red">
             <strong>{employeeDisplayName(request)}</strong> has already been removed from the system. Confirm deletion or reinstate if it was a mistake.
           </div>
@@ -444,7 +446,7 @@ function ReviewModal({
           </div>
         )}
 
-        {!isFlagged && (
+        {canApprove && !isFlagged && (
           <div className="rounded-md border border-border bg-surface2/40 px-4 py-3 text-xs text-text-muted space-y-1">
             <div><span className="font-semibold">Status:</span> <Badge tone={STATUS_TONE[request.status]}>{request.status}</Badge></div>
             {request.reviewedBy && <div><span className="font-semibold">Reviewed by:</span> {request.reviewedBy.name ?? '—'}</div>}

@@ -4,6 +4,7 @@ import { useAuth } from "../store/auth";
 import { activityApi } from "../api/activity";
 import { AuditLogResults } from "../components/activity/AuditLogResults";
 import { AuditLogTabBar } from "../components/activity/AuditLogTabBar";
+import { TablePagination } from "../components/ui/TablePagination";
 import type { AuditLogCategory } from "@mams/types";
 
 const PAGE_SIZE = 50
@@ -22,7 +23,7 @@ export function ComplianceActivity(){
         return () => clearTimeout(t);
     }, [search]);
 
-    const { data, isLoading } = useQuery({
+    const { data, isLoading, error } = useQuery({
         queryKey: ['activity','compliance',page,category,debouncedSearch],
         queryFn: () =>
             activityApi.listOrg({
@@ -74,32 +75,17 @@ export function ComplianceActivity(){
             </div>
 
             <div className="card p-4">
-                <AuditLogResults items={data?.items} isLoading={isLoading} />
+                <AuditLogResults items={data?.items} isLoading={isLoading} error={error} />
 
                 {total > PAGE_SIZE && (
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                        <span className="text-text-muted">
-                            Page {page} of {pageCount} ({total} events)
-                        </span>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                className="btn-outline btn-sm"
-                                disabled={page <= 1}
-                                onClick={() => setPage((p) => p-1)}
-                            >
-                                Previous
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-outline btn-sm"
-                                disabled={page >= pageCount}
-                                onClick={() => setPage((p) => p + 1)}
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
+                    <TablePagination
+                        page={page}
+                        totalPages={pageCount}
+                        total={total}
+                        showTotal
+                        onPrev={() => setPage((p) => p - 1)}
+                        onNext={() => setPage((p) => p + 1)}
+                    />
                 )}
 
             </div>

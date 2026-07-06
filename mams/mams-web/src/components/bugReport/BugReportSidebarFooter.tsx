@@ -1,6 +1,7 @@
 import { useBugReport } from './BugReportContext';
 import { BugReportRecordingDock } from './BugReportRecordingHud';
 import { BugReportRecordingPip } from './BugReportRecordingPip';
+import { NavIcon } from '../navIcons';
 
 type Props = {
   collapsed?: boolean;
@@ -55,15 +56,19 @@ export function BugReportSidebarFooter({ collapsed = false }: Props) {
       {showReportButton && (
         <button
           type="button"
-          className={`bug-report-sidebar-btn w-full min-h-[44px] rounded-lg px-3 py-2.5 text-sm font-semibold transition-opacity touch-target ${
+          className={`bug-report-sidebar-btn w-full min-h-[44px] rounded-lg px-3 py-2.5 text-sm font-semibold transition-opacity touch-target flex items-center justify-center gap-2 ${
             capturing ? 'opacity-70 cursor-wait' : ''
-          } ${collapsed ? 'lg:px-2 lg:text-[10px]' : ''}`}
+          } ${collapsed ? 'lg:px-2' : ''}`}
           onClick={() => void onOpen()}
           disabled={capturing || recorder.isActive}
           aria-label="Report bug"
           title={collapsed ? 'Report bug' : undefined}
         >
-          {capturing ? 'Capturing…' : collapsed ? 'Bug' : 'Report Bug'}
+          {collapsed ? (
+            <NavIcon name="bug" />
+          ) : (
+            <span>{capturing ? 'Capturing…' : 'Report Bug'}</span>
+          )}
         </button>
       )}
     </div>

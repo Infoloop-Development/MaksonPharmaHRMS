@@ -67,9 +67,11 @@ export function AuditLogActiveFilters({
 export function AuditLogResults({
   items,
   isLoading,
+  error,
 }: {
   items: ActivityListItem[] | undefined;
   isLoading: boolean;
+  error?: unknown;
 }) {
   const getSortValue = useCallback((row: ActivityListItem, col: string) => {
     if (col === 'occurredAt') return row.occurredAt;
@@ -86,6 +88,10 @@ export function AuditLogResults({
 
   if (isLoading) {
     return <div className="text-sm text-text-muted py-6 text-center">Loading audit…</div>;
+  }
+
+  if (error) {
+    return <div className="text-sm text-red py-6 text-center">Failed to load.</div>;
   }
 
   if (!sortedRows.length) {

@@ -19,7 +19,7 @@ const SeedUsersEnvSchema = z.object({
   SEED_IT_ADMIN_NAME: z.string().min(1).default('IT Administrator'),
   SEED_DEFAULT_PASSWORD: z.string().min(8).default('makson2026'),
   SEED_HR_ADMIN_NAME: z.string().min(1).default('Priya Patel'),
-  SEED_HR_COMPLIANCE_NAME: z.string().min(1).default('Compliance Auditor'),
+  SEED_HR_COMPLIANCE_NAME: z.string().min(1).default('Priya Patel'),
   SEED_FORCE_PASSWORD: z
     .enum(['true', 'false'])
     .default('false')

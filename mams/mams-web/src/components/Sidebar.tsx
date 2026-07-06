@@ -49,7 +49,7 @@ function buildNav(
     nav = nav.filter((item) => !COMPLAINCE_HIDDEN_ROUTES.has(item.to));
     nav = [
       ...nav.slice(0, 2),
-      { ...COMPLIANCE_ATTENDANCE_NAV, label: 'Attendance Log' },
+      { to: '/attendance', label: 'Attendance Log', icon: 'attendance' as const },
       ...nav.slice(2),
     ];
   } else if (hasCompliant && hasReal) {
