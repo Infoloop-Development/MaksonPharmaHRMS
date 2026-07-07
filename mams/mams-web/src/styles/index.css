@@ -762,6 +762,15 @@ input, select, textarea {
   background: rgba(255, 255, 255, 0.38);
 }
 
+/* Scrollable region without visible scrollbar (trackpad/mouse wheel still works). */
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 /* Add/Edit user: permissions & unmask grids */
 .user-perm-grid,
 .user-unmask-grid {

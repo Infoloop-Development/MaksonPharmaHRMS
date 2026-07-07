@@ -129,7 +129,11 @@ export function BugReportKanbanBoard({
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className={`flex gap-3 overflow-x-auto pb-2 ${expanded ? 'flex-1 min-h-0 items-stretch' : 'pb-4'}`}>
+      <div
+        className={`scrollbar-hidden flex gap-3 overflow-x-auto pb-2 ${
+          expanded ? 'flex-1 min-h-0 items-stretch' : 'pb-4'
+        }`}
+      >
         {columnData.map((column) => (
           <KanbanColumn
             key={column.phaseId}

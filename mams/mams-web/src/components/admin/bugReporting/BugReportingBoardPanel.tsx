@@ -187,7 +187,7 @@ export function BugReportingBoardPanel({
       {phasesLoading && phases.length === 0 ? (
         <p className="text-text-muted text-sm">Loading phases…</p>
       ) : (
-        <div className={chromeless ? 'flex-1 min-h-0' : undefined}>
+        <div className={chromeless ? 'flex-1 min-h-0 min-w-0' : 'min-w-0'}>
           <BugReportKanbanBoard
             phases={phases}
             columns={columns}
