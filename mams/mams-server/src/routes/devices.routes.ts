@@ -19,11 +19,12 @@ import {
 } from '../services/notification.service.js';
 import { syncDevice, testDeviceConnectivity } from '../services/deviceSync.service.js';
 import { softDeleteFields } from '../utils/softDelete.util.js';
+import { sanitizeDeviceForClient } from '../utils/deviceResponse.js';
 
 const router = Router();
 router.use(requireAuth);
 
-router.get('/', async (_req, res, next) => {
+router.get('/', requirePermission('manage.devices'), async (_req, res, next) => {
   try {
     const items = await DeviceModel.find({ isDeleted: { $ne: true } }).sort({ deviceCode: 1 }).lean();
     const now = Date.now();
@@ -41,14 +42,16 @@ router.get('/', async (_req, res, next) => {
     );
     const map = new Map(counts.map((c) => [c.id, c]));
 
-    const enriched = items.map((d) => ({
-      ...d,
-      vendor: d.vendor ?? 'eSSL',
-      protocolMode: d.protocolMode ?? 'push',
-      isOnline: d.lastPingAt ? d.lastPingAt > new Date(now - 5 * 60 * 1000) : false,
-      totalEmployeesAssigned: map.get(String(d._id))?.empCount ?? 0,
-      recentPunchCount: map.get(String(d._id))?.recentPunches ?? 0,
-    }));
+    const enriched = items.map((d) =>
+      sanitizeDeviceForClient({
+        ...d,
+        vendor: d.vendor ?? 'eSSL',
+        protocolMode: d.protocolMode ?? 'push',
+        isOnline: d.lastPingAt ? d.lastPingAt > new Date(now - 5 * 60 * 1000) : false,
+        totalEmployeesAssigned: map.get(String(d._id))?.empCount ?? 0,
+        recentPunchCount: map.get(String(d._id))?.recentPunches ?? 0,
+      })
+    );
 
     res.json({ items: enriched, total: enriched.length });
   } catch (err) {
@@ -133,7 +136,7 @@ router.post('/', requirePermission('manage.devices'), async (req, res, next) => 
         entityId: created._id,
       })
     );
-    res.status(201).json(created);
+    res.status(201).json(sanitizeDeviceForClient(created.toObject() as Record<string, unknown>));
   } catch (err) {
     next(err);
   }
@@ -151,7 +154,7 @@ router.patch('/:id', requirePermission('manage.devices'), async (req, res, next)
       { userId: req.auth!.sub, ipAddress: req.clientIp ?? null, userAgent: req.header('user-agent') ?? null },
       { entityType: 'device', entityId: doc._id, payload: { changedFields: Object.keys(body) } }
     );
-    res.json(doc);
+    res.json(sanitizeDeviceForClient(doc.toObject() as Record<string, unknown>));
   } catch (err) {
     next(err);
   }
@@ -256,7 +259,7 @@ router.post('/:id/sync', requirePermission('manage.devices'), async (req, res, n
     }
 
     const updated = await DeviceModel.findById(id).lean();
-    res.json({ ...result, device: updated });
+    res.json({ ...result, device: updated ? sanitizeDeviceForClient(updated as Record<string, unknown>) : null });
   } catch (err) {
     next(err);
   }

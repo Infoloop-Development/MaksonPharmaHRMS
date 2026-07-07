@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { AdjustmentModel } from '../models/Adjustment.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel } from '../models/Employee.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import { recomputeDerived } from '../services/attendance.service.js';
@@ -12,6 +12,7 @@ import { AdjustmentCreateSchema, AdjustmentDecisionSchema } from '@mams/types';
 
 const router = Router();
 router.use(requireAuth);
+const adjustmentReadGate = requireAnyPermission('write.adjust', 'approve.adjust');
 
 router.use((req, res, next) => {
   if (req.auth?.viewMode === 'compliant') {
@@ -29,7 +30,7 @@ const ListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', adjustmentReadGate, async (req, res, next) => {
   try {
     const q = ListQuerySchema.parse(req.query);
     const filter: Record<string, unknown> = {};

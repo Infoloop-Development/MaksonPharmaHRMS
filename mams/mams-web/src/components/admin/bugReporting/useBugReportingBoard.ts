@@ -12,7 +12,6 @@ import {
   BUG_PHASES_QUERY_KEY,
   BUG_REPORTING_QUERY_KEY,
 } from '../../../api/adminBugReporting';
-import { usersApi } from '../../../api/users';
 import { useToast } from '../../ui/Toast';
 
 const BOARD_PAGE_SIZE = 50;
@@ -70,9 +69,9 @@ export function useBugReportingBoard(enabled: boolean) {
     enabled,
   });
 
-  const { data: usersData } = useQuery({
-    queryKey: ['users'],
-    queryFn: usersApi.list,
+  const { data: assigneesData } = useQuery({
+    queryKey: [...BUG_REPORTING_QUERY_KEY, 'assignees'],
+    queryFn: () => adminBugReportingApi.listAssignees(),
     enabled,
   });
 
@@ -153,8 +152,12 @@ export function useBugReportingBoard(enabled: boolean) {
     void phaseLabel;
   };
 
-  const assigneeOptions = (usersData?.items ?? []).filter((u) => u.isActive);
-  const itAdminOptions = assigneeOptions.filter((u) => u.role === 'it.admin');
+  const assigneeOptions = (assigneesData?.items ?? []).map((u) => ({
+    _id: u.id,
+    name: u.name,
+    role: u.role,
+  }));
+  const itAdminOptions = assigneeOptions;
 
   return {
     filters: { severity, module, assigneeId, search },

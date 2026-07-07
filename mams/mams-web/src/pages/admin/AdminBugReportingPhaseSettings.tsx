@@ -22,6 +22,7 @@ import { useAuth } from '../../store/auth';
 import { adminBugReportingApi, BUG_PHASES_QUERY_KEY } from '../../api/adminBugReporting';
 import { useToast } from '../../components/ui/Toast';
 import { Modal } from '../../components/ui/Modal';
+import { ItAdminSubNav } from '../../components/admin/itAdmin/ItAdminSubNav';
 
 function SortablePhaseRow({
   phase,
@@ -161,6 +162,7 @@ export function AdminBugReportingPhaseSettings() {
 
   return (
     <div>
+      <ItAdminSubNav />
       <div className="mb-4">
         <Link to="/admin/bug-reporting" className="text-sm text-link hover:underline">
           ← Back to board

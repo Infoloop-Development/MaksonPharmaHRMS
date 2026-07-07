@@ -100,9 +100,9 @@ export async function rotateRefresh(token: string, ctx: { ipAddress: string | nu
   return { user, accessToken, refreshToken };
 }
 
-export async function logout(refreshToken: string): Promise<void> {
+export async function logout(refreshToken: string, userId: string): Promise<void> {
   await RefreshTokenModel.updateOne(
-    { tokenHash: hashToken(refreshToken) },
+    { tokenHash: hashToken(refreshToken), userId },
     { $set: { revokedAt: new Date() } }
   );
 }

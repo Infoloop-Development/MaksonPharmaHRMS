@@ -1,3 +1,4 @@
+import { escapeRegex } from '../utils/escapeRegex.js';
 import { Types } from 'mongoose';
 import {
   BUG_REPORT_ASSIGNEE_UNASSIGNED,
@@ -195,7 +196,7 @@ export async function listBugReports(query: BugReportListQuery): Promise<BugRepo
     filter.assigneeId = new Types.ObjectId(q.assigneeId);
   }
   if (q.search?.trim()) {
-    filter.title = { $regex: q.search.trim(), $options: 'i' };
+    filter.title = { $regex: escapeRegex(q.search.trim()), $options: 'i' };
   }
 
   const sortField = q.sortBy === 'title' ? 'title' : q.sortBy;
@@ -301,6 +302,12 @@ export async function patchBugReport(
   if (parsed.assigneeId !== undefined) {
     if (parsed.assigneeId && !Types.ObjectId.isValid(parsed.assigneeId)) {
       throw new ApiError(400, 'validation_error', 'Invalid assignee id');
+    }
+    if (parsed.assigneeId) {
+      const assignee = await UserModel.findById(parsed.assigneeId).select('role isActive').lean();
+      if (!assignee?.isActive || assignee.role !== 'it.admin') {
+        throw new ApiError(400, 'validation_error', 'Assignee must be an active IT Admin');
+      }
     }
     doc.assigneeId = parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null;
   }

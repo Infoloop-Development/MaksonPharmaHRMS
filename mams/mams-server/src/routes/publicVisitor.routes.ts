@@ -1,6 +1,7 @@
 import { Router, type Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import multer from 'multer';
+import { validatePublicVisitorUploadFile } from '../utils/visitorUploadValidation.js';
 import { randomBytes } from 'node:crypto';
 import { Types } from 'mongoose';
 import { VisitorPublicSubmitSchema, validateVisitorResponses, validateIntroAttestation, type VisitorField, type VisitorIntro } from '@mams/types';
@@ -135,6 +136,8 @@ router.post('/:slug/upload', uploadLimiter, upload.single('file'), async (req, r
 
     const file = req.file;
     if (!file) throw new ApiError(400, 'no_file', 'No file uploaded');
+
+    validatePublicVisitorUploadFile(file);
 
     const maxBytes = field.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
     if (file.size > maxBytes) {

@@ -33,6 +33,7 @@ import {
 } from '../services/bugReportComment.service.js';
 import { MAX_BUG_REPORT_COMMENT_IMAGE_BYTES } from '../services/bugReportMedia.storage.js';
 import { transcribeBugReportVideo } from '../services/bugReportTranscription.service.js';
+import { UserModel } from '../models/User.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -94,6 +95,25 @@ router.delete('/phases/:phaseId', async (req, res, next) => {
 router.get('/modules', async (_req, res, next) => {
   try {
     res.json({ modules: await listBugReportModules() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/assignees', async (_req, res, next) => {
+  try {
+    const items = await UserModel.find({ role: 'it.admin', isActive: true })
+      .select('name email role')
+      .sort({ name: 1 })
+      .lean();
+    res.json({
+      items: items.map((u) => ({
+        id: String(u._id),
+        name: u.name,
+        email: u.email,
+        role: 'it.admin' as const,
+      })),
+    });
   } catch (err) {
     next(err);
   }

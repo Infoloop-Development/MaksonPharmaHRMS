@@ -7,7 +7,6 @@ import {
 } from '@mams/types';
 import { useAuth } from '../../store/auth';
 import { adminBugReportingApi, BUG_PHASES_QUERY_KEY, BUG_REPORTING_QUERY_KEY } from '../../api/adminBugReporting';
-import { usersApi } from '../../api/users';
 import { useToast } from '../../components/ui/Toast';
 import { Field, Select } from '../../components/ui/Field';
 import { Badge } from '../../components/ui/Badge';
@@ -41,9 +40,9 @@ export function AdminBugReportDetail() {
     enabled: canAccess,
   });
 
-  const { data: usersData } = useQuery({
-    queryKey: ['users'],
-    queryFn: usersApi.list,
+  const { data: assigneesData } = useQuery({
+    queryKey: [...BUG_REPORTING_QUERY_KEY, 'assignees'],
+    queryFn: () => adminBugReportingApi.listAssignees(),
     enabled: canAccess,
   });
 
@@ -80,7 +79,11 @@ export function AdminBugReportDetail() {
     }
   };
 
-  const assigneeOptions = (usersData?.items ?? []).filter((u) => u.isActive);
+  const assigneeOptions = (assigneesData?.items ?? []).map((u) => ({
+    _id: u.id,
+    name: u.name,
+    role: u.role,
+  }));
 
   return (
     <div>

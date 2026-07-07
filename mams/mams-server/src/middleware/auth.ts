@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { Permission, Role, ViewMode } from '@mams/types';
 import { env } from '../config/env.js';
+import { UserModel } from '../models/User.js';
+import { filterPermissionsForSession } from '../config/featureFlags.js';
 
 export interface AuthClaims {
   sub: string;        // userId
@@ -42,7 +44,7 @@ export function verifyRefreshToken(token: string): { sub: string } {
   return { sub: decoded.sub };
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     res.status(401).json({ error: 'unauthenticated' });
@@ -51,7 +53,21 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   const token = header.slice('Bearer '.length);
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as AuthClaims;
-    req.auth = decoded;
+    const user = await UserModel.findById(decoded.sub)
+      .select('isActive role viewMode permissions')
+      .lean();
+    if (!user || user.isActive === false) {
+      res.status(401).json({ error: 'unauthenticated' });
+      return;
+    }
+    req.auth = {
+      sub: String(user._id),
+      role: user.role as Role,
+      viewMode: user.viewMode as ViewMode,
+      permissions: filterPermissionsForSession((user.permissions ?? []) as Permission[]),
+      iat: decoded.iat,
+      exp: decoded.exp,
+    };
     next();
   } catch {
     res.status(401).json({ error: 'invalid_token' });

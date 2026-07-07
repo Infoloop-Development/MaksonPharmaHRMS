@@ -8,6 +8,7 @@ import {
 } from '../../components/admin/bugReporting/BugReportingBoardPanel';
 import { useBugReportingBoard } from '../../components/admin/bugReporting/useBugReportingBoard';
 import { BugReportDetailModal } from '../../components/bugReport/BugReportDetailModal';
+import { ItAdminSubNav } from '../../components/admin/itAdmin/ItAdminSubNav';
 
 export function AdminBugReporting() {
   const user = useAuth((s) => s.user);
@@ -44,6 +45,7 @@ export function AdminBugReporting() {
 
   return (
     <div>
+      <ItAdminSubNav />
       <BugReportingBoardPanel
         phases={board.phases}
         phasesLoading={board.phasesLoading}

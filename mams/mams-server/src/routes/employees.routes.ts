@@ -26,6 +26,7 @@ const router = Router();
 router.use(requireAuth);
 
 const manageEmployeesGate = requireAnyPermission('manage.employees', 'manage.users');
+const hrReadGate = requireAnyPermission('read.real', 'read.compliant', 'manage.employees');
 
 // Preview next server-allocated emp code (must be before /:id)
 router.get('/next-code', requireAnyPermission('manage.employees', 'manage.users'), async (_req, res, next) => {
@@ -38,7 +39,7 @@ router.get('/next-code', requireAnyPermission('manage.employees', 'manage.users'
 });
 
 // LIST - masked
-router.get('/', async (req, res, next) => {
+router.get('/', hrReadGate, async (req, res, next) => {
   try {
     const q = EmployeeListQuerySchema.parse(req.query);
     const filter: Record<string, unknown> = { isDeleted: { $ne: true } };
@@ -75,7 +76,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // GET ONE - masked
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', hrReadGate, async (req, res, next) => {
   try {
     if (!Types.ObjectId.isValid(req.params.id ?? '')) {
       throw new ApiError(404, 'not_found', 'Employee not found');

@@ -44,7 +44,7 @@ router.post('/refresh', async (req, res, next) => {
 router.post('/logout', requireAuth, async (req, res, next) => {
   try {
     const body = RefreshRequestSchema.parse(req.body);
-    await logout(body.refreshToken);
+    await logout(body.refreshToken, req.auth!.sub);
     if (req.auth) {
       await audit('logout', {
         userId: req.auth.sub,

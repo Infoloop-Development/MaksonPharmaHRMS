@@ -1,6 +1,14 @@
-import { PERMISSIONS_BY_ROLE, dedupePermissions, type Permission, type Role } from '@mams/types';
+import {
+  PERMISSIONS_BY_ROLE,
+  dedupePermissions,
+  type Permission,
+  type Role,
+  type SensitiveUnmaskField,
+} from '@mams/types';
 import { UserModel, type UserDoc } from '../models/User.js';
 import { logger } from '../utils/logger.js';
+import { isUnmaskEnabled } from '../config/featureFlags.js';
+import { applyUnmaskSensitivePermission } from './unmaskGrants.service.js';
 
 /**
  * Add any role-default permissions missing from the user document.
@@ -10,10 +18,27 @@ export async function ensureUserRoleDefaultPermissions(user: UserDoc): Promise<U
   const role = user.role as Role;
   const defaults = PERMISSIONS_BY_ROLE[role] ?? [];
   const current = (user.permissions ?? []) as Permission[];
-  const missing = defaults.filter((p) => !current.includes(p));
-  if (missing.length === 0) return user;
+  const hasGranularUnmaskGrants =
+    isUnmaskEnabled() && (user.unmaskFieldGrants ?? []).length > 0;
 
-  user.permissions = dedupePermissions([...current, ...missing]);
+  let missing = defaults.filter((p) => !current.includes(p));
+  if (hasGranularUnmaskGrants) {
+    missing = missing.filter((p) => p !== 'unmask.sensitive');
+  }
+
+  let nextPermissions =
+    missing.length > 0 ? dedupePermissions([...current, ...missing]) : [...current];
+
+  if (hasGranularUnmaskGrants) {
+    nextPermissions = applyUnmaskSensitivePermission(
+      nextPermissions,
+      user.unmaskFieldGrants as SensitiveUnmaskField[]
+    );
+  }
+
+  if (JSON.stringify(nextPermissions) === JSON.stringify(current)) return user;
+
+  user.permissions = nextPermissions;
   await user.save();
   logger.info('Backfilled missing role default permissions', {
     userId: String(user._id),

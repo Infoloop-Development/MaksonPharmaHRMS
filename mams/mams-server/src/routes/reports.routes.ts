@@ -2,7 +2,7 @@ import { Router, type Response } from 'express';
 import { z } from 'zod';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel } from '../models/Employee.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAnyPermission } from '../middleware/auth.js';
 import { SettingsModel } from '../models/Settings.js';
 import { buildExportFileName } from '../services/exportFileName.service.js';
 import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.service.js';
@@ -17,6 +17,7 @@ import {
 
 const router = Router();
 router.use(requireAuth);
+const hrReadGate = requireAnyPermission('read.real', 'read.compliant');
 
 const FilterSchema = z.object({
   date: z.string().optional(),
@@ -77,7 +78,7 @@ function projectionFor(viewMode: 'real' | 'compliant') {
 }
 
 // Daily Attendance Report
-router.get('/daily', async (req, res, next) => {
+router.get('/daily', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -98,7 +99,7 @@ router.get('/daily', async (req, res, next) => {
 });
 
 // Monthly Summary - groups by employee within the month
-router.get('/monthly', async (req, res, next) => {
+router.get('/monthly', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     if (!q.yearMonth) {
@@ -150,7 +151,7 @@ router.get('/monthly', async (req, res, next) => {
 });
 
 // Department-wise Report - aggregate by department within a period
-router.get('/department', async (req, res, next) => {
+router.get('/department', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -202,7 +203,7 @@ router.get('/department', async (req, res, next) => {
 });
 
 // Location-wise Report
-router.get('/location', async (req, res, next) => {
+router.get('/location', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -261,7 +262,7 @@ function formatReportDateRange(startDate?: string, endDate?: string): string {
 }
 
 // CSV export of daily report
-router.get('/daily.csv', async (req, res, next) => {
+router.get('/daily.csv', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -346,7 +347,7 @@ router.get('/daily.csv', async (req, res, next) => {
   }
 });
 
-router.get('/daily.xlsx', async (req, res, next) => {
+router.get('/daily.xlsx', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -407,7 +408,7 @@ router.get('/daily.xlsx', async (req, res, next) => {
   }
 });
 
-router.get('/monthly.xlsx', async (req, res, next) => {
+router.get('/monthly.xlsx', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     if (!q.yearMonth) {
@@ -500,7 +501,7 @@ router.get('/monthly.xlsx', async (req, res, next) => {
   }
 });
 
-router.get('/monthly.csv', async (req, res, next) => {
+router.get('/monthly.csv', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     if (!q.yearMonth) {
@@ -612,7 +613,7 @@ router.get('/monthly.csv', async (req, res, next) => {
   }
 });
 
-router.get('/department.xlsx', async (req, res, next) => {
+router.get('/department.xlsx', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -693,7 +694,7 @@ router.get('/department.xlsx', async (req, res, next) => {
   }
 });
 
-router.get('/department.csv', async (req, res, next) => {
+router.get('/department.csv', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -794,7 +795,7 @@ router.get('/department.csv', async (req, res, next) => {
   }
 });
 
-router.get('/location.xlsx', async (req, res, next) => {
+router.get('/location.xlsx', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
@@ -869,7 +870,7 @@ router.get('/location.xlsx', async (req, res, next) => {
   }
 });
 
-router.get('/location.csv', async (req, res, next) => {
+router.get('/location.csv', hrReadGate, async (req, res, next) => {
   try {
     const q = FilterSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);

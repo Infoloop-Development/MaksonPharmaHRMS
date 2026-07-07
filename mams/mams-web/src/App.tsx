@@ -30,6 +30,7 @@ import { AdminRecycleBin } from './pages/admin/AdminRecycleBin';
 import { AdminBugReporting } from './pages/admin/AdminBugReporting';
 import { AdminBugReportingBoard } from './pages/admin/AdminBugReportingBoard';
 import { AdminBugReportingPhaseSettings } from './pages/admin/AdminBugReportingPhaseSettings';
+import { AdminManageItAdmins } from './pages/admin/AdminManageItAdmins';
 import { BugReportingBoardChromelessLayout } from './components/admin/bugReporting/BugReportingBoardChromelessLayout';
 import { AdminBugReportDetail } from './pages/admin/AdminBugReportDetail';
 import { BugReportInstrumentationProvider } from './components/bugReport/BugReportInstrumentationProvider';
@@ -113,6 +114,7 @@ export function App() {
         <Route path="recycle-bin" element={<AdminRecycleBin />} />
         <Route path="bug-reporting" element={<AdminBugReporting />} />
         <Route path="bug-reporting/settings" element={<AdminBugReportingPhaseSettings />} />
+        <Route path="bug-reporting/it-admins" element={<AdminManageItAdmins />} />
         <Route path="bug-reporting/:id" element={<AdminBugReportDetail />} />
       </Route>
       <Route

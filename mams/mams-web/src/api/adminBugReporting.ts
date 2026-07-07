@@ -33,6 +33,10 @@ export const adminBugReportingApi = {
       language: options?.language ?? 'auto',
     }),
   modules: () => api.get<{ modules: string[] }>('/admin/bug-reporting/modules'),
+  listAssignees: () =>
+    api.get<{ items: { id: string; name: string; email: string; role: 'it.admin' }[] }>(
+      '/admin/bug-reporting/assignees'
+    ),
   phases: {
     list: () => api.get<{ phases: BugPhase[] }>('/admin/bug-reporting/phases'),
     create: (body: BugPhaseCreateBody) =>
