@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,6 +12,7 @@ import { Field, Select } from '../../components/ui/Field';
 import { Badge } from '../../components/ui/Badge';
 import { fmtIstDate } from '../../lib/format';
 import { formatBugReportSummary } from '../../lib/bugReport/formatBugReportSummary';
+import { applyBugReportPatchToCache } from '../../lib/bugReport/bugReportingQueryCache';
 import { BugReportDetailContent } from '../../components/bugReport/BugReportDetailContent';
 
 function severityTone(severity: string): 'green' | 'amber' | 'red' | 'blue' {
@@ -50,10 +51,21 @@ export function AdminBugReportDetail() {
   const [assigneeId, setAssigneeId] = useState<string>('');
   const [deadline, setDeadline] = useState('');
 
+  useEffect(() => {
+    if (!data) return;
+    setPhaseId(data.phaseId);
+    setAssigneeId(data.assignee?.id ?? '');
+    setDeadline(data.deadline ?? '');
+  }, [data?.id, data?.phaseId, data?.assignee?.id, data?.deadline]);
+
   const patchMu = useMutation({
     mutationFn: (body: Parameters<typeof adminBugReportingApi.patch>[1]) =>
       adminBugReportingApi.patch(id, body),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      applyBugReportPatchToCache(qc, updated);
+      setPhaseId(updated.phaseId);
+      setAssigneeId(updated.assignee?.id ?? '');
+      setDeadline(updated.deadline ?? '');
       toast('Bug report updated', 'success');
       void qc.invalidateQueries({ queryKey: BUG_REPORTING_QUERY_KEY });
     },
@@ -66,7 +78,7 @@ export function AdminBugReportDetail() {
 
   const phases = phasesData?.phases ?? [];
   const currentPhaseId = phaseId || data.phaseId;
-  const currentAssignee = assigneeId !== '' ? assigneeId : data.assignee?.id ?? '';
+  const currentAssignee = assigneeId;
   const currentDeadline = deadline || data.deadline || '';
 
   const onCopyBugSummary = async () => {

@@ -79,11 +79,24 @@ export function toScreenshotDataUrl(mimeType: string | null | undefined, data: u
   return `data:${mimeType};base64,${buf.toString('base64')}`;
 }
 
-async function loadUserMap(ids: Types.ObjectId[]): Promise<Map<string, { id: string; name: string; email: string; role: string }>> {
-  const unique = [...new Set(ids.filter(Boolean).map(String))];
+async function loadUserMap(
+  ids: Array<Types.ObjectId | string | null | undefined>
+): Promise<Map<string, { id: string; name: string; email: string; role: string }>> {
+  const unique = [
+    ...new Set(
+      ids
+        .filter(Boolean)
+        .map((id) => String(id))
+        .filter((id) => Types.ObjectId.isValid(id))
+    ),
+  ];
   const map = new Map<string, { id: string; name: string; email: string; role: string }>();
   if (unique.length === 0) return map;
-  const users = await UserModel.find({ _id: { $in: unique } }).select('name email role').lean();
+  const users = await UserModel.find({
+    _id: { $in: unique.map((id) => new Types.ObjectId(id)) },
+  })
+    .select('name email role')
+    .lean();
   for (const u of users) {
     map.set(String(u._id), {
       id: String(u._id),

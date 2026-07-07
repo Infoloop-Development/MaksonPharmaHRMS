@@ -6,6 +6,7 @@ import { adminBugReportingApi, BUG_REPORTING_QUERY_KEY } from '../../api/adminBu
 import { useToast } from '../ui/Toast';
 import { Badge } from '../ui/Badge';
 import { Select } from '../ui/Field';
+import { applyBugReportPatchToCache } from '../../lib/bugReport/bugReportingQueryCache';
 import { formatBugReportSummary } from '../../lib/bugReport/formatBugReportSummary';
 import { BugReportDetailContent } from './BugReportDetailContent';
 import { BugReportCommentThread } from './BugReportCommentThread';
@@ -46,12 +47,11 @@ export function BugReportDetailModal({
 }: Props) {
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
-  const id = reportId ?? '';
 
   const { data, isLoading, error } = useQuery({
-    queryKey: [...BUG_REPORTING_QUERY_KEY, id],
-    queryFn: () => adminBugReportingApi.getOne(id),
-    enabled: open && Boolean(id),
+    queryKey: [...BUG_REPORTING_QUERY_KEY, reportId],
+    queryFn: () => adminBugReportingApi.getOne(reportId!),
+    enabled: open && Boolean(reportId),
   });
 
   const [phaseId, setPhaseId] = useState('');
@@ -59,19 +59,30 @@ export function BugReportDetailModal({
   const [deadline, setDeadline] = useState('');
 
   useEffect(() => {
-    if (!data) return;
+    if (!open || !reportId) {
+      setPhaseId('');
+      setAssigneeId('');
+      setDeadline('');
+    }
+  }, [open, reportId]);
+
+  useEffect(() => {
+    if (!open || !data) return;
     setPhaseId(data.phaseId);
     setAssigneeId(data.assignee?.id ?? '');
     setDeadline(data.deadline ?? '');
-  }, [data?.id, data?.phaseId, data?.assignee?.id, data?.deadline]);
+  }, [open, data?.id, data?.phaseId, data?.assignee?.id, data?.deadline]);
 
   const patchMu = useMutation({
     mutationFn: (body: Parameters<typeof adminBugReportingApi.patch>[1]) =>
-      adminBugReportingApi.patch(id, body),
-    onSuccess: () => {
+      adminBugReportingApi.patch(reportId!, body),
+    onSuccess: (updated) => {
+      applyBugReportPatchToCache(qc, updated);
+      setPhaseId(updated.phaseId);
+      setAssigneeId(updated.assignee?.id ?? '');
+      setDeadline(updated.deadline ?? '');
       toast('Bug report updated', 'success');
       void qc.invalidateQueries({ queryKey: BUG_REPORTING_QUERY_KEY });
-      void qc.invalidateQueries({ queryKey: [...BUG_REPORTING_QUERY_KEY, id] });
     },
     onError: (e: unknown) => toast(e instanceof Error ? e.message : 'Update failed', 'error'),
   });
@@ -202,7 +213,7 @@ export function BugReportDetailModal({
 
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[2fr_3fr] overflow-hidden">
           <div className="border-b lg:border-b-0 lg:border-r border-border bg-surface2/20 min-h-[220px] lg:min-h-0 flex flex-col overflow-hidden">
-            {id && <BugReportCommentThread reportId={id} mentionUsers={mentionUsers} />}
+            {reportId && <BugReportCommentThread reportId={reportId} mentionUsers={mentionUsers} />}
           </div>
           <div className="p-4 overflow-y-auto min-h-0">
             {data && <BugReportDetailContent data={data} compact />}
