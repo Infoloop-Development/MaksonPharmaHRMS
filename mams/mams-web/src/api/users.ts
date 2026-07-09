@@ -18,6 +18,7 @@ export interface UserSummary {
 export interface UserCreateResponse extends UserSummary {
   emailSent?: boolean;
   emailError?: string;
+  devSinkPath?: string;
 }
 
 export type UserPatchResponse =
@@ -26,6 +27,7 @@ export type UserPatchResponse =
 
 export const usersApi = {
   list: () => api.get<{ items: UserSummary[] }>('/users'),
+  mailStatus: () => api.get<{ mailEnabled: boolean }>('/users/mail-status'),
   create: (body: {
     email: string;
     name: string;

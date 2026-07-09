@@ -5,6 +5,7 @@ import { ApiError } from '../api/client';
 import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { AuthBrandHeader } from '../components/AuthBrandHeader';
+import { PasswordRevealToggle } from '../components/ui/PasswordRevealToggle';
 import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
 
 const PASSWORD_MIN = 10;
@@ -37,6 +38,9 @@ export function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const user = useAuth((s) => s.user);
@@ -87,33 +91,51 @@ export function ChangePassword() {
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="label">Current password</label>
-            <input
-              type="password"
-              className="input"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-            />
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? 'text' : 'password'}
+                className="input pr-11"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <PasswordRevealToggle
+                visible={showCurrentPassword}
+                onToggle={() => setShowCurrentPassword((v) => !v)}
+              />
+            </div>
           </div>
           <div>
             <label className="label">New password</label>
-            <input
-              type="password"
-              className="input"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              autoComplete="new-password"
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                className="input pr-11"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <PasswordRevealToggle
+                visible={showNewPassword}
+                onToggle={() => setShowNewPassword((v) => !v)}
+              />
+            </div>
           </div>
           <div>
             <label className="label">Confirm new password</label>
-            <input
-              type="password"
-              className="input"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                className="input pr-11"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <PasswordRevealToggle
+                visible={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((v) => !v)}
+              />
+            </div>
           </div>
           <p className="text-[11px] text-text-subtle">
             {PASSWORD_MIN}–{PASSWORD_MAX} characters; include at least 3 of: uppercase, lowercase, number, symbol.

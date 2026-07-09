@@ -13,6 +13,7 @@ import {
   buildBugMentionedNotification,
   notifyUser,
 } from './notification.service.js';
+import { emailBugMentioned } from './bugNotificationEmail.service.js';
 
 async function loadAuthors(ids: Types.ObjectId[]) {
   const users = await UserModel.find({ _id: { $in: ids } })
@@ -149,6 +150,12 @@ export async function createBugReportComment(
         entityId: reportId,
       })
     );
+    void emailBugMentioned({
+      mentionedUserId: userId,
+      title: report.title,
+      authorName: author.name,
+      reportId,
+    });
   }
 
   const authorMap = await loadAuthors([doc.authorId]);

@@ -12,6 +12,10 @@ const MailEnvSchema = z.object({
     (v) => parseBool(typeof v === 'string' ? v : undefined, false),
     z.boolean()
   ),
+  MAIL_DEV_FILE_SINK: z.preprocess(
+    (v) => parseBool(typeof v === 'string' ? v : undefined, false),
+    z.boolean()
+  ),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_SECURE: z.preprocess(
@@ -21,8 +25,15 @@ const MailEnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('MAMS <noreply@makson-group.com>'),
-  APP_PUBLIC_URL: z.string().url().default('http://localhost:5173'),
 });
+
+function resolvePublicAppUrl(): string {
+  const raw =
+    process.env.PUBLIC_APP_URL?.trim() ||
+    process.env.APP_PUBLIC_URL?.trim() ||
+    'http://localhost:5173';
+  return raw.replace(/\/$/, '');
+}
 
 const parsed = MailEnvSchema.safeParse(process.env);
 if (!parsed.success) {
@@ -30,12 +41,22 @@ if (!parsed.success) {
 }
 const mailEnv = parsed.data;
 
+export function isMailDevFileSink(): boolean {
+  return mailEnv.MAIL_DEV_FILE_SINK && process.env.NODE_ENV !== 'production';
+}
+
+/** True when welcome emails will be sent (SMTP or local dev outbox). */
 export function isMailEnabled(): boolean {
-  return mailEnv.MAIL_ENABLED;
+  return mailEnv.MAIL_ENABLED || isMailDevFileSink();
+}
+
+/** True when real SMTP should be used (not dev file sink). */
+export function useSmtpTransport(): boolean {
+  return mailEnv.MAIL_ENABLED && !isMailDevFileSink();
 }
 
 export function getAppPublicUrl(): string {
-  return mailEnv.APP_PUBLIC_URL.replace(/\/$/, '');
+  return resolvePublicAppUrl();
 }
 
 export function getSmtpFrom(): string {

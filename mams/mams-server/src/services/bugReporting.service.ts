@@ -38,6 +38,11 @@ import {
   buildBugResolvedNotification,
   notifyUser,
 } from './notification.service.js';
+import {
+  emailBugAssigned,
+  emailBugResolved,
+  emailItAdminsNewBugReport,
+} from './bugNotificationEmail.service.js';
 import type { BugReportStatus } from '@mams/types';
 
 const MAX_SCREENSHOT_BYTES = 1_500_000;
@@ -184,6 +189,17 @@ export async function createBugReport(reporterId: string, body: BugReportCreateB
     failedRequests: parsed.failedRequests,
     ...(screenshot ? { screenshot } : {}),
   });
+
+  const reporter = await UserModel.findById(reporterId).select('name').lean();
+  void emailItAdminsNewBugReport({
+    title: doc.title,
+    reporterName: reporter?.name ?? 'A user',
+    severity: doc.severity,
+    module: doc.module,
+    reportId: String(doc._id),
+    reporterUserId: reporterId,
+  });
+
   return { id: String(doc._id) };
 }
 
@@ -348,6 +364,11 @@ export async function patchBugReport(
         entityId: id,
       })
     );
+    void emailBugResolved({
+      reporterUserId: String(doc.reporterId),
+      title: doc.title,
+      phaseLabel: phase.label,
+    });
   }
 
   if (
@@ -368,6 +389,12 @@ export async function patchBugReport(
           entityId: id,
         })
       );
+      void emailBugAssigned({
+        assigneeUserId: newAssigneeId,
+        title: doc.title,
+        assignerName: actor?.name ?? 'Someone',
+        reportId: id,
+      });
     }
   }
 

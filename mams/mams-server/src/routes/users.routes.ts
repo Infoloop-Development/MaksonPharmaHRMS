@@ -42,6 +42,10 @@ router.get('/', manageUsersGate, async (_req, res, next) => {
   }
 });
 
+router.get('/mail-status', manageUsersGate, (_req, res) => {
+  res.json({ mailEnabled: isMailEnabled() });
+});
+
 function permissionsEqual(a: Permission[], b: Permission[]): boolean {
   if (a.length !== b.length) return false;
   const sa = [...a].sort();
@@ -164,6 +168,7 @@ router.post('/', manageUsersGate, async (req, res, next) => {
 
     let emailSent = false;
     let emailError: string | undefined;
+    let devSinkPath: string | undefined;
     if (isMailEnabled()) {
       const mailResult = await sendWelcomeUserEmail({
         to: created.email,
@@ -174,6 +179,7 @@ router.post('/', manageUsersGate, async (req, res, next) => {
       });
       if (mailResult.ok) {
         emailSent = true;
+        devSinkPath = mailResult.devSinkPath;
       } else {
         emailError = mailResult.error;
         await audit(
@@ -185,7 +191,12 @@ router.post('/', manageUsersGate, async (req, res, next) => {
     }
 
     const { passwordHash: _, ...safe } = created.toObject();
-    res.status(201).json({ ...safe, emailSent, ...(emailError ? { emailError } : {}) });
+    res.status(201).json({
+      ...safe,
+      emailSent,
+      ...(emailError ? { emailError } : {}),
+      ...(devSinkPath ? { devSinkPath } : {}),
+    });
   } catch (err) {
     next(err);
   }
