@@ -9,16 +9,24 @@ const hrAdminId = '507f1f77bcf86cd799439013';
 function makeReportDoc() {
   const doc = {
     _id: new Types.ObjectId(reportId),
+    publicId: 'BUG-0001',
     title: 'Test bug',
     reporterId: new Types.ObjectId(),
     assigneeId: null as Types.ObjectId | null,
     phaseId: null,
     status: 'new',
+    statusHistory: [] as Array<Record<string, unknown>>,
+    assignmentHistory: [] as Array<Record<string, unknown>>,
     deadline: null,
     module: 'Test',
     route: '/test',
     description: 'desc',
     severity: 'low',
+    consoleLog: [],
+    breadcrumbs: [],
+    failedRequests: [],
+    context: {},
+    attachments: [],
     createdAt: new Date(),
     updatedAt: new Date(),
     save: vi.fn(async function save(this: typeof doc) {
@@ -36,6 +44,7 @@ let reportDoc = makeReportDoc();
 vi.mock('../src/models/BugReport.js', () => ({
   BugReportModel: {
     findById: vi.fn(() => reportDoc),
+    findOne: vi.fn(async () => null),
   },
 }));
 

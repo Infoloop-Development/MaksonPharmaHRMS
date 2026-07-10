@@ -35,3 +35,13 @@ export function utcToIstTimeHmsMsString(d: Date): string {
   const ms = String(d.getUTCMilliseconds()).padStart(3, '0');
   return `${base}.${ms}`;
 }
+
+/** Start of an IST calendar day (inclusive) as UTC. */
+export function istDateStartUtc(dateStr: string): Date {
+  return fromZonedTime(`${dateStr}T00:00:00.000`, IST);
+}
+
+/** End of an IST calendar day (inclusive) as UTC. */
+export function istDateEndUtc(dateStr: string): Date {
+  return fromZonedTime(`${dateStr}T23:59:59.999`, IST);
+}

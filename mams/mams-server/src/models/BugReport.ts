@@ -29,8 +29,29 @@ const bugReportAttachmentSchema = new Schema(
   { _id: true }
 );
 
+const bugReportStatusHistorySchema = new Schema(
+  {
+    phaseName: { type: String, required: true },
+    phaseId: { type: Schema.Types.ObjectId, ref: 'BugPhase', required: true },
+    changedAt: { type: Date, required: true },
+    changedById: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { _id: false }
+);
+
+const bugReportAssignmentHistorySchema = new Schema(
+  {
+    assignedById: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    assignedToId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    assignedAt: { type: Date, required: true },
+    deadline: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const bugReportSchema = new Schema(
   {
+    publicId: { type: String, required: true, unique: true, index: true },
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
@@ -68,6 +89,8 @@ const bugReportSchema = new Schema(
     transcriptionError: { type: String, default: null },
     transcriptionConfidence: { type: Number, default: null },
     transcriptionGeneratedAt: { type: Date, default: null },
+    statusHistory: { type: [bugReportStatusHistorySchema], default: [] },
+    assignmentHistory: { type: [bugReportAssignmentHistorySchema], default: [] },
   },
   { timestamps: true }
 );

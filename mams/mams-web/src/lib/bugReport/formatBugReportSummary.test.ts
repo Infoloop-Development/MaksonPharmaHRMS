@@ -3,6 +3,7 @@ import { formatBugReportSummary } from './formatBugReportSummary';
 
 const baseReport = {
   id: 'report-123',
+  publicId: 'BUG-0001',
   title: 'Save failed',
   description: 'Cannot save employee record after editing fields.',
   severity: 'high' as const,
@@ -43,6 +44,8 @@ const baseReport = {
   transcriptionGeneratedAt: null,
   videoAvailableOnDisk: true,
   videoHasAudio: true,
+  statusHistory: [],
+  assignmentHistory: [],
 };
 
 describe('formatBugReportSummary', () => {

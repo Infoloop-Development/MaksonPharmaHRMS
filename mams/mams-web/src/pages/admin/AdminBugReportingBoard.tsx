@@ -1,40 +1,50 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { canManageBugReports } from '@mams/types';
+import { useAuth } from '../../store/auth';
 import {
   BugReportingBoardPanel,
-  BugReportingFilters,
+  BugReportingFilterPanel,
 } from '../../components/admin/bugReporting/BugReportingBoardPanel';
 import { useBugReportingBoard } from '../../components/admin/bugReporting/useBugReportingBoard';
 import { BugReportDetailModal } from '../../components/bugReport/BugReportDetailModal';
+import { BugReportingAccessDenied } from '../../components/admin/bugReporting/BugReportingAccessDenied';
+import { adminBugReportingApi } from '../../api/adminBugReporting';
 
 export function AdminBugReportingBoard() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const user = useAuth((s) => s.user);
+  const canAccess = canManageBugReports(user?.permissions ?? []);
+  const { publicId: routePublicId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  const board = useBugReportingBoard(true);
+  const board = useBugReportingBoard(canAccess);
+
+  const publicId = routePublicId ?? null;
 
   useEffect(() => {
     const openId = searchParams.get('open');
-    if (openId) setSelectedReportId(openId);
-  }, [searchParams]);
+    if (!openId || publicId) return;
+    void adminBugReportingApi
+      .getOne(openId)
+      .then((data) => {
+        navigate(`/admin/bug-reporting/board/${data.publicId}`, { replace: true });
+      })
+      .catch(() => {
+        navigate('/admin/bug-reporting/board', { replace: true });
+      });
+  }, [searchParams, publicId, navigate]);
 
-  const onOpen = (id: string) => {
-    setSelectedReportId(id);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('open', id);
-      return next;
-    });
+  const onOpen = (ref: string, itemPublicId?: string) => {
+    const target = itemPublicId?.trim() || ref;
+    navigate(`/admin/bug-reporting/board/${encodeURIComponent(target)}`);
   };
 
   const onCloseModal = () => {
-    setSelectedReportId(null);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.delete('open');
-      return next;
-    });
+    navigate('/admin/bug-reporting/board');
   };
+
+  if (!canAccess) return <BugReportingAccessDenied />;
 
   return (
     <div className="flex h-full min-h-0 flex-col p-3 sm:p-4">
@@ -46,8 +56,9 @@ export function AdminBugReportingBoard() {
         loadingByPhaseId={board.loadingByPhaseId}
         onOpen={onOpen}
         onMove={board.onMove}
+        shareVariant="board"
         filtersSlot={
-          <BugReportingFilters
+          <BugReportingFilterPanel
             compact
             search={board.filters.search}
             onSearchChange={board.setSearch}
@@ -66,12 +77,13 @@ export function AdminBugReportingBoard() {
       />
 
       <BugReportDetailModal
-        reportId={selectedReportId}
-        open={Boolean(selectedReportId)}
+        reportId={publicId}
+        open={Boolean(publicId)}
         onClose={onCloseModal}
         phases={board.phases}
         assigneeOptions={board.assigneeOptions}
         itAdminOptions={board.itAdminOptions}
+        shareVariant="board"
       />
     </div>
   );

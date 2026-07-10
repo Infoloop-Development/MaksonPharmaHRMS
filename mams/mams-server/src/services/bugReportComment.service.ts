@@ -14,6 +14,7 @@ import {
   notifyUser,
 } from './notification.service.js';
 import { emailBugMentioned } from './bugNotificationEmail.service.js';
+import { resolveBugReportRef } from './bugPublicId.service.js';
 
 async function loadAuthors(ids: Types.ObjectId[]) {
   const users = await UserModel.find({ _id: { $in: ids } })
@@ -62,10 +63,8 @@ function serializeComment(
   };
 }
 
-export async function listBugReportComments(reportId: string): Promise<BugReportComment[]> {
-  if (!Types.ObjectId.isValid(reportId)) throw new ApiError(404, 'not_found', 'Bug report not found');
-  const exists = await BugReportModel.exists({ _id: reportId });
-  if (!exists) throw new ApiError(404, 'not_found', 'Bug report not found');
+export async function listBugReportComments(reportRef: string): Promise<BugReportComment[]> {
+  const reportId = await resolveBugReportRef(reportRef);
 
   const rows = await BugReportCommentModel.find({ bugReportId: reportId })
     .sort({ createdAt: 1 })
@@ -78,12 +77,12 @@ export async function listBugReportComments(reportId: string): Promise<BugReport
 }
 
 export async function createBugReportComment(
-  reportId: string,
+  reportRef: string,
   authorUserId: string,
   body: unknown,
   imageFile?: { buffer: Buffer; mimetype: string; size: number; originalname?: string }
 ): Promise<BugReportComment> {
-  if (!Types.ObjectId.isValid(reportId)) throw new ApiError(404, 'not_found', 'Bug report not found');
+  const reportId = await resolveBugReportRef(reportRef);
   const parsed = BugReportCommentCreateBodySchema.parse(body);
 
   const report = await BugReportModel.findById(reportId).select('title').lean();
@@ -163,11 +162,12 @@ export async function createBugReportComment(
 }
 
 export async function streamBugReportCommentAttachment(
-  reportId: string,
+  reportRef: string,
   commentId: string,
   attachmentId: string
 ): Promise<{ absolutePath: string; mimeType: string; size: number; originalName: string }> {
-  if (!Types.ObjectId.isValid(reportId) || !Types.ObjectId.isValid(commentId)) {
+  const reportId = await resolveBugReportRef(reportRef);
+  if (!Types.ObjectId.isValid(commentId)) {
     throw new ApiError(404, 'not_found', 'Attachment not found');
   }
   const comment = await BugReportCommentModel.findOne({

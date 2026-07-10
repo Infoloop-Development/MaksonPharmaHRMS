@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
@@ -9,6 +9,7 @@ import { defaultHomePath } from '@mams/types';
 import { resetSessionStart } from '../lib/bugReport';
 import { AuthBrandHeader } from '../components/AuthBrandHeader';
 import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
+import { safeReturnPath } from '../lib/safeReturnPath';
 
 export function Login() {
   const [email, setEmail] = useState('org.admin@makson-group.com');
@@ -18,6 +19,7 @@ export function Login() {
   const setAuth = useAuth((s) => s.setAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const { companyName, companyLogo } = usePublicOrgBranding();
 
   const submit = async (e: React.FormEvent) => {
@@ -32,7 +34,13 @@ export function Login() {
       if (data.isFirstLogin) {
         setFirstLoginSession();
       }
-      navigate(data.user.mustChangePassword ? '/change-password' : defaultHomePath(data.user.role));
+      if (data.user.mustChangePassword) {
+        navigate('/change-password');
+        return;
+      }
+      const from = location.state as { from?: { pathname?: string; search?: string } } | null;
+      const returnTo = safeReturnPath(from?.from?.pathname, from?.from?.search);
+      navigate(returnTo ?? defaultHomePath(data.user.role));
     } catch (e: any) {
       setErr(e?.message ?? 'Login failed');
     } finally {

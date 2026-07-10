@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import type { BugPhase } from './useBugReportingBoard';
 import type { BugReportListItem, BugReportListResponse } from '@mams/types';
+import type { BugShareVariant } from '../../../lib/bugReport/bugShareUrl';
 import { BugReportKanbanCard } from './BugReportKanbanCard';
 
 type ColumnData = {
@@ -26,10 +27,12 @@ function KanbanColumn({
   column,
   onOpen,
   expanded,
+  shareVariant,
 }: {
   column: ColumnData;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, publicId?: string) => void;
   expanded: boolean;
+  shareVariant: BugShareVariant;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.phaseId });
 
@@ -57,7 +60,12 @@ function KanbanColumn({
         )}
         {!column.isLoading &&
           column.items.map((item) => (
-            <BugReportKanbanCard key={item.id} item={item} onOpen={onOpen} />
+            <BugReportKanbanCard
+              key={item.id}
+              item={item}
+              onOpen={onOpen}
+              shareVariant={shareVariant}
+            />
           ))}
         {!column.isLoading && column.total > column.items.length && (
           <p className="px-2 py-1 text-center text-[10px] text-text-muted">
@@ -73,9 +81,10 @@ type Props = {
   phases: BugPhase[];
   columns: Record<string, BugReportListResponse | undefined>;
   loadingByPhaseId: Record<string, boolean>;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, publicId?: string) => void;
   onMove: (reportId: string, fromPhaseId: string, toPhaseId: string, phaseLabel: string) => void;
   expanded?: boolean;
+  shareVariant?: BugShareVariant;
 };
 
 export function BugReportKanbanBoard({
@@ -85,6 +94,7 @@ export function BugReportKanbanBoard({
   onOpen,
   onMove,
   expanded = false,
+  shareVariant = 'default',
 }: Props) {
   const [activeItem, setActiveItem] = useState<BugReportListItem | null>(null);
 
@@ -140,6 +150,7 @@ export function BugReportKanbanBoard({
             column={column}
             onOpen={onOpen}
             expanded={expanded}
+            shareVariant={shareVariant}
           />
         ))}
       </div>

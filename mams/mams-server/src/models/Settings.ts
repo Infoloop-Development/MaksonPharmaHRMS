@@ -51,6 +51,8 @@ const settingsSchema = new Schema(
     },
     /** Last issued employee numeric suffix (MKS####). Incremented on each server-allocated hire. */
     employeeCodeSequence: { type: Number, default: 0 },
+    /** Last issued bug report numeric suffix (BUG-####). Incremented on each new bug report. */
+    bugReportSequence: { type: Number, default: 0 },
     exportNaming: {
       type: {
         companyCode: { type: String, default: DEFAULT_EXPORT_NAMING.companyCode },

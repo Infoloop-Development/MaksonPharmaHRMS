@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import type { BugPhase } from '@mams/types';
-import { BUG_REPORT_SEVERITY_LABELS } from '@mams/types';
+import { BUG_REPORT_SEVERITY_LABELS, isBugPublicId } from '@mams/types';
 import { adminBugReportingApi, BUG_REPORTING_QUERY_KEY } from '../../api/adminBugReporting';
 import { useToast } from '../ui/Toast';
 import { Badge } from '../ui/Badge';
 import { Select } from '../ui/Field';
 import { applyBugReportPatchToCache } from '../../lib/bugReport/bugReportingQueryCache';
 import { formatBugReportSummary } from '../../lib/bugReport/formatBugReportSummary';
+import {
+  getBugReportSharePath,
+  type BugShareVariant,
+} from '../../lib/bugReport/bugShareUrl';
 import { BugReportDetailContent } from './BugReportDetailContent';
 import { BugReportCommentThread } from './BugReportCommentThread';
+import { BugReportActivityTimeline } from './BugReportActivityTimeline';
+import { BugReportShareLinkButton } from './BugReportShareLinkButton';
 
 type UserOption = { _id: string; name: string; role?: string };
 
@@ -20,6 +27,8 @@ type Props = {
   phases: BugPhase[];
   assigneeOptions: UserOption[];
   itAdminOptions: UserOption[];
+  /** Base route for share links and URL normalization. */
+  shareVariant?: BugShareVariant;
 };
 
 function TriageField({
@@ -44,9 +53,11 @@ export function BugReportDetailModal({
   phases,
   assigneeOptions,
   itAdminOptions,
+  shareVariant = 'default',
 }: Props) {
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery({
     queryKey: [...BUG_REPORTING_QUERY_KEY, reportId],
@@ -72,6 +83,12 @@ export function BugReportDetailModal({
     setAssigneeId(data.assignee?.id ?? '');
     setDeadline(data.deadline ?? '');
   }, [open, data?.id, data?.phaseId, data?.assignee?.id, data?.deadline]);
+
+  useEffect(() => {
+    if (!open || !data?.publicId || !reportId) return;
+    if (isBugPublicId(reportId)) return;
+    navigate(getBugReportSharePath(data.publicId, shareVariant), { replace: true });
+  }, [open, data?.publicId, reportId, shareVariant, navigate]);
 
   const patchMu = useMutation({
     mutationFn: (body: Parameters<typeof adminBugReportingApi.patch>[1]) =>
@@ -135,20 +152,30 @@ export function BugReportDetailModal({
                 <>
                   <h2 className="text-lg font-bold leading-snug truncate pr-2">{data.title}</h2>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge tone="blue">{BUG_REPORT_SEVERITY_LABELS[data.severity]}</Badge>
+                    {data.publicId ? (
+                      <Badge tone="blue">{data.publicId}</Badge>
+                    ) : null}
+                    <Badge tone={data.severity === 'critical' ? 'red' : data.severity === 'high' ? 'amber' : data.severity === 'medium' ? 'blue' : 'green'}>
+                      {BUG_REPORT_SEVERITY_LABELS[data.severity]}
+                    </Badge>
                     <span className="text-xs text-text-muted">{data.module}</span>
                   </div>
                 </>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0 -mt-0.5"
-              aria-label="Close"
-            >
-              ✕
-            </button>
+            <div className="flex shrink-0 items-center gap-0.5 -mt-0.5">
+              {data?.publicId && (
+                <BugReportShareLinkButton publicId={data.publicId} shareVariant={shareVariant} />
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {data && (
@@ -215,7 +242,8 @@ export function BugReportDetailModal({
           <div className="border-b lg:border-b-0 lg:border-r border-border bg-surface2/20 min-h-[220px] lg:min-h-0 flex flex-col overflow-hidden">
             {reportId && <BugReportCommentThread reportId={reportId} mentionUsers={mentionUsers} />}
           </div>
-          <div className="p-4 overflow-y-auto min-h-0">
+          <div className="p-4 overflow-y-auto min-h-0 space-y-4">
+            {data && <BugReportActivityTimeline detail={data} />}
             {data && <BugReportDetailContent data={data} compact />}
           </div>
         </div>

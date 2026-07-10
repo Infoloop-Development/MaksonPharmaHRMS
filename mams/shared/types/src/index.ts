@@ -1,5 +1,6 @@
 export * from './recycleBin.js';
 export * from './bugReport.js';
+export * from './bugActivityTimeline.js';
 export * from './bugPhase.js';
 export * from './bugReportComment.js';
 export * from './bulkMutation.js';

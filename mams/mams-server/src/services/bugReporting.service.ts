@@ -5,17 +5,21 @@ import {
   BugReportCreateBodySchema,
   BugReportListQuerySchema,
   BugReportPatchBodySchema,
+  type BugReportAssignmentHistoryEntry,
   type BugReportAttachment,
   type BugReportCreateBody,
   type BugReportDetail,
   type BugReportListQuery,
   type BugReportListResponse,
   type BugReportPatchBody,
+  type BugReportStatusHistoryEntry,
 } from '@mams/types';
 import { BugReportModel } from '../models/BugReport.js';
 import { UserModel } from '../models/User.js';
 import type { BugReportDoc } from '../models/BugReport.js';
 import { ApiError } from '../middleware/error.js';
+import { allocateNextBugPublicId, resolveBugReportRef } from './bugPublicId.service.js';
+import { buildBugReportRaisedDateFilter } from './bugReportDateFilter.js';
 import {
   deleteBugReportVideo,
   deleteBugReportAttachment,
@@ -38,6 +42,7 @@ import {
   buildBugResolvedNotification,
   notifyUser,
 } from './notification.service.js';
+import { getBugReportStats } from './bugReportStats.service.js';
 import {
   emailBugAssigned,
   emailBugResolved,
@@ -144,6 +149,7 @@ function serializeListItem(
 
   return {
     id: String(doc._id),
+    publicId: doc.publicId ?? '',
     title: doc.title,
     description: doc.description,
     severity: doc.severity,
@@ -170,11 +176,66 @@ function serializeListItem(
   };
 }
 
+function serializeStatusHistory(
+  doc: {
+    statusHistory?: Array<{
+      phaseName: string;
+      phaseId: Types.ObjectId;
+      changedAt: Date;
+      changedById: Types.ObjectId;
+    }>;
+  },
+  userMap: Map<string, { id: string; name: string; email: string; role: string }>
+): BugReportStatusHistoryEntry[] {
+  return (doc.statusHistory ?? []).map((entry) => {
+    const changedBy = userMap.get(String(entry.changedById));
+    return {
+      phaseName: entry.phaseName,
+      phaseId: String(entry.phaseId),
+      changedAt: new Date(entry.changedAt).toISOString(),
+      changedBy: changedBy
+        ? { id: changedBy.id, name: changedBy.name }
+        : { id: String(entry.changedById), name: 'Unknown' },
+    };
+  });
+}
+
+function serializeAssignmentHistory(
+  doc: {
+    assignmentHistory?: Array<{
+      assignedById: Types.ObjectId;
+      assignedToId?: Types.ObjectId | null;
+      assignedAt: Date;
+      deadline?: Date | null;
+    }>;
+  },
+  userMap: Map<string, { id: string; name: string; email: string; role: string }>
+): BugReportAssignmentHistoryEntry[] {
+  return (doc.assignmentHistory ?? []).map((entry) => {
+    const assignedBy = userMap.get(String(entry.assignedById));
+    const assignedTo = entry.assignedToId ? userMap.get(String(entry.assignedToId)) : null;
+    return {
+      assignedAt: new Date(entry.assignedAt).toISOString(),
+      deadline: entry.deadline ? new Date(entry.deadline).toISOString().slice(0, 10) : null,
+      assignedBy: assignedBy
+        ? { id: assignedBy.id, name: assignedBy.name }
+        : { id: String(entry.assignedById), name: 'Unknown' },
+      assignedTo: assignedTo
+        ? { id: assignedTo.id, name: assignedTo.name }
+        : entry.assignedToId
+          ? { id: String(entry.assignedToId), name: 'Unknown' }
+          : null,
+    };
+  });
+}
+
 export async function createBugReport(reporterId: string, body: BugReportCreateBody) {
   const parsed = BugReportCreateBodySchema.parse(body);
   const screenshot = parseScreenshot(parsed.screenshotBase64);
   const defaultPhaseId = await getDefaultPhaseId();
+  const publicId = await allocateNextBugPublicId();
   const doc = await BugReportModel.create({
+    publicId,
     reporterId: new Types.ObjectId(reporterId),
     title: parsed.title,
     description: parsed.description,
@@ -200,7 +261,7 @@ export async function createBugReport(reporterId: string, body: BugReportCreateB
     reporterUserId: reporterId,
   });
 
-  return { id: String(doc._id) };
+  return { id: String(doc._id), publicId: doc.publicId };
 }
 
 export async function listBugReports(query: BugReportListQuery): Promise<BugReportListResponse> {
@@ -226,6 +287,10 @@ export async function listBugReports(query: BugReportListQuery): Promise<BugRepo
   }
   if (q.search?.trim()) {
     filter.title = { $regex: escapeRegex(q.search.trim()), $options: 'i' };
+  }
+  const raisedDateFilter = buildBugReportRaisedDateFilter(q);
+  if (raisedDateFilter) {
+    filter.createdAt = raisedDateFilter;
   }
 
   const sortField = q.sortBy === 'title' ? 'title' : q.sortBy;
@@ -253,14 +318,19 @@ export async function listBugReports(query: BugReportListQuery): Promise<BugRepo
   };
 }
 
-export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
-  if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Bug report not found');
+export async function getBugReportDetail(ref: string): Promise<BugReportDetail> {
+  const id = await resolveBugReportRef(ref);
   const doc = await BugReportModel.findById(id).lean();
   if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
 
-  const userMap = await loadUserMap(
-    [doc.reporterId, doc.assigneeId].filter(Boolean) as Types.ObjectId[]
-  );
+  const historyUserIds = [
+    doc.reporterId,
+    doc.assigneeId,
+    ...(doc.statusHistory ?? []).flatMap((e) => [e.changedById]),
+    ...(doc.assignmentHistory ?? []).flatMap((e) => [e.assignedById, e.assignedToId]),
+  ].filter(Boolean) as Types.ObjectId[];
+
+  const userMap = await loadUserMap(historyUserIds);
   const phaseMap = await loadPhaseMap();
   const base = serializeListItem(
     doc as BugReportDoc & { createdAt: Date; updatedAt: Date },
@@ -279,6 +349,8 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
 
   return {
     ...base,
+    statusHistory: serializeStatusHistory(doc, userMap),
+    assignmentHistory: serializeAssignmentHistory(doc, userMap),
     consoleLog: (doc.consoleLog ?? []) as BugReportDetail['consoleLog'],
     breadcrumbs: (doc.breadcrumbs ?? []) as BugReportDetail['breadcrumbs'],
     failedRequests: (doc.failedRequests ?? []) as BugReportDetail['failedRequests'],
@@ -301,11 +373,11 @@ export async function getBugReportDetail(id: string): Promise<BugReportDetail> {
 }
 
 export async function patchBugReport(
-  id: string,
+  ref: string,
   body: BugReportPatchBody,
   actorUserId?: string
 ) {
-  if (!Types.ObjectId.isValid(id)) throw new ApiError(404, 'not_found', 'Bug report not found');
+  const id = await resolveBugReportRef(ref);
   const parsed = BugReportPatchBodySchema.parse(body);
   const doc = await BugReportModel.findById(id);
   if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
@@ -313,6 +385,7 @@ export async function patchBugReport(
   const phaseMap = await loadPhaseMap();
   const prevPhaseId = doc.phaseId ? String(doc.phaseId) : null;
   const prevAssigneeId = doc.assigneeId ? String(doc.assigneeId) : null;
+  const now = new Date();
 
   if (parsed.phaseId !== undefined) {
     if (!Types.ObjectId.isValid(parsed.phaseId)) {
@@ -320,12 +393,36 @@ export async function patchBugReport(
     }
     const phase = phaseMap.get(parsed.phaseId);
     if (!phase) throw new ApiError(404, 'not_found', 'Phase not found');
-    doc.phaseId = new Types.ObjectId(parsed.phaseId);
-    if (phase.legacyKey) doc.status = phase.legacyKey as BugReportStatus;
+    const newPhaseId = parsed.phaseId;
+    if (newPhaseId !== prevPhaseId) {
+      doc.phaseId = new Types.ObjectId(parsed.phaseId);
+      if (phase.legacyKey) doc.status = phase.legacyKey as BugReportStatus;
+      if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
+        doc.statusHistory.push({
+          phaseName: phase.label,
+          phaseId: new Types.ObjectId(parsed.phaseId),
+          changedAt: now,
+          changedById: new Types.ObjectId(actorUserId),
+        });
+      }
+    }
   } else if (parsed.status !== undefined) {
-    doc.status = parsed.status;
     const phase = [...phaseMap.values()].find((p) => p.legacyKey === parsed.status);
-    if (phase) doc.phaseId = new Types.ObjectId(phase.id);
+    const newPhaseId = phase?.id ?? null;
+    if (phase && newPhaseId && newPhaseId !== prevPhaseId) {
+      doc.status = parsed.status;
+      doc.phaseId = new Types.ObjectId(phase.id);
+      if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
+        doc.statusHistory.push({
+          phaseName: phase.label,
+          phaseId: new Types.ObjectId(phase.id),
+          changedAt: now,
+          changedById: new Types.ObjectId(actorUserId),
+        });
+      }
+    } else if (!newPhaseId) {
+      doc.status = parsed.status;
+    }
   }
 
   if (parsed.assigneeId !== undefined) {
@@ -338,7 +435,24 @@ export async function patchBugReport(
         throw new ApiError(400, 'validation_error', 'Assignee must be an active IT Admin');
       }
     }
-    doc.assigneeId = parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null;
+    const newAssigneeId = parsed.assigneeId ? String(parsed.assigneeId) : null;
+    if (newAssigneeId !== prevAssigneeId) {
+      doc.assigneeId = parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null;
+      if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
+        const deadlineSnapshot =
+          parsed.deadline !== undefined
+            ? parsed.deadline
+              ? new Date(`${parsed.deadline}T00:00:00.000Z`)
+              : null
+            : doc.deadline;
+        doc.assignmentHistory.push({
+          assignedById: new Types.ObjectId(actorUserId),
+          assignedToId: parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null,
+          assignedAt: now,
+          deadline: deadlineSnapshot,
+        });
+      }
+    }
   }
 
   if (parsed.deadline !== undefined) {
@@ -401,6 +515,8 @@ export async function patchBugReport(
   return getBugReportDetail(id);
 }
 
+export { getBugReportStats, resolveBugReportRef };
+
 export async function listBugReportModules(): Promise<string[]> {
   const rows = await BugReportModel.distinct('module');
   return rows.sort();
@@ -451,14 +567,12 @@ export async function attachBugReportVideo(
   }
 }
 
-export async function streamBugReportVideo(reportId: string): Promise<{
+export async function streamBugReportVideo(reportRef: string): Promise<{
   absolutePath: string;
   mimeType: string;
   size: number;
 }> {
-  if (!Types.ObjectId.isValid(reportId)) {
-    throw new ApiError(404, 'not_found', 'Bug report not found');
-  }
+  const reportId = await resolveBugReportRef(reportRef);
   const doc = await BugReportModel.findById(reportId).select('video').lean();
   if (!doc?.video?.filePath) {
     throw new ApiError(404, 'not_found', 'Video not found');
@@ -551,7 +665,7 @@ export async function attachBugReportFiles(
 }
 
 export async function streamBugReportAttachment(
-  reportId: string,
+  reportRef: string,
   attachmentId: string
 ): Promise<{
   absolutePath: string;
@@ -559,9 +673,7 @@ export async function streamBugReportAttachment(
   size: number;
   originalName: string;
 }> {
-  if (!Types.ObjectId.isValid(reportId)) {
-    throw new ApiError(404, 'not_found', 'Bug report not found');
-  }
+  const reportId = await resolveBugReportRef(reportRef);
   const doc = await BugReportModel.findById(reportId).select('attachments').lean();
   if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
 
