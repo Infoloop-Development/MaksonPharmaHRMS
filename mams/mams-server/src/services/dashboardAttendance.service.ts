@@ -74,10 +74,7 @@ function rowFromDerived(doc: DerivedLean, viewMode: ViewMode): DashboardAttendan
 
   const entryAt = viewMode === 'compliant' ? doc.compliantEntryAt : doc.realEntryAt;
   const exitAt = viewMode === 'compliant' ? doc.compliantExitAt : doc.realExitAt;
-  const hours =
-    viewMode === 'compliant'
-      ? (doc.compliantHours ?? null)
-      : (doc.realNetHours ?? null);
+  const hours = viewMode === 'compliant' ? (doc.compliantHours ?? null) : (doc.realNetHours ?? null);
 
   const displayStatus = computeDisplayStatus(doc.status, entryAt ?? null, emp.timeShift, viewMode, emp.alternateShift);
 

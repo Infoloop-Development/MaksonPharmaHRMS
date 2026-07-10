@@ -9,9 +9,17 @@ import {
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
 import { ComplianceGeneratedAttendanceModel } from '../models/ComplianceGeneratedAttendance.js';
+import { LeaveApplicationModel } from '../models/LeaveApplication.js';
 import { logger } from '../utils/logger.js';
 
 const IST = 'Asia/Kolkata';
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function weekdayOf(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number) as [number, number, number];
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return WEEKDAYS[dt.getUTCDay()]!;
+}
 
 export interface ComplianceAutogenResult {
   date: string;
@@ -51,7 +59,7 @@ export async function runComplianceAutogenForDate(targetDate: string): Promise<C
     status: 'Active',
     isDeleted: { $ne: true },
   })
-    .select('_id alternateShift name')
+    .select('_id alternateShift name weeklyOff')
     .lean();
 
   employees.sort((a, b) => {
@@ -63,13 +71,42 @@ export async function runComplianceAutogenForDate(targetDate: string): Promise<C
     return String(a.name ?? '').localeCompare(String(b.name ?? ''));
   });
 
+  // Approved full-day leave for this date - these employees don't get a fabricated
+  // "Present" record, same principle as recomputeDerived. Half-day leave is left alone.
+  const approvedLeaveEmployeeIds = new Set(
+    (
+      await LeaveApplicationModel.find({
+        status: 'Approved',
+        halfDayPortion: null,
+        fromDate: { $lte: targetDate },
+        toDate: { $gte: targetDate },
+      })
+        .select('employeeId')
+        .lean()
+    ).map((l) => String(l.employeeId))
+  );
+
+  const targetWeekday = weekdayOf(targetDate);
+
   let generated = 0;
+  let skipped = 0;
   let errors = 0;
   const now = new Date();
   const ops: Parameters<typeof ComplianceGeneratedAttendanceModel.bulkWrite>[0] = [];
 
   for (const emp of employees) {
     try {
+      const isWeeklyOff = (emp.weeklyOff ?? []).includes(targetWeekday);
+      const isOnLeave = approvedLeaveEmployeeIds.has(String(emp._id));
+
+      if (isWeeklyOff || isOnLeave) {
+        // Remove any stale record from a prior generation run for this date so the
+        // employee doesn't linger as "Present" once they're on leave / weekly off.
+        ops.push({ deleteOne: { filter: { employeeId: emp._id, date: targetDate } } });
+        skipped++;
+        continue;
+      }
+
       const alternateShift = (emp.alternateShift ?? 'A') as ComplianceShift;
       const seedBase = `${String(emp._id)}:${targetDate}`;
       const punches = generateDailyCompliancePunches({ seedBase, alternateShift });
@@ -108,6 +145,8 @@ export async function runComplianceAutogenForDate(targetDate: string): Promise<C
   for (let i = 0; i < ops.length; i += BATCH) {
     await ComplianceGeneratedAttendanceModel.bulkWrite(ops.slice(i, i + BATCH), { ordered: false });
   }
+
+  logger.info('compliance_autogen_skipped_leave_or_weekly_off', { date: targetDate, skipped });
 
   logger.info('compliance_autogen_complete', { date: targetDate, generated, errors });
   return { date: targetDate, skippedSunday: false, generated, errors };

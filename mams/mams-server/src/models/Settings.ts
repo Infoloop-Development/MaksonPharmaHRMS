@@ -43,7 +43,7 @@ const settingsSchema = new Schema(
       ],
     },
     smartAnchorEnabled: { type: Boolean, default: true },
-    smartAnchorVersion: { type: String, default: 'v2.0.0' },
+    smartAnchorVersion: { type: String, default: 'v3.0.0' },
     confidentialityNoticeEnabled: { type: Boolean, default: true },
     confidentialityNoticeText: {
       type: String,

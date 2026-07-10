@@ -3,7 +3,8 @@ import { AttendanceRawModel } from '../models/AttendanceRaw.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { EmployeeModel, type EmployeeDoc } from '../models/Employee.js';
 import { SettingsModel } from '../models/Settings.js';
-import { decomposeHours, smartAnchorV2 } from './smartAnchor.js';
+import { LeaveApplicationModel } from '../models/LeaveApplication.js';
+import { decomposeHours, smartAnchorV3 } from './smartAnchor.js';
 import type { ComplianceShift } from '@mams/types';
 
 /**
@@ -21,17 +22,32 @@ export async function recomputeDerived(
   const employee = (await EmployeeModel.findById(employeeId).lean()) as EmployeeDoc | null;
   if (!employee) return;
 
-  const raws = await AttendanceRawModel.find({
-    employeeId,
-    rawDate: date,
-  })
-    .sort({ rawTimestamp: 1 })
-    .lean();
-
   const isWeeklyOff = employee.weeklyOff?.includes(weekdayOf(date)) ?? false;
 
+  // Approved full-day leave always wins, even over stray raw punches - otherwise the
+  // Leave module says "on leave" while Attendance (real or compliant) fabricates a
+  // worked shift for the same day, which is an obvious contradiction to anyone
+  // cross-referencing both. Half-day leave is left alone; that's a legitimate partial
+  // work day, not an absence.
+  const onApprovedLeave = await LeaveApplicationModel.exists({
+    employeeId,
+    status: 'Approved',
+    halfDayPortion: null,
+    fromDate: { $lte: date },
+    toDate: { $gte: date },
+  });
+
+  const raws = onApprovedLeave
+    ? []
+    : await AttendanceRawModel.find({
+        employeeId,
+        rawDate: date,
+      })
+        .sort({ rawTimestamp: 1 })
+        .lean();
+
   if (raws.length === 0) {
-    // No punches and not a weekly off -> Absent.
+    // No punches (or on approved leave) and not a weekly off -> Absent.
     await upsertDerived(employeeId, date, {
       realEntryAt: null,
       realExitAt: null,
@@ -45,7 +61,7 @@ export async function recomputeDerived(
       dayType: isWeeklyOff ? 'Weekly Off' : 'Working',
       status: isWeeklyOff ? 'Weekly Off' : 'Absent',
       rawRecordIds: [],
-      computedFromSmartAnchorVersion: 'v2.0.0',
+      computedFromSmartAnchorVersion: 'v3.0.0',
     }, reason);
     return;
   }
@@ -57,14 +73,14 @@ export async function recomputeDerived(
   const smartAnchorOn = settings?.smartAnchorEnabled !== false;
 
   const sa = smartAnchorOn
-    ? smartAnchorV2({
+    ? smartAnchorV3({
         employeeId: String(employeeId),
         date,
         alternateShift: employee.alternateShift as ComplianceShift,
         realEntryAt,
         realExitAt,
       })
-    : { compliantEntryAt: null, compliantExitAt : null, smartAnchorVersion: 'disabled'};
+    : { compliantEntryAt: null, compliantExitAt: null, compliantHours: 0, smartAnchorVersion: 'disabled' };
 
   await upsertDerived(employeeId, date, {
     realEntryAt,
@@ -74,7 +90,7 @@ export async function recomputeDerived(
     breakMinutes: decomp.breakMinutes,
     compliantEntryAt: sa.compliantEntryAt,
     compliantExitAt: sa.compliantExitAt,
-    compliantHours: decomp.compliantHours,
+    compliantHours: sa.compliantHours,
     otHours: decomp.otHours,
     dayType: isWeeklyOff ? 'Weekly Off' : 'Working',
     status: isWeeklyOff ? 'Weekly Off' : (decomp.realNetHours >= 4 ? 'Present' : 'Half Day'),

@@ -33,7 +33,7 @@ const attendanceDerivedSchema = new Schema(
 
     // Audit
     computedAt: { type: Date, default: () => new Date() },
-    computedFromSmartAnchorVersion: { type: String, default: 'v2.0.0' },
+    computedFromSmartAnchorVersion: { type: String, default: 'v3.0.0' },
     recomputeHistory: [{
       recomputedAt: { type: Date, required: true },
       previousState: { type: Schema.Types.Mixed },

@@ -9,9 +9,56 @@ import {
   type MonthlyPlanResult,
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
+import { LeaveApplicationModel } from '../models/LeaveApplication.js';
 import { sumComplianceHoursByEmployeeForMonth } from './complianceHoursAggregate.service.js';
 import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from './plainXlsx.service.js';
 import { logger } from '../utils/logger.js';
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number) as [number, number, number];
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+function datesBetween(from: string, to: string): string[] {
+  const out: string[] = [];
+  let cur = from;
+  while (cur <= to) {
+    out.push(cur);
+    cur = addDays(cur, 1);
+  }
+  return out;
+}
+
+/**
+ * Real approved (full-day) leave dates per employee, clamped to the given month.
+ * Touches the database - call this from the route/job layer, not from
+ * buildComplianceMonthlyReportXlsx itself, which is a pure function kept
+ * DB-free on purpose so it stays cheaply unit-testable.
+ */
+export async function realLeaveDatesByEmployeeForMonth(yearMonth: string): Promise<Map<string, string[]>> {
+  const monthStart = `${yearMonth}-01`;
+  const monthEnd = `${yearMonth}-31`;
+  const approvedLeaves = await LeaveApplicationModel.find({
+    status: 'Approved',
+    halfDayPortion: null,
+    fromDate: { $lte: monthEnd },
+    toDate: { $gte: monthStart },
+  })
+    .select('employeeId fromDate toDate')
+    .lean();
+
+  const byEmployee = new Map<string, string[]>();
+  for (const leave of approvedLeaves) {
+    const empKey = String(leave.employeeId);
+    const clampedFrom = leave.fromDate > monthStart ? leave.fromDate : monthStart;
+    const clampedTo = leave.toDate < monthEnd ? leave.toDate : monthEnd;
+    const dates = byEmployee.get(empKey) ?? [];
+    dates.push(...datesBetween(clampedFrom, clampedTo));
+    byEmployee.set(empKey, dates);
+  }
+  return byEmployee;
+}
 
 export { XLSX_CONTENT_TYPE };
 
@@ -33,6 +80,8 @@ export interface ComplianceReportEmployeeInput {
 export interface ComplianceMonthlyReportInput {
   yearMonth: string;
   employees: ComplianceReportEmployeeInput[];
+  /** Real approved leave dates per employeeId for this month, if known (see realLeaveDatesByEmployeeForMonth). */
+  realLeaveDatesByEmployee?: Map<string, string[]>;
 }
 
 export interface ComplianceReportOverride {
@@ -154,7 +203,9 @@ export async function buildComplianceMonthlyReportXlsx(
     'Hours',
   ];
 
-  const dailyWs = XLSX.utils.aoa_to_sheet([dailyHeaders]);
+  const dailyRows: (string | number)[][] = [];
+
+  const realLeaveDatesByEmployee = input.realLeaveDatesByEmployee ?? new Map<string, string[]>();
 
   let processed = 0;
   for (const emp of input.employees) {
@@ -180,6 +231,7 @@ export async function buildComplianceMonthlyReportXlsx(
       bufferEnd: preset.bufferEnd,
       realHours: emp.totalHours,
       seedNamespace: `${emp.employeeId}:${input.yearMonth}`,
+      realLeaveDates: realLeaveDatesByEmployee.get(emp.employeeId) ?? [],
     });
     if ('error' in plan) {
       throw new Error(`${emp.empCode}: ${plan.error}`);
@@ -201,7 +253,7 @@ export async function buildComplianceMonthlyReportXlsx(
 
     const batch = dailyRowsForEmployee(emp, input.yearMonth, shift, plan);
     if (batch.length > 0) {
-      XLSX.utils.sheet_add_aoa(dailyWs, batch, { origin: -1 });
+      dailyRows.push(...batch);
     }
 
     processed += 1;
@@ -215,6 +267,7 @@ export async function buildComplianceMonthlyReportXlsx(
 
   const wb = XLSX.utils.book_new();
   const summaryWs = XLSX.utils.aoa_to_sheet([summaryHeaders, ...summaryRows]);
+  const dailyWs = XLSX.utils.aoa_to_sheet([dailyHeaders, ...dailyRows]);
   XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
   XLSX.utils.book_append_sheet(wb, dailyWs, 'Daily');
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;

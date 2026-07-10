@@ -117,6 +117,60 @@ describe('computeMonthlyPlan', () => {
     }
   });
 
+  it('real leave dates are labeled leave directly, not left to the random shuffle', () => {
+    // 2026-06-03 and 2026-06-04 are Wed/Thu - eligible weekdays in June 2026.
+    const result = computeMonthlyPlan({
+      yearMonth: JUNE_2026,
+      shift: 'A',
+      bufferStart: PRESET_A.bufferStart,
+      bufferEnd: PRESET_A.bufferEnd,
+      realHours: 160, // computes to 6 leave days on its own
+      realLeaveDates: ['2026-06-03', '2026-06-04'],
+    });
+    if ('error' in result) throw new Error(result.error);
+    const byDate = new Map(result.days.map((d) => [d.date, d.status]));
+    expect(byDate.get('2026-06-03')).toBe('leave');
+    expect(byDate.get('2026-06-04')).toBe('leave');
+    expect(result.summary.leaveDays).toBe(6);
+    expect(result.summary.calendarLeaveDays).toBe(6);
+  });
+
+  it('real leave dates are honored in full even when they exceed the hours-computed leave count', () => {
+    // realHours=208 computes 0 leave days on its own, but 3 real leave days exist.
+    const realLeaveDates = ['2026-06-02', '2026-06-03', '2026-06-04'];
+    const result = computeMonthlyPlan({
+      yearMonth: JUNE_2026,
+      shift: 'A',
+      bufferStart: PRESET_A.bufferStart,
+      bufferEnd: PRESET_A.bufferEnd,
+      realHours: 208,
+      realLeaveDates,
+    });
+    if ('error' in result) throw new Error(result.error);
+    const byDate = new Map(result.days.map((d) => [d.date, d.status]));
+    for (const date of realLeaveDates) {
+      expect(byDate.get(date)).toBe('leave');
+    }
+    expect(result.summary.leaveDays).toBe(3);
+    expect(result.summary.presentDays).toBe(BASELINE_WORKING_DAYS - 3);
+  });
+
+  it('real leave dates outside the eligible weekday set (e.g. Sundays) are ignored', () => {
+    // 2026-06-07 is a Sunday in June 2026 - already weeklyOff, shouldn't double-count as leave.
+    const result = computeMonthlyPlan({
+      yearMonth: JUNE_2026,
+      shift: 'A',
+      bufferStart: PRESET_A.bufferStart,
+      bufferEnd: PRESET_A.bufferEnd,
+      realHours: 208,
+      realLeaveDates: ['2026-06-07'],
+    });
+    if ('error' in result) throw new Error(result.error);
+    const day = result.days.find((d) => d.date === '2026-06-07');
+    expect(day?.status).toBe('weeklyOff');
+    expect(result.summary.leaveDays).toBe(0);
+  });
+
   it('shift C overnight can produce next-day clock-out', () => {
     const preset = COMPLIANCE_SHIFT_BUFFER_PRESETS.C;
     const result = computeMonthlyPlan({

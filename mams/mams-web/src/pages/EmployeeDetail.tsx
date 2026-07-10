@@ -75,7 +75,7 @@ export function EmployeeDetail() {
     const totalNetHours = attItems.reduce((s,r) => s + (r.realNetHours ?? 0), 0);
     const totalOtHours = attItems.reduce((s,r) => s + (r.otHours ?? 0), 0);
     const totalCompliantHours = attItems.reduce((s,r) => s + (r.compliantHours ?? 0), 0);
-    const equivDays = (isCompliant ? totalCompliantHours : totalNetHours) / 9.5;
+    const equivDays = isCompliant ? totalCompliantHours / 8 : totalNetHours / 9.5;
     return { present, absent, weeklyOff, totalNetHours, totalOtHours, totalCompliantHours, equivDays}
   }, [attItems, isCompliant]);
 
@@ -134,17 +134,19 @@ export function EmployeeDetail() {
         )}
       </div>
 
-      <div className={isCompliant ? 'max-w-xl' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'}>
+      <div className={isCompliant ? '' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'}>
         <Section title="Profile">
-          <Row label="Department" value={data.department} />
-          <Row label="Designation" value={data.designation} />
-          <Row label="Location" value={data.location} />
-          {!isCompliant && <Row label="Time Shift (real)" value={data.timeShift ?? '—'} />}
-          <Row label={isCompliant ? "Shift" : "Compliance Shift"} value={data.alternateShift} />
-          <Row label="Weekly Off" value={data.weeklyOff.join(', ')} />
-          <Row label="Joined" value={fmtDate(data.joinDate.slice(0, 10))} />
-          <Row label="Gender" value={data.gender} />
-          <Row label="Status" value={data.status} />
+          <div className={isCompliant ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8' : ''}>
+            <Row tight={isCompliant} label="Department" value={data.department} />
+            <Row tight={isCompliant} label="Designation" value={data.designation} />
+            <Row tight={isCompliant} label="Location" value={data.location} />
+            {!isCompliant && <Row label="Time Shift (real)" value={data.timeShift ?? '—'} />}
+            <Row tight={isCompliant} label={isCompliant ? "Shift" : "Compliance Shift"} value={data.alternateShift} />
+            <Row tight={isCompliant} label="Weekly Off" value={data.weeklyOff.join(', ')} />
+            <Row tight={isCompliant} label="Joined" value={fmtDate(data.joinDate.slice(0, 10))} />
+            <Row tight={isCompliant} label="Gender" value={data.gender} />
+            <Row tight={isCompliant} label="Status" value={data.status} />
+          </div>
         </Section>
 
         {!isCompliant && (
@@ -312,7 +314,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, tight }: { label: string; value: string; tight?: boolean }) {
+  if (tight) {
+    return (
+      <div className="flex items-baseline gap-2 py-1.5 text-sm">
+        <span className="text-text-muted shrink-0">{label}:</span>
+        <span className="font-medium break-all">{value}</span>
+      </div>
+    );
+  }
   return (
     <div className="flex justify-between py-1.5 text-sm gap-4">
       <span className="text-text-muted shrink-0">{label}</span>
