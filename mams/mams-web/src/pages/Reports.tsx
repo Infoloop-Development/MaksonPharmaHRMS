@@ -253,6 +253,12 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
         </div>
       </div>
 
+      {data?.truncated && (
+        <div className="mb-3 text-xs text-amber bg-amber-bg/40 border border-amber/30 rounded px-3 py-2">
+          Showing the first {data.rows.length.toLocaleString()} of {data.total.toLocaleString()} matching records. Narrow the date range for complete results — the totals above already reflect the full match.
+        </div>
+      )}
+
       <DailyReportCardList rows={displayDailyRows} isLoading={isLoading} isCompliant={isCompliant} />
 
       {data && data.rows.length > 500 && (

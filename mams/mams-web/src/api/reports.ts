@@ -5,6 +5,8 @@ export interface DailyReport {
   viewMode: 'real' | 'compliant';
   summary: { total: number; present: number; absent: number; weeklyOff: number; halfDay: number };
   rows: Array<Record<string, any>>;
+  total: number;
+  truncated: boolean;
 }
 
 export interface MonthlyReport {
