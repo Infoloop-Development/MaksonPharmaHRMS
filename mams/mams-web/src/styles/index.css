@@ -198,6 +198,7 @@ input, select, textarea {
     color: var(--color-link);
   }
   .tbl-scroll tbody td {
+    @apply whitespace-nowrap;
     color: var(--color-text);
   }
   .page-toolbar {
@@ -305,6 +306,23 @@ input, select, textarea {
   }
   .dash-pill-red {
     @apply dash-pill bg-red-bg text-red;
+  }
+  /*
+   * Shift column pill: the soft dash-pill-* fills read as washed-out on a white row
+   * (low contrast, no edge). A thin border at the same hue gives it definition as a
+   * "chip" without the loudness of a solid fill. Scoped to the shift column only.
+   */
+  .dash-pill-shift-blue {
+    @apply dash-pill bg-primary-bg text-primary-on-bg border border-primary/35;
+  }
+  .dash-pill-shift-amber {
+    @apply dash-pill bg-amber-bg text-[var(--color-pill-amber-text)] border border-amber/45;
+  }
+  .dash-pill-shift-green {
+    @apply dash-pill bg-green-bg text-[var(--color-pill-green-text)] border border-green/45;
+  }
+  .dash-pill-shift-red {
+    @apply dash-pill bg-red-bg text-red border border-red/45;
   }
   .dash-time {
     @apply font-mono text-xs text-text-muted;

@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
+import { CollapsibleInfoBox } from '../ui/CollapsibleInfoBox';
 
-/** Explains biometric ID mapping for HR on Employees and import flows. */
+/** Explains biometric ID mapping for HR on Employees and import flows. Collapsible; state persists per browser. */
 export function BiometricIdBanner() {
   return (
-    <div className="rounded-md border border-primary/20 bg-primary-bg p-4 text-sm mb-4">
-      <div className="font-semibold text-text mb-1">Biometric ID = device user ID</div>
+    <CollapsibleInfoBox storageKey="mams-biometric-id-banner-collapsed" title="Biometric ID = device user ID">
       <p className="text-xs text-text-muted leading-relaxed">
         Every employee who will punch on a biometric machine needs a <strong>Biometric ID</strong> in MAMS that
         matches the user ID enrolled on the hardware (not employee code). When someone scans a finger or face, the
@@ -19,6 +19,6 @@ export function BiometricIdBanner() {
         </Link>{' '}
         page for go-live checklist and unmapped punch alerts.
       </p>
-    </div>
+    </CollapsibleInfoBox>
   );
 }

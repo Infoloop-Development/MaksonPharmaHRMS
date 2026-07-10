@@ -120,7 +120,9 @@ export function useAdminOverviewChartState({
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 0 },
-      layout: { padding: { top: 18 } },
+      // Value-label plugin draws 11px bold text with its baseline 8px above the bar top,
+      // so it needs ~20px of clearance to avoid clipping the tops of tall digits.
+      layout: { padding: { top: 26 } },
       datasets: { bar: { grouped: false, categoryPercentage: 0.72, barPercentage: 0.88 } },
       onClick: (_event: ChartEvent, elements: ActiveElement[]) => {
         const idx = elements[0]?.index;
@@ -325,6 +327,11 @@ export function useAdminOverviewChartState({
 
   const hasChartData = Boolean(data && (data.last7Days.totalEmployees > 0 || barMetric.startsWith('users') || barMetric.startsWith('audit') || barMetric.startsWith('login') || barMetric.startsWith('devices')));
 
+  // Chart.js's own onHover can miss the "left the canvas" transition on fast mouse
+  // movement, leaving a bar stuck in its hovered/highlighted state. A native
+  // mouseleave on the chart's container is a reliable backstop.
+  const resetBarHover = () => setHoveredDayIndex(null);
+
   return {
     chartsError,
     isInitialLoad,
@@ -332,6 +339,7 @@ export function useAdminOverviewChartState({
     barChart,
     barLabel,
     barMetric,
+    resetBarHover,
     donutChart,
     donutMeta,
     selectedDate,

@@ -8,6 +8,7 @@ import { useAuth } from '../store/auth';
 import { useToast } from '../components/ui/Toast';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
+import { CollapsibleInfoBox } from '../components/ui/CollapsibleInfoBox';
 import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { EmployeeDeleteModal } from './EmployeeDeleteModal';
@@ -158,7 +159,8 @@ export function Employees() {
       {!isCompliant && flaggedRequests && flaggedRequests.counts.Flagged > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
           <span className="font-semibold">
-            {flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''} need your review.
+            {flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''}{' '}
+            {flaggedRequests.counts.Flagged !== 1 ? 'need' : 'needs'} your review.
           </span>
           <RouterLink to="/employee-change-requests" className="underline font-medium hover:no-underline">
             Review now
@@ -210,7 +212,7 @@ export function Employees() {
             <thead className="bg-surface2">
               <tr className="text-left text-xs uppercase tracking-wider">
                 {canEdit && (
-                  <th className="px-4 py-3 w-10">
+                  <th className="px-4 py-3 w-10 !text-center">
                     <BulkSelectCheckbox
                       checked={pageCheck.allSelected && pageIds.length > 0}
                       indeterminate={pageCheck.someSelected}
@@ -219,16 +221,16 @@ export function Employees() {
                     />
                   </th>
                 )}
-                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} />
-                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-200">Biometric ID</th>
-                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} />
-                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'department')} />
-                <th className={`px-4 py-3 font-semibold ${TABLE_HEADER_TH_CLASS}`}>Location</th>
-                <th className={`px-4 py-3 font-semibold ${TABLE_HEADER_TH_CLASS}`}>Shift</th>
-                {!isCompliant && <th className={`px-4 py-3 font-semibold hidden xl:table-cell ${TABLE_HEADER_TH_CLASS}`}>Comp</th>}
-                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell" tooltip={tableColumnTooltip('employees', 'joinDate')} />
-                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'status')} />
-                {canEdit && <th className={`py-3 w-24 font-semibold text-center ${TABLE_HEADER_TH_CLASS}`}>Actions</th>}
+                <SortableTh label="Code" sortKey="empCode" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'empCode')} className="!text-center" />
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-200 !text-center">Biometric ID</th>
+                <SortableTh label="Name" sortKey="name" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'name')} className="!text-center" />
+                <SortableTh label="Department" sortKey="department" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'department')} className="!text-center" />
+                <th className={`px-4 py-3 font-semibold !text-center ${TABLE_HEADER_TH_CLASS}`}>Location</th>
+                <th className={`px-4 py-3 font-semibold !text-center ${TABLE_HEADER_TH_CLASS}`}>Shift</th>
+                {!isCompliant && <th className={`px-4 py-3 font-semibold hidden xl:table-cell !text-center ${TABLE_HEADER_TH_CLASS}`}>Comp</th>}
+                <SortableTh label="Joined" sortKey="joinDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="hidden xl:table-cell !text-center" tooltip={tableColumnTooltip('employees', 'joinDate')} />
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} tooltip={tableColumnTooltip('employees', 'status')} className="!text-center" />
+                {canEdit && <th className={`py-3 w-24 font-semibold !text-center ${TABLE_HEADER_TH_CLASS}`}>Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -241,7 +243,7 @@ export function Employees() {
               {data?.items.map((e) => (
                 <tr key={e.id} className="hover:bg-surface2/50 transition">
                   {canEdit && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-center">
                       <BulkSelectCheckbox
                         checked={bulk.isSelected(e.id)}
                         onChange={() => bulk.toggle(e.id)}
@@ -249,18 +251,26 @@ export function Employees() {
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 font-mono text-xs">{e.empCode}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-muted">{e.biometricId}</td>
-                  <td className="px-4 py-3 font-medium">
-                    <Link to={`/employees/${e.id}`} className="text-link font-medium hover:underline">{e.name}</Link>
+                  <td className="px-4 py-3 font-mono text-xs text-center">
+                    <span className="inline-block -ml-4">{e.empCode}</span>
                   </td>
-                  <td className="px-4 py-3">{e.department}</td>
-                  <td className="px-4 py-3 text-xs text-text-muted">{e.location}</td>
-                  <td className="px-4 py-3">{isCompliant ? e.alternateShift : e.timeShift}</td>
-                  {!isCompliant && <td className="px-4 py-3 font-mono text-xs hidden xl:table-cell">{e.alternateShift}</td>}
-                  <td className="px-4 py-3 text-xs text-text-muted hidden xl:table-cell">{fmtDate(e.joinDate.slice(0, 10))}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
+                  <td className="px-4 py-3 font-mono text-xs text-text-muted text-center">{e.biometricId}</td>
+                  <td className="px-4 py-3 font-medium text-center">
+                    <Link to={`/employees/${e.id}`} className="text-link font-medium hover:underline inline-block -ml-4">{e.name}</Link>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-block -ml-4">{e.department}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-text-muted text-center">{e.location}</td>
+                  <td className="px-4 py-3 text-center">{isCompliant ? e.alternateShift : e.timeShift}</td>
+                  {!isCompliant && <td className="px-4 py-3 font-mono text-xs hidden xl:table-cell text-center">{e.alternateShift}</td>}
+                  <td className="px-4 py-3 text-xs text-text-muted hidden xl:table-cell text-center">
+                    <span className="inline-block -ml-4">{fmtDate(e.joinDate.slice(0, 10))}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-block -ml-4">
+                      <Badge tone={e.status === 'Active' ? 'green' : 'red'}>{e.status}</Badge>
+                    </span>
                   </td>
                   {canEdit && (
                     <td className="py-3 w-24">
@@ -423,12 +433,9 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
               disabled={templateBusy}
               onClick={onDownloadTemplate}
             >
-              {templateBusy ? 'Preparing?' : 'Download blank template (.csv)'}
+              {templateBusy ? 'Preparing...' : 'Download blank template (.csv)'}
             </button>
-            <p className="mt-2 text-xs text-text-muted">
-              Uses your login session so the file downloads correctly. Opens your browser&apos;s save dialog as{' '}
-              <span className="font-mono">mams-employee-import-template.csv</span>.
-              {' '}
+            <p className="mt-3 text-xs text-text-muted">
               <button
                 type="button"
                 className="text-link font-semibold underline hover:no-underline"
@@ -440,42 +447,8 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
 
-          <div className="p-4 bg-primary-bg rounded-md text-sm">
-            <div className="font-semibold mb-1">Before you import</div>
-            <ol className="list-decimal pl-5 space-y-1 text-xs">
-              <li>Do not change or reorder the header row: column names must match the template exactly.</li>
-              <li>
-                <span className="font-mono">empCode</span>: unique, format <span className="font-mono">MKS</span> + four digits (e.g. <span className="font-mono">MKS0042</span>).
-              </li>
-              <li>
-                <span className="font-mono">joinDate</span> as <span className="font-mono">YYYY-MM-DD</span>; <span className="font-mono">gender</span> one of <span className="font-mono">M</span>, <span className="font-mono">F</span>, <span className="font-mono">O</span>.
-              </li>
-              <li>
-                <span className="font-mono">timeShift</span> <span className="font-mono">Day</span> or <span className="font-mono">Night</span>; <span className="font-mono">alternateShift</span> <span className="font-mono">A</span>, <span className="font-mono">B</span>, or <span className="font-mono">C</span>.
-              </li>
-              <li>
-                <span className="font-mono">weeklyOff</span>: one or two weekdays; multiple days separated with semicolons (e.g. <span className="font-mono">Saturday;Sunday</span>).
-              </li>
-              <li>
-                <span className="font-mono">biometricId</span> must be unique and must match the user ID enrolled on
-                each biometric device (exact string, e.g. device sends <span className="font-mono">42</span>, CSV must
-                be <span className="font-mono">42</span>, not <span className="font-mono">BIO042</span> unless the device
-                uses that).
-              </li>
-              <li>
-                PAN: five letters + four digits + one letter (<span className="font-mono">AAAAA0000A</span>); IFSC: valid 11-character bank code (<span className="font-mono">AAAA0XXXXXX</span>).
-              </li>
-              <li>
-                Aadhaar: exactly 12 digits (format only in Phase 1); bank account: 9?18 digits; ESI: 10 or 17 digits.
-              </li>
-              <li>
-                <span className="font-mono">accountType</span>: <span className="font-mono">Savings</span>, <span className="font-mono">Current</span>, or <span className="font-mono">Salary</span>; PF number: letters, digits, slashes, dots, hyphens, spaces (min 5, max 40 characters).
-              </li>
-            </ol>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
+          <div className="rounded-md border border-border bg-surface2/40 p-4">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
               Step 2: choose CSV file
             </label>
             <input
@@ -491,8 +464,60 @@ function CsvImportModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
+          <CollapsibleInfoBox storageKey="mams-csv-import-rules-collapsed" title="Before you import">
+            <ol className="list-decimal pl-5 space-y-1 text-xs">
+              <li>Header row must match the template exactly - don't rename, reorder, or remove columns.</li>
+              <li>
+                <span className="font-semibold">empCode</span>: unique; format <span className="font-mono">MKS</span> + four digits (e.g. <span className="font-mono">MKS0042</span>).
+              </li>
+              <li>
+                <span className="font-semibold">joinDate</span>: format <span className="font-mono">YYYY-MM-DD</span>.
+              </li>
+              <li>
+                <span className="font-semibold">gender</span>: M, F, or O.
+              </li>
+              <li>
+                <span className="font-semibold">timeShift</span>: Day or Night.
+              </li>
+              <li>
+                <span className="font-semibold">alternateShift</span>: A, B, or C.
+              </li>
+              <li>
+                <span className="font-semibold">weeklyOff</span>: one or two weekdays, separated by semicolons (e.g. <span className="font-mono">Saturday;Sunday</span>).
+              </li>
+              <li>
+                <span className="font-semibold">biometricId</span>: unique; must exactly match the device-enrolled user
+                ID as a string (e.g. device sends <span className="font-mono">42</span> &rarr; CSV must say{' '}
+                <span className="font-mono">42</span>, not <span className="font-mono">BIO042</span>, unless the
+                device itself uses that format).
+              </li>
+              <li>
+                <span className="font-semibold">pan</span>: five letters + four digits + one letter (e.g. <span className="font-mono">AAAAA0000A</span>).
+              </li>
+              <li>
+                <span className="font-semibold">ifsc</span>: valid 11-character bank code (e.g. <span className="font-mono">AAAA0XXXXXX</span>).
+              </li>
+              <li>
+                <span className="font-semibold">aadhaar</span>: exactly 12 digits (format check only in Phase 1).
+              </li>
+              <li>
+                <span className="font-semibold">bankAccountNumber</span>: 9-18 digits.
+              </li>
+              <li>
+                <span className="font-semibold">esiNumber</span>: 10 or 17 digits.
+              </li>
+              <li>
+                <span className="font-semibold">accountType</span>: Savings, Current, or Salary.
+              </li>
+              <li>
+                <span className="font-semibold">pfNumber</span>: letters, digits, slashes, dots, hyphens, spaces (5-40 characters).
+              </li>
+            </ol>
+          </CollapsibleInfoBox>
+
           <div className="text-xs text-text-muted bg-amber-bg text-amber px-3 py-2 rounded">
-            Data discrepancies (duplicate codes, invalid PAN/IFSC) will be flagged in the report. Source-data integrity is your responsibility; we do not silently fix.
+            Rows with data issues (duplicate codes, invalid PAN/IFSC, etc.) are flagged in the import report, not
+            auto-corrected - review your CSV against the rules above before importing.
           </div>
         </div>
       )}
@@ -584,15 +609,15 @@ function EmployeeBulkDeleteRequestModal({
         }
       }
       toast(
-        `Submitted ${result.succeeded} deletion request${result.succeeded !== 1 ? 's' : ''}${
-          result.skipped ? `, ${result.skipped} failed` : ''
+        `Deleted ${result.succeeded} employee${result.succeeded !== 1 ? 's' : ''}${
+          result.skipped ? `, ${result.skipped} skipped` : ''
         }`,
         result.succeeded > 0 ? 'success' : 'error'
       );
       qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
       onSuccess();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not submit requests.');
+      setError(e instanceof Error ? e.message : 'Could not delete employees.');
     } finally {
       setBusy(false);
     }
@@ -602,19 +627,19 @@ function EmployeeBulkDeleteRequestModal({
     <Modal
       open
       onClose={onClose}
-      title="Request employee deletions"
+      title="Delete employees"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
-            {busy ? 'Submitting?' : `Submit ${count} request${count !== 1 ? 's' : ''}`}
+            {busy ? 'Deleting…' : `Delete ${count} employee${count !== 1 ? 's' : ''}`}
           </button>
         </>
       }
     >
       <div className="space-y-4 text-sm">
         <p className="text-text-muted">
-          Request deletion of <strong className="text-text">{count}</strong> employee{count !== 1 ? 's' : ''}. HR must approve before records are removed.
+          Delete <strong className="text-text">{count}</strong> employee{count !== 1 ? 's' : ''}? This cannot be undone.
         </p>
         {itemLabels.length > 0 && (
           <ul className="list-disc pl-5 text-text-muted space-y-0.5">
@@ -622,7 +647,7 @@ function EmployeeBulkDeleteRequestModal({
               <li key={label}>{label}</li>
             ))}
             {itemLabels.length > 5 && (
-              <li className="list-none -ml-5 text-text-subtle">?and {itemLabels.length - 5} more</li>
+              <li className="list-none -ml-5 text-text-subtle">…and {itemLabels.length - 5} more</li>
             )}
           </ul>
         )}
@@ -630,7 +655,7 @@ function EmployeeBulkDeleteRequestModal({
           <label className="label">Reason</label>
           <textarea
             className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
-            placeholder="Describe why these employees should be removed (min 10 characters)?"
+            placeholder="Describe why these employees should be removed (min 10 characters)"
             value={reason}
             onChange={(e) => { setReason(e.target.value); setError(null); }}
           />
@@ -657,11 +682,11 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     setError(null);
     try {
       await employeeChangeRequestsApi.submit({ changeType: 'delete', employeeId: employee.id, reason: reason.trim() });
-      toast('Deletion request submitted for HR review', 'success');
+      toast(`Deleted ${employee.name}`, 'success');
       qc.invalidateQueries({ queryKey: ['employee-change-requests'] });
       onClose();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not submit request.');
+      setError(e instanceof Error ? e.message : 'Could not delete employee.');
     } finally {
       setBusy(false);
     }
@@ -671,25 +696,25 @@ function EmployeeDeleteRequestModal({ employee, onClose }: { employee: EmployeeM
     <Modal
       open
       onClose={onClose}
-      title="Request employee deletion"
+      title="Delete employee?"
       footer={
         <>
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="button" className="btn-primary bg-red hover:bg-red/90" disabled={busy || reason.trim().length < 10} onClick={onConfirm}>
-            {busy ? 'Submitting?' : 'Submit request'}
+            {busy ? 'Deleting…' : 'Delete employee'}
           </button>
         </>
       }
     >
       <div className="space-y-4 text-sm">
         <p className="text-text-muted">
-          Request deletion of <strong className="text-text">{employee.name}</strong> ({employee.empCode}). HR must approve before the record is removed.
+          Delete employee <strong className="text-text">{employee.name}</strong> ({employee.empCode})? This cannot be undone.
         </p>
         <div>
           <label className="label">Reason</label>
           <textarea
             className={`input w-full min-h-[80px] resize-y ${error ? 'ring-1 ring-red' : ''}`}
-            placeholder="Describe why this employee should be removed (min 10 characters)?"
+            placeholder="Describe why this employee should be removed (min 10 characters)"
             value={reason}
             onChange={(e) => { setReason(e.target.value); setError(null); }}
           />

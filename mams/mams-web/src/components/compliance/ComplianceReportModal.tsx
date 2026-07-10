@@ -145,8 +145,7 @@ export function ComplianceReportModal({
 
         <p className="text-sm text-text-muted">
           The report includes <strong className="text-text">all active employees</strong> for the selected month.
-          Search below only to override total hours for specific employees; everyone else uses their generated
-          attendance totals (or 208 h baseline if none exist).
+          Search below to adjust total hours for specific employees, if needed.
         </p>
 
         <div className="border-b border-border pb-4">
@@ -230,12 +229,6 @@ export function ComplianceReportModal({
             </div>
           </div>
         )}
-
-        <p className="text-xs text-text-muted">
-          Monthly baseline is 208 hours (26 working days × 8 h). Sundays are weekly off. Leave days are placed on
-          weekdays using a deterministic shuffle per employee when total hours are below 208. Values above 208 are
-          capped at 208 in the report (26 present days, no leave). Example: 160 h → 6 leave days and 20 present days.
-        </p>
 
         {submitAttempted && validationErrors.length > 0 && (
           <div className="p-3 rounded-md bg-red/10 border border-red/30 text-sm text-red">

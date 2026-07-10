@@ -28,7 +28,7 @@ const reportJobSchema = new Schema(
     requestedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     filename: { type: String, default: null },
     mimeType: { type: String, default: null },
-    fileData: { type: Buffer, default: null },
+    filePath: { type: String, default: null },
     errorMessage: { type: String, default: null },
     employeeCount: { type: Number, default: null },
     processedCount: { type: Number, default: null },

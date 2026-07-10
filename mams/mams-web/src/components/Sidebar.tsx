@@ -7,7 +7,7 @@ import { isAutogenDemoEnabled } from '../config/featureFlags';
 import { NavIcon, type NavIconName } from './navIcons';
 import { SidebarBrandHeader } from './SidebarBrandHeader';
 import { BugReportSidebarFooter } from './bugReport/BugReportSidebarFooter';
-import { hasOrgAdminLikeAccess, type Role } from '@mams/types';
+import { hasOrgAdminLikeAccess } from '@mams/types';
 
 const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -34,7 +34,6 @@ const COMPLIANCE_ATTENDANCE_NAV = {
 
 function buildNav(
   permissions: string[],
-  role?: Role,
   canViewChangeRequests = false,
   isCompliant = false,
 ) {
@@ -42,7 +41,7 @@ function buildNav(
   const hasReal = permissions.includes('read.real');
 
   let nav = [...BASE_NAV];
-  if (role === 'hr.compliance') {
+  if (!hasCompliant) {
     nav = nav.filter((item) => item.to !== '/adjustments');
   }
   if (hasCompliant && !hasReal) {
@@ -61,7 +60,7 @@ function buildNav(
   if (canViewChangeRequests) {
     const crItem = {
       to: '/employee-change-requests',
-      label: isCompliant ? 'Change History' : 'Change Requests',
+      label: isCompliant ? 'Update Log' : 'Change Requests',
       icon: 'adjustments' as const,
     };
     const leaveIdx = nav.findIndex((n) => n.to === '/leave');
@@ -153,7 +152,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             )}
           </>
         )}
-        {buildNav(user?.permissions ?? [], user?.role as Role | undefined, canViewChangeRequests, isCompliant).map((n) => (
+        {buildNav(user?.permissions ?? [], canViewChangeRequests, isCompliant).map((n) => (
           <Fragment key={n.to}>
             {n.to === '/settings' && (
               <div className="my-2 border-t sidebar-divider opacity-40" />

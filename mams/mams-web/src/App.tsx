@@ -134,7 +134,14 @@ export function App() {
         {isAutogenDemoEnabled() && (
           <Route path="autogeneration-demo" element={<AutogenerationDemo />} />
         )}
-        <Route path="adjustments" element={<Adjustments />} />
+        <Route
+          path="adjustments"
+          element={
+            <RequireAnyPermission permissions={['read.compliant']} fallback="/dashboard">
+              <Adjustments />
+            </RequireAnyPermission>
+          }
+        />
         <Route path="regularization" element={<Regularization />} />
         <Route path="leave" element={<Leave />} />
         <Route path="visitors" element={<Visitors />} />

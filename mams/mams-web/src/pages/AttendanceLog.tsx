@@ -295,6 +295,13 @@ export function AttendanceLog() {
         />
       </div>
 
+      {!date && (
+        <p className="text-xs text-text-muted mb-3 -mt-1">
+          Stat counts are for <strong className="text-text">{scopeLabel}</strong> (IST). The table below
+          shows all dates until you filter by date.
+        </p>
+      )}
+
       {isModified && (
         <div className="dash-filter-bar">
           <span className="dash-filter-bar-label">

@@ -207,6 +207,7 @@ export function Dashboard() {
             barLabel={chartState.barLabel}
             barMetric={chartState.barMetric}
             hasChartData={chartState.hasChartData}
+            resetBarHover={chartState.resetBarHover}
           />
         );
       }

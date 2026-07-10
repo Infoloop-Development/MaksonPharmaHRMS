@@ -90,24 +90,23 @@ export function formatHhmm(hhmm: string | null | undefined, format: TimeFormat):
   return `${h}:${m} ${parts.period}`;
 }
 
-/** Format dashboard stamp HH:mm:ss.SSS for display. */
+/** Format dashboard stamp HH:mm:ss for display. */
 export function formatStampString(stamp: string | null | undefined, format: TimeFormat): string {
   if (stamp == null || stamp === '' || stamp === '-') return '-';
   const m = /^(\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,3}))?$/.exec(stamp);
   if (!m) return stamp;
   const hhmm = `${m[1]}:${m[2]}`;
   const secPart = m[3] ? `:${m[3]}` : '';
-  const msPart = m[4] ? `.${m[4].padEnd(3, '0').slice(0, 3)}` : '';
 
   if (format === '24h') {
-    return `${m[1]}:${m[2]}${secPart}${msPart}`;
+    return `${m[1]}:${m[2]}${secPart}`;
   }
 
   const parts = splitHhmmTo12h(hhmm);
   if (!parts) return stamp;
   const h = parts.hour12;
   const min = String(parts.minute).padStart(2, '0');
-  return `${h}:${min}${secPart}${msPart} ${parts.period}`;
+  return `${h}:${min}${secPart} ${parts.period}`;
 }
 
 /** Format a shift window label like "06:00 – 18:00". */

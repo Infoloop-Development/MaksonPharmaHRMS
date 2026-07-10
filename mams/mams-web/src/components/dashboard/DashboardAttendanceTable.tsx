@@ -444,33 +444,33 @@ export function DashboardAttendanceTable({
               ) : (
                 <>
                   <th
-                    className={sortCol === 'name' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'name' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('name')}
                   >
                     Employee <span className="sort-arrow">{dashboardSortArrow('name')}</span>
                   </th>
-                  <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleDashboardSort('id')}>
+                  <th className={`!text-center ${sortCol === 'id' ? 'sorted' : ''}`} onClick={() => toggleDashboardSort('id')}>
                     ID <span className="sort-arrow">{dashboardSortArrow('id')}</span>
                   </th>
                   <th
-                    className={sortCol === 'dept' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'dept' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('dept')}
                   >
                     Department <span className="sort-arrow">{dashboardSortArrow('dept')}</span>
                   </th>
                   <th
-                    className={sortCol === 'shift' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'shift' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('shift')}
                   >
                     Shift <span className="sort-arrow">{dashboardSortArrow('shift')}</span>
                   </th>
-                  <th>Entry</th>
-                  <th>Exit</th>
-                  <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleDashboardSort('hrs')}>
+                  <th className="!text-center">Entry</th>
+                  <th className="!text-center">Exit</th>
+                  <th className={`!text-center ${sortCol === 'hrs' ? 'sorted' : ''}`} onClick={() => toggleDashboardSort('hrs')}>
                     Hours <span className="sort-arrow">{dashboardSortArrow('hrs')}</span>
                   </th>
                   <th
-                    className={sortCol === 'status' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'status' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('status')}
                   >
                     Status <span className="sort-arrow">{dashboardSortArrow('status')}</span>
@@ -509,22 +509,22 @@ export function DashboardAttendanceTable({
                     ))
                   ) : (
                     <>
-                      <td>
+                      <td className="text-center">
                         <Link to={`/employees/${row.employeeId}`} className="dash-emp-link">
                           {row.employeeName}
                         </Link>
                       </td>
-                      <td className="font-mono text-[11px]">{row.empCode}</td>
-                      <td>{row.department}</td>
-                      <td>
+                      <td className="font-mono text-[11px] text-center">{row.empCode}</td>
+                      <td className="text-center">{row.department}</td>
+                      <td className="text-center">
                         <AttendanceShiftPill shift={row.timeShift} />
                       </td>
-                      <td className="dash-time">{formatCell(row.entryStamp)}</td>
-                      <td className="dash-time">{formatCell(row.exitStamp)}</td>
-                      <td className="dash-time">
+                      <td className="dash-time text-center">{formatCell(row.entryStamp)}</td>
+                      <td className="dash-time text-center">{formatCell(row.exitStamp)}</td>
+                      <td className="dash-time text-center">
                         {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
                       </td>
-                      <td>
+                      <td className="text-center">
                         <AttendanceStatusPill status={row.displayStatus} />
                       </td>
                     </>

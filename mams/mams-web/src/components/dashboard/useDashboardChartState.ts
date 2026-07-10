@@ -96,7 +96,9 @@ export function useDashboardChartState({
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 0 },
-      layout: { padding: { top: 18 } },
+      // Value-label plugin draws 11px bold text with its baseline 8px above the bar top,
+      // so it needs ~20px of clearance to avoid clipping the tops of tall digits.
+      layout: { padding: { top: 26 } },
       datasets: {
         bar: {
           grouped: false,
@@ -295,11 +297,11 @@ export function useDashboardChartState({
     const isLeave = statusFilter === 'Weekly Off' || statusFilter === 'Half Day';
 
     const bgColors = [
-      all || isPresent || isOnTime ? CHART_COLORS.navy : dimColor(CHART_COLORS.navy),
+      all || isPresent || isOnTime ? CHART_COLORS.green : dimColor(CHART_COLORS.green),
       all || isLate || isPresent ? CHART_COLORS.amber : dimColor(CHART_COLORS.amber),
       all || isAbsent || isLeave ? CHART_COLORS.red : dimColor(CHART_COLORS.red),
     ];
-    const hoverColors = [CHART_COLORS.navy, CHART_COLORS.amber, CHART_COLORS.red];
+    const hoverColors = [CHART_COLORS.green, CHART_COLORS.amber, CHART_COLORS.red];
     const offsets = [
       isOnTime || isPresent ? 10 : 0,
       isLate ? 10 : isPresent ? 8 : 0,
@@ -369,6 +371,11 @@ export function useDashboardChartState({
 
   const hasChartData = Boolean(data && data.last7Days.totalEmployees > 0);
 
+  // Chart.js's own onHover can miss the "left the canvas" transition on fast mouse
+  // movement, leaving a bar stuck in its hovered/highlighted state. A native
+  // mouseleave on the chart's container is a reliable backstop.
+  const resetBarHover = () => setHoveredDayIndex(null);
+
   return {
     chartsError,
     isInitialLoad,
@@ -376,6 +383,7 @@ export function useDashboardChartState({
     barChart,
     barLabel,
     barMetric,
+    resetBarHover,
     donutChart,
     donutMeta,
     selectedDate,

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EmployeeCreateBodySchema,
@@ -138,6 +138,34 @@ export function EmployeesAddModal({
   const [busy, setBusy] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const canUnmask = isEdit;
+  const initialDraftRef = useRef<Draft | null>(isEdit && employee ? draftFromEmployee(employee, isCompliant) : null);
+
+  const { data: freshEmployee } = useQuery({
+    queryKey: ['employees', employee?.id, 'edit'],
+    queryFn: () => employeesApi.getOne(employee!.id),
+    enabled: canUnmask,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!freshEmployee || freshEmployee.isMasked) return;
+    const sensitiveFields = {
+      pan: freshEmployee.pan,
+      aadhaar: freshEmployee.aadhaar,
+      bankAccountNumber: freshEmployee.bankAccountNumber,
+      ifsc: freshEmployee.ifsc,
+      bankName: freshEmployee.bankName,
+      accountHolderName: freshEmployee.accountHolderName,
+      accountType: freshEmployee.accountType,
+      pfNumber: freshEmployee.pfNumber,
+      esiNumber: freshEmployee.esiNumber,
+    };
+    if (initialDraftRef.current) {
+      initialDraftRef.current = { ...initialDraftRef.current, ...sensitiveFields };
+    }
+    setDraft((prev) => ({ ...prev, ...sensitiveFields }));
+  }, [freshEmployee]);
 
   const { data: nextCodeData, isLoading: nextCodeLoading } = useQuery({
     queryKey: ['employees', 'next-code'],
@@ -189,13 +217,17 @@ export function EmployeesAddModal({
     [draft, step1Payload]
   );
 
+  // For compliance edit: show masked current value as placeholder so auditors can see data exists
+  const mp = isCompliant && isEdit ? employee : undefined;
+
+  const hasChanges = useMemo(() => {
+    if (!isEdit || !initialDraftRef.current) return true;
+    return JSON.stringify(draft) !== JSON.stringify(initialDraftRef.current);
+  }, [draft, isEdit]);
+
   const goStep2 = () => {
     setFormError(null);
     setReasonError('');
-    if (isCompliant && reason.trim().length < 10) {
-      setReasonError('Reason must be at least 10 characters');
-      return;
-    }
     const schemaToUse = isCompliant
       ? EmployeeCreateStep1Schema.omit({ timeShift: true })
       : EmployeeCreateStep1Schema;
@@ -210,6 +242,10 @@ export function EmployeesAddModal({
 
   const onSubmit = async () => {
     setFormError(null);
+    if (isCompliant && reason.trim().length < 10) {
+      setReasonError('Reason must be at least 10 characters');
+      return;
+    }
 
     if (isCompliant) {
       setBusy(true);
@@ -375,7 +411,7 @@ export function EmployeesAddModal({
           Next
         </button>
       ) : (
-        <button type="button" className="btn-primary" onClick={onSubmit} disabled={busy}>
+        <button type="button" className="btn-primary" onClick={onSubmit} disabled={busy || (isEdit && !hasChanges)}>
           {busy ? 'Saving…' : isEdit ? 'Save changes' : 'Save employee'}
         </button>
       )}
@@ -386,9 +422,7 @@ export function EmployeesAddModal({
     <Modal
       open
       onClose={onClose}
-      title={isEdit
-        ? (isCompliant ? 'Request employee update' : 'Edit employee')
-        : (isCompliant ? 'Request new employee' : 'Add employee')}
+      title={isEdit ? 'Edit employee' : 'Add employee'}
       size="xl"
       footer={footer}
     >
@@ -501,6 +535,76 @@ export function EmployeesAddModal({
                 <StatusToggle value={draft.status} onChange={(v) => set('status', v)} error={err('status')} />
               </div>
             </section>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-8 animate-[fadeIn_0.15s_ease-out]">
+            {isEdit && (
+              <p className="text-xs text-text-muted bg-surface2 border border-border rounded px-3 py-2">
+                Sensitive and bank fields are pre-filled with current values. Edit only what needs to change.
+              </p>
+            )}
+            <p className="text-xs text-text-muted">
+              PAN and IFSC are normalised to uppercase. Aadhaar: 12 digits (format only in Phase 1). Bank account: 9–18 digits. ESI: 10 or 17 digits.
+            </p>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Statutory</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="add-pan" className="label">PAN</label>
+                  <input id="add-pan" className={`input font-mono uppercase ${err('pan') ? 'ring-1 ring-red' : ''}`} value={draft.pan} onChange={(e) => set('pan', e.target.value)} placeholder={mp?.pan || 'ABCDE1234F'} />
+                  {err('pan') && <p className="mt-1 text-[11px] text-red">{err('pan')}</p>}
+                </div>
+                <div>
+                  <label htmlFor="add-aad" className="label">Aadhaar</label>
+                  <input id="add-aad" className={`input font-mono ${err('aadhaar') ? 'ring-1 ring-red' : ''}`} value={draft.aadhaar} onChange={(e) => set('aadhaar', e.target.value)} placeholder={mp?.aadhaar || '12 digits'} />
+                  {err('aadhaar') && <p className="mt-1 text-[11px] text-red">{err('aadhaar')}</p>}
+                </div>
+                <div>
+                  <label htmlFor="add-pf" className="label">PF number</label>
+                  <input id="add-pf" className={`input font-mono ${err('pfNumber') ? 'ring-1 ring-red' : ''}`} value={draft.pfNumber} onChange={(e) => set('pfNumber', e.target.value)} placeholder={mp?.pfNumber || undefined} />
+                  {err('pfNumber') && <p className="mt-1 text-[11px] text-red">{err('pfNumber')}</p>}
+                </div>
+              </div>
+              <div className="mt-4 max-w-md">
+                <label htmlFor="add-esi" className="label">ESI number</label>
+                <input id="add-esi" className={`input font-mono ${err('esiNumber') ? 'ring-1 ring-red' : ''}`} value={draft.esiNumber} onChange={(e) => set('esiNumber', e.target.value)} placeholder={mp?.esiNumber || undefined} />
+                {err('esiNumber') && <p className="mt-1 text-[11px] text-red">{err('esiNumber')}</p>}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Bank</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="add-bank" className="label">Bank name</label>
+                  <input id="add-bank" className={`input ${err('bankName') ? 'ring-1 ring-red' : ''}`} value={draft.bankName} onChange={(e) => set('bankName', e.target.value)} placeholder={mp?.bankName || undefined} />
+                  {err('bankName') && <p className="mt-1 text-[11px] text-red">{err('bankName')}</p>}
+                </div>
+                <SelectField id="add-acct" label="Account type" value={draft.accountType} onChange={(v) => set('accountType', v as Draft['accountType'])} error={err('accountType')}>
+                  <option value="Current">Current</option>
+                  <option value="Savings">Savings</option>
+                  <option value="Salary">Salary</option>
+                </SelectField>
+                <div>
+                  <label htmlFor="add-bacct" className="label">Bank account number</label>
+                  <input id="add-bacct" className={`input font-mono ${err('bankAccountNumber') ? 'ring-1 ring-red' : ''}`} value={draft.bankAccountNumber} onChange={(e) => set('bankAccountNumber', e.target.value)} placeholder={mp?.bankAccountNumber || undefined} />
+                  {err('bankAccountNumber') && <p className="mt-1 text-[11px] text-red">{err('bankAccountNumber')}</p>}
+                </div>
+                <div>
+                  <label htmlFor="add-holder" className="label">Account holder name</label>
+                  <input id="add-holder" className={`input ${err('accountHolderName') ? 'ring-1 ring-red' : ''}`} value={draft.accountHolderName} onChange={(e) => set('accountHolderName', e.target.value)} placeholder={mp?.accountHolderName || undefined} />
+                  {err('accountHolderName') && <p className="mt-1 text-[11px] text-red">{err('accountHolderName')}</p>}
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="add-ifsc" className="label">IFSC code</label>
+                  <input id="add-ifsc" className={`input font-mono uppercase max-w-md ${err('ifsc') ? 'ring-1 ring-red' : ''}`} value={draft.ifsc} onChange={(e) => set('ifsc', e.target.value)} placeholder={mp?.ifsc || undefined} />
+                  {err('ifsc') && <p className="mt-1 text-[11px] text-red">{err('ifsc')}</p>}
+                </div>
+              </div>
+            </section>
 
             {isCompliant && (
               <section>
@@ -516,77 +620,6 @@ export function EmployeesAddModal({
                 </div>
               </section>
             )}
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-8 animate-[fadeIn_0.15s_ease-out]">
-            {isEdit && (
-              <p className="text-xs text-text-muted bg-surface2 border border-border rounded px-3 py-2">
-                Leave sensitive and bank fields blank to keep current values. Enter a value only when you need to change
-                it.
-              </p>
-            )}
-            <p className="text-xs text-text-muted">
-              PAN and IFSC are normalised to uppercase. Aadhaar: 12 digits (format only in Phase 1). Bank account: 9–18 digits. ESI: 10 or 17 digits.
-            </p>
-
-            <section>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Statutory</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="add-pan" className="label">PAN</label>
-                  <input id="add-pan" className={`input font-mono uppercase ${err('pan') ? 'ring-1 ring-red' : ''}`} value={draft.pan} onChange={(e) => set('pan', e.target.value)} placeholder="ABCDE1234F" />
-                  {err('pan') && <p className="mt-1 text-[11px] text-red">{err('pan')}</p>}
-                </div>
-                <div>
-                  <label htmlFor="add-aad" className="label">Aadhaar</label>
-                  <input id="add-aad" className={`input font-mono ${err('aadhaar') ? 'ring-1 ring-red' : ''}`} value={draft.aadhaar} onChange={(e) => set('aadhaar', e.target.value)} placeholder="12 digits" />
-                  {err('aadhaar') && <p className="mt-1 text-[11px] text-red">{err('aadhaar')}</p>}
-                </div>
-                <div>
-                  <label htmlFor="add-pf" className="label">PF number</label>
-                  <input id="add-pf" className={`input font-mono ${err('pfNumber') ? 'ring-1 ring-red' : ''}`} value={draft.pfNumber} onChange={(e) => set('pfNumber', e.target.value)} />
-                  {err('pfNumber') && <p className="mt-1 text-[11px] text-red">{err('pfNumber')}</p>}
-                </div>
-              </div>
-              <div className="mt-4 max-w-md">
-                <label htmlFor="add-esi" className="label">ESI number</label>
-                <input id="add-esi" className={`input font-mono ${err('esiNumber') ? 'ring-1 ring-red' : ''}`} value={draft.esiNumber} onChange={(e) => set('esiNumber', e.target.value)} />
-                {err('esiNumber') && <p className="mt-1 text-[11px] text-red">{err('esiNumber')}</p>}
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Bank</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="add-bank" className="label">Bank name</label>
-                  <input id="add-bank" className={`input ${err('bankName') ? 'ring-1 ring-red' : ''}`} value={draft.bankName} onChange={(e) => set('bankName', e.target.value)} />
-                  {err('bankName') && <p className="mt-1 text-[11px] text-red">{err('bankName')}</p>}
-                </div>
-                <SelectField id="add-acct" label="Account type" value={draft.accountType} onChange={(v) => set('accountType', v as Draft['accountType'])} error={err('accountType')}>
-                  <option value="Current">Current</option>
-                  <option value="Savings">Savings</option>
-                  <option value="Salary">Salary</option>
-                </SelectField>
-                <div>
-                  <label htmlFor="add-bacct" className="label">Bank account number</label>
-                  <input id="add-bacct" className={`input font-mono ${err('bankAccountNumber') ? 'ring-1 ring-red' : ''}`} value={draft.bankAccountNumber} onChange={(e) => set('bankAccountNumber', e.target.value)} />
-                  {err('bankAccountNumber') && <p className="mt-1 text-[11px] text-red">{err('bankAccountNumber')}</p>}
-                </div>
-                <div>
-                  <label htmlFor="add-holder" className="label">Account holder name</label>
-                  <input id="add-holder" className={`input ${err('accountHolderName') ? 'ring-1 ring-red' : ''}`} value={draft.accountHolderName} onChange={(e) => set('accountHolderName', e.target.value)} />
-                  {err('accountHolderName') && <p className="mt-1 text-[11px] text-red">{err('accountHolderName')}</p>}
-                </div>
-                <div className="md:col-span-2">
-                  <label htmlFor="add-ifsc" className="label">IFSC code</label>
-                  <input id="add-ifsc" className={`input font-mono uppercase max-w-md ${err('ifsc') ? 'ring-1 ring-red' : ''}`} value={draft.ifsc} onChange={(e) => set('ifsc', e.target.value)} />
-                  {err('ifsc') && <p className="mt-1 text-[11px] text-red">{err('ifsc')}</p>}
-                </div>
-              </div>
-            </section>
           </div>
         )}
       </div>

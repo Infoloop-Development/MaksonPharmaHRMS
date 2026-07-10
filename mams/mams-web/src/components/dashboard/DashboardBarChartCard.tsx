@@ -11,7 +11,8 @@ export function DashboardBarChartCard({
   barLabel,
   barMetric,
   hasChartData,
-}: Pick<ChartState, 'isInitialLoad' | 'barChart' | 'barLabel' | 'barMetric' | 'hasChartData'>) {
+  resetBarHover,
+}: Pick<ChartState, 'isInitialLoad' | 'barChart' | 'barLabel' | 'barMetric' | 'hasChartData' | 'resetBarHover'>) {
   const showEmpty = !isInitialLoad && (!barChart || !hasChartData);
 
   return (
@@ -20,7 +21,7 @@ export function DashboardBarChartCard({
       <p className="text-xs text-text-muted mb-4">
         Click a bar to select day.
       </p>
-      <div className="dash-chart-card-body">
+      <div className="dash-chart-card-body" onMouseLeave={resetBarHover}>
         {isInitialLoad && (
           <div className="absolute inset-0 flex items-center justify-center text-text-muted text-sm">
             Loading chart…

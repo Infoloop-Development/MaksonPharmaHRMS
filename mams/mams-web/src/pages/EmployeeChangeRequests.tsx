@@ -78,9 +78,9 @@ export function EmployeeChangeRequests() {
     <div>
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">{canApprove ? 'Employee Change Requests' : 'Change History'}</h1>
+          <h1 className="text-2xl font-bold">{canApprove ? 'Employee Change Requests' : 'Update Log'}</h1>
           <p className="text-sm text-text-muted mt-0.5">
-            {canApprove ? 'Compliance-initiated employee changes — review and correct if needed' : 'Your submitted employee changes and their outcomes'}
+            {canApprove ? 'Compliance-initiated employee changes — review and correct if needed' : 'Status of employee updates you’ve submitted'}
           </p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export function EmployeeChangeRequests() {
       ) : (
         <div className="mb-6 max-w-[220px]">
           <DashboardStatCard
-            label="Total Changes"
+            label="Total Updates"
             value={String(data?.total ?? 0)}
             sub=""
             accent="primary"
@@ -301,7 +301,7 @@ function ReviewModal({
     <Modal
       open
       onClose={onClose}
-      title={canApprove ? `Review: ${changeTypeLabel}` : `Change details: ${changeTypeLabel}`}
+      title={canApprove ? `Review: ${changeTypeLabel}` : `Update details: ${changeTypeLabel}`}
       size="xl"
       footer={
         <>
