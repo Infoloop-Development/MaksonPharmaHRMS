@@ -12,6 +12,7 @@
     "seed:first-time-user": "tsx seed/firstTimeUser.ts",
     "seed:attendance": "tsx seed/seedAttendanceDays.ts",
     "seed:compliance-month": "tsx seed/complianceMonth.ts",
+    "purge:bug-reports": "tsx seed/purgeBugReports.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

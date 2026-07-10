@@ -15,7 +15,7 @@ import { BugReportModal } from './BugReportModal';
 import { BugReportClickSpotlight } from './BugReportClickSpotlight';
 import { useToast } from '../ui/Toast';
 
-const HIDDEN_PREFIXES = ['/login', '/change-password', '/visit/'];
+const HIDDEN_PREFIXES = ['/login', '/change-password', '/visit/', '/admin/bug-reporting/board'];
 
 type FormState = {
   title: string;

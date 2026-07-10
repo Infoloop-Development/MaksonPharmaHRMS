@@ -7,7 +7,7 @@ import { isAutogenDemoEnabled } from '../../config/featureFlags';
 import { NavIcon, type NavIconName } from '../navIcons';
 import { SidebarBrandHeader } from '../SidebarBrandHeader';
 import { BugReportSidebarFooter } from '../bugReport/BugReportSidebarFooter';
-import { canManageBugReports, canManageRecycleBin, hasOrgAdminLikeAccess } from '@mams/types';
+import { canManageBugReports, canManageRecycleBin, canManageOrgUsers, hasOrgAdminLikeAccess } from '@mams/types';
 
 const ADMIN_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/admin', label: 'Overview', icon: 'dashboard' },
@@ -54,6 +54,7 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
   const showHrModules = hasOrgAdminLikeAccess(user?.role ?? 'hr.admin');
   const showRecycleBin = canManageRecycleBin(user?.permissions ?? []);
   const showBugReporting = canManageBugReports(user?.permissions ?? []);
+  const showManageItAdmins = canManageOrgUsers(user?.permissions ?? []);
 
   return (
     <aside
@@ -84,6 +85,12 @@ export function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => 
           <NavLink to="/admin/bug-reporting" className={({ isActive }) => navLinkClass(isActive)}>
             <NavIcon name="reports" />
             <span>Bug reporting</span>
+          </NavLink>
+        )}
+        {showManageItAdmins && (
+          <NavLink to="/admin/bug-reporting/it-admins" className={({ isActive }) => navLinkClass(isActive)}>
+            <NavIcon name="employees" />
+            <span>Manage IT Admins</span>
           </NavLink>
         )}
         {showHrModules && (

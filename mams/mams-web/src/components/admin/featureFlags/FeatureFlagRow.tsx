@@ -13,7 +13,6 @@ export function FeatureFlagRow({
   onToggle: (next: boolean) => void;
 }) {
   const envKeys = [flag.serverEnvKey, flag.webEnvKey].filter(Boolean);
-  const showWarning = flag.webSynced === false;
 
   return (
     <div className="py-4 border-b border-border last:border-0 last:pb-0 first:pt-0">
@@ -39,11 +38,6 @@ export function FeatureFlagRow({
           ariaLabel={`Toggle ${flag.label}`}
         />
       </div>
-      {showWarning && (
-        <div className="dash-layout-blocked-msg mt-3 mb-0">
-          Web build may not match server until Netlify env is updated and the site is redeployed.
-        </div>
-      )}
     </div>
   );
 }

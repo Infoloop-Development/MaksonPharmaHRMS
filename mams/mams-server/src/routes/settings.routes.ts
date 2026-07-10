@@ -84,6 +84,12 @@ const ORG_SETTINGS_FIELDS = new Set([
   'orgNotificationAlerts',
 ]);
 
+const LEAVE_SETTINGS_FIELDS = new Set(['leaveQuotaResetPolicy', 'financialYearStartMonth']);
+
+function canEditLeaveSettings(perms: string[]): boolean {
+  return perms.includes('manage.leave') || perms.includes('manage.org_settings') || perms.includes('manage.settings');
+}
+
 function canEditOrgSettings(perms: string[]): boolean {
   return perms.includes('manage.org_settings') || perms.includes('manage.settings');
 }
@@ -108,8 +114,13 @@ router.patch('/', async (req, res, next) => {
     }
 
     const perms = req.auth!.permissions;
+    const touchesLeaveSettings = changedKeys.some((k) => LEAVE_SETTINGS_FIELDS.has(k));
     const touchesOrgSettings = changedKeys.some((k) => ORG_SETTINGS_FIELDS.has(k));
     const touchesExportNaming = changedKeys.includes('exportNaming');
+    if (touchesLeaveSettings && !canEditLeaveSettings(perms)) {
+      res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.leave' });
+      return;
+    }
     if (touchesOrgSettings && !canEditOrgSettings(perms)) {
       res.status(403).json({ error: 'forbidden', requiredPermission: 'manage.org_settings' });
       return;

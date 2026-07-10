@@ -5,7 +5,14 @@ const notificationSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     kind: {
       type: String,
-      enum: ['visitor_submitted', 'leave_applied', 'device_registered'],
+      enum: [
+        'visitor_submitted',
+        'leave_applied',
+        'device_registered',
+        'bug_assigned',
+        'bug_mentioned',
+        'bug_resolved',
+      ],
       required: true,
     },
     title: { type: String, required: true },

@@ -54,9 +54,11 @@ import {
 import { eachDateInRange } from '../services/leave/leaveDate.util.js';
 import { z } from 'zod';
 import { softDeleteFields } from '../utils/softDelete.util.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 
 const router = Router();
 router.use(requireAuth);
+const leaveReadGate = requireAnyPermission('read.leave', 'write.leave', 'approve.leave', 'manage.leave');
 
 function requireMongoId(id: string | undefined): string {
   if (!id || !Types.ObjectId.isValid(id)) throw new ApiError(400, 'invalid_id', 'Invalid id');
@@ -96,7 +98,7 @@ async function holidaysInRange(from: string, to: string) {
   }).lean();
 }
 
-router.get('/summary', async (_req, res, next) => {
+router.get('/summary', leaveReadGate, async (_req, res, next) => {
   try {
     res.json(await getLeaveSummary());
   } catch (err) {
@@ -104,7 +106,7 @@ router.get('/summary', async (_req, res, next) => {
   }
 });
 
-router.get('/types', async (_req, res, next) => {
+router.get('/types', leaveReadGate, async (_req, res, next) => {
   try {
     const items = await LeaveTypeModel.find().sort({ sortOrder: 1, name: 1 }).lean();
     res.json({ items: items.map(mapLeaveType) });
@@ -140,7 +142,7 @@ router.patch('/types/:id', requirePermission('manage.leave'), async (req, res, n
   }
 });
 
-router.get('/holidays', async (req, res, next) => {
+router.get('/holidays', leaveReadGate, async (req, res, next) => {
   try {
     const year = req.query.year ? String(req.query.year) : undefined;
     const filter: Record<string, unknown> = { isDeleted: { $ne: true } };
@@ -235,7 +237,7 @@ router.post('/holidays/import-csv', requirePermission('manage.leave'), async (re
   }
 });
 
-router.get('/quota/preview', async (req, res, next) => {
+router.get('/quota/preview', leaveReadGate, async (req, res, next) => {
   try {
     const q = LeaveQuotaPreviewQuerySchema.parse(req.query);
     const leaveType = await LeaveTypeModel.findById(q.leaveTypeId).lean();
@@ -251,7 +253,7 @@ router.get('/quota/preview', async (req, res, next) => {
   }
 });
 
-router.get('/quota', async (req, res, next) => {
+router.get('/quota', leaveReadGate, async (req, res, next) => {
   try {
     const employeeId = req.query.employeeId ? String(req.query.employeeId) : undefined;
     const filter: Record<string, unknown> = {};
@@ -347,10 +349,11 @@ async function buildApplicationListFilter(q: z.infer<typeof LeaveListQuerySchema
     if (q.startsTo) filter.fromDate = {...(filter.fromDate as object), $lte: q.startsTo};
   }
   if (q.search?.trim()) {
+    const search = escapeRegex(q.search.trim());
     const employees = await EmployeeModel.find({
       $or: [
-        { name: { $regex: q.search.trim(), $options: 'i' } },
-        { empCode: { $regex: q.search.trim(), $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { empCode: { $regex: search, $options: 'i' } },
       ],
       isDeleted: { $ne: true },
     })
@@ -362,7 +365,7 @@ async function buildApplicationListFilter(q: z.infer<typeof LeaveListQuerySchema
   return filter;
 }
 
-router.get('/applications', async (req, res, next) => {
+router.get('/applications', leaveReadGate, async (req, res, next) => {
   try {
     const q = LeaveListQuerySchema.parse(req.query);
     const filter = await buildApplicationListFilter(q);
@@ -425,7 +428,7 @@ router.get('/applications', async (req, res, next) => {
   }
 });
 
-router.get('/applications/export.xlsx', async (req, res, next) => {
+router.get('/applications/export.xlsx', leaveReadGate, async (req, res, next) => {
   try {
     const q = LeaveListQuerySchema.parse({ ...req.query, pageSize: 5000 });
     const filter = await buildApplicationListFilter(q);
@@ -478,7 +481,7 @@ router.get('/applications/export.xlsx', async (req, res, next) => {
   }
 });
 
-router.get('/applications/export.csv', async (req, res, next) => {
+router.get('/applications/export.csv', leaveReadGate, async (req, res, next) => {
   try {
     const q = LeaveListQuerySchema.parse({ ...req.query, pageSize: 5000 });
     const filter = await buildApplicationListFilter(q);
@@ -524,7 +527,7 @@ router.get('/applications/export.csv', async (req, res, next) => {
   }
 });
 
-router.get('/applications/:id', async (req, res, next) => {
+router.get('/applications/:id', leaveReadGate, async (req, res, next) => {
   try {
     const id = requireMongoId(req.params.id);
     const item = await LeaveApplicationModel.findById(id)
@@ -776,7 +779,7 @@ router.patch('/applications/:id/cancel', requireAnyPermission('approve.leave', '
   }
 });
 
-router.get('/settings/policy', async (_req, res, next) => {
+router.get('/settings/policy', leaveReadGate, async (_req, res, next) => {
   try {
     const doc = await SettingsModel.findOne().select('leaveQuotaResetPolicy financialYearStartMonth').lean();
     res.json({

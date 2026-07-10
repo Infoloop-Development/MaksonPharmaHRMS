@@ -8,12 +8,14 @@ import { syncSoftDeleteIndexes } from './services/softDeleteIndexes.service.js';
 import { startComplianceScheduler } from './services/complianceScheduler.service.js';
 import { startReportJobRunner } from './services/reportJobRunner.service.js';
 import { startRecycleBinPurgeScheduler } from './services/recycleBinPurge.service.js';
+import { ensureBugPhases } from './seed/ensureBugPhases.js';
 
 async function main() {
   await connectDb();
   await loadFeatureFlagOverrides();
   await backfillAllUsersRoleDefaultPermissions();
   await syncSoftDeleteIndexes();
+  await ensureBugPhases();
   startComplianceScheduler();
   startReportJobRunner();
   startRecycleBinPurgeScheduler();

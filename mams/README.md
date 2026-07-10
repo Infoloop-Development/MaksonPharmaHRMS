@@ -23,6 +23,8 @@ cp mams-web/.env.example mams-web/.env
 npm run seed
 
 # 5. Run dev servers (in two terminals)
+# Optional — welcome email on localhost: set MAIL_DEV_FILE_SINK=true in mams-server/.env
+# (emails saved to mams-server/data/mail-outbox/ — open the .html file in your browser)
 npm run dev:server   # http://localhost:3001
 npm run dev:web      # http://localhost:5173
 

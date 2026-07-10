@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { AttendanceRawListQuerySchema, AttendanceRawStatsQuerySchema } from '@mams/types';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAnyPermission } from '../middleware/auth.js';
 import { listRawPunches } from '../services/attendanceRawList.service.js';
 import { getRawPunchStats } from '../services/attendanceRawStats.service.js';
 
 const router = Router();
 router.use(requireAuth);
+const hrReadGate = requireAnyPermission('read.real', 'read.compliant');
 
 function blockCompliantView(req: Parameters<Parameters<typeof router.get>[1]>[0],res: any,next: any){
   if (req.auth?.viewMode === 'compliant'){
@@ -27,7 +28,7 @@ const QuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(500).default(100),
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', hrReadGate, async (req, res, next) => {
   try {
     const q = QuerySchema.parse(req.query);
     const filter: Record<string, unknown> = {};
@@ -65,7 +66,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/raw/stats', blockCompliantView, async (req, res, next) => {
+router.get('/raw/stats', hrReadGate, blockCompliantView, async (req, res, next) => {
   try {
     const q = AttendanceRawStatsQuerySchema.parse(req.query);
     res.json(await getRawPunchStats(q));
@@ -74,7 +75,7 @@ router.get('/raw/stats', blockCompliantView, async (req, res, next) => {
   }
 });
 
-router.get('/raw', blockCompliantView, async (req, res, next) => {
+router.get('/raw', hrReadGate, blockCompliantView, async (req, res, next) => {
   try {
     const q = AttendanceRawListQuerySchema.parse(req.query);
     const result = await listRawPunches(q);
@@ -85,7 +86,7 @@ router.get('/raw', blockCompliantView, async (req, res, next) => {
 });
 
 // Live raw punch feed - polled every ~5s by the AttendanceLog page.
-router.get('/raw/recent', blockCompliantView, async (req, res, next) => {
+router.get('/raw/recent', hrReadGate, blockCompliantView, async (req, res, next) => {
   try {
     const limit = Math.min(Number(req.query.limit ?? 50), 200);
     const result = await listRawPunches({

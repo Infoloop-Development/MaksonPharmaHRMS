@@ -22,6 +22,7 @@ import notificationsRoutes from './notifications.routes.js';
 import recycleBinRoutes from './recycleBin.routes.js';
 import bugReportsRoutes from './bugReports.routes.js';
 import adminBugReportingRoutes from './adminBugReporting.routes.js';
+import itAdminsRoutes from './itAdmins.routes.js';
 
 export const apiRouter = Router();
 apiRouter.use('/auth', authRoutes);
@@ -45,6 +46,7 @@ apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/admin/overview', adminOverviewRoutes);
 apiRouter.use('/admin/recycle-bin', recycleBinRoutes);
 apiRouter.use('/admin/bug-reporting', adminBugReportingRoutes);
+apiRouter.use('/admin/it-admins', itAdminsRoutes);
 apiRouter.use('/bug-reports', bugReportsRoutes);
 apiRouter.use('/notifications', notificationsRoutes);
 

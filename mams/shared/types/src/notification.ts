@@ -4,6 +4,9 @@ export const NotificationKindSchema = z.enum([
   'visitor_submitted',
   'leave_applied',
   'device_registered',
+  'bug_assigned',
+  'bug_mentioned',
+  'bug_resolved',
 ]);
 export type NotificationKind = z.infer<typeof NotificationKindSchema>;
 
@@ -80,5 +83,13 @@ export function isNotificationKindEnabled(
       return alerts.leaveApplied;
     case 'device_registered':
       return alerts.deviceRegistered;
+    case 'bug_assigned':
+    case 'bug_mentioned':
+    case 'bug_resolved':
+      return true;
   }
+}
+
+export function isPerUserNotificationKind(kind: NotificationKind): boolean {
+  return kind === 'bug_assigned' || kind === 'bug_mentioned' || kind === 'bug_resolved';
 }

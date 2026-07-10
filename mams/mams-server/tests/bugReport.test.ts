@@ -14,6 +14,9 @@ import {
   validateBugReportVideoSize,
   MAX_BUG_REPORT_VIDEO_BYTES,
   normalizeBugReportVideoMime,
+  validateBugReportAttachmentMime,
+  validateBugReportAttachmentSize,
+  MAX_BUG_REPORT_ATTACHMENT_BYTES,
 } from '../src/services/bugReportMedia.storage.js';
 import {
   canStartTranscription,
@@ -54,6 +57,40 @@ describe('BugReportListQuerySchema', () => {
     const q = BugReportListQuerySchema.parse({});
     expect(q.page).toBe(1);
     expect(q.sortBy).toBe('createdAt');
+  });
+
+  it('accepts assigneeId including unassigned sentinel', () => {
+    const q = BugReportListQuerySchema.parse({ assigneeId: 'unassigned' });
+    expect(q.assigneeId).toBe('unassigned');
+  });
+
+  it('accepts phaseId filter', () => {
+    const q = BugReportListQuerySchema.parse({ phaseId: '507f1f77bcf86cd799439011' });
+    expect(q.phaseId).toBe('507f1f77bcf86cd799439011');
+  });
+});
+
+describe('BUG_REPORT_KANBAN_COLUMNS', () => {
+  it('maps five workflow statuses to kanban labels', async () => {
+    const { BUG_REPORT_KANBAN_COLUMNS } = await import('@mams/types');
+    expect(BUG_REPORT_KANBAN_COLUMNS).toHaveLength(5);
+    expect(BUG_REPORT_KANBAN_COLUMNS[0]).toEqual({ status: 'new', label: 'Raised' });
+    expect(BUG_REPORT_KANBAN_COLUMNS[4]?.status).toBe('closed');
+  });
+});
+
+describe('bug report attachment validation', () => {
+  it('accepts allowed image mime types', () => {
+    expect(() => validateBugReportAttachmentMime('image/png', 'shot.png')).not.toThrow();
+    expect(() => validateBugReportAttachmentMime('application/pdf', 'doc.pdf')).not.toThrow();
+  });
+
+  it('rejects disallowed mime types', () => {
+    expect(() => validateBugReportAttachmentMime('text/plain', 'notes.txt')).toThrow(ApiError);
+  });
+
+  it('rejects files over 10MB', () => {
+    expect(() => validateBugReportAttachmentSize(MAX_BUG_REPORT_ATTACHMENT_BYTES + 1)).toThrow(ApiError);
   });
 });
 

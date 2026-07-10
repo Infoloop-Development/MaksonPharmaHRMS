@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Types } from 'mongoose';
 import { EmployeeChangeRequestModel } from '../models/EmployeeChangeRequest.js';
 import { EmployeeModel } from '../models/Employee.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import { allocateNextEmpCode } from '../services/employeeCode.service.js';
@@ -15,8 +15,9 @@ import {
 
 const router = Router();
 router.use(requireAuth);
+const changeRequestReadGate = requireAnyPermission('write.employee_change', 'approve.employee_change');
 
-router.get('/', async (req, res, next) => {
+router.get('/', changeRequestReadGate, async (req, res, next) => {
   try {
     const q = EmployeeChangeRequestListQuerySchema.parse(req.query);
     const filter: Record<string, unknown> = {};

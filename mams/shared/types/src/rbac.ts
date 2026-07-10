@@ -187,3 +187,22 @@ export function permissionsWithUnmaskGrants(
 export function canRoleHaveUnmaskFieldGrants(role: Role): boolean {
   return role === 'hr.admin';
 }
+
+/** Governance permissions stripped from delegated IT Admin accounts (no user/org management). */
+export const IT_ADMIN_GOVERNANCE_PERMISSIONS: readonly Permission[] = [
+  'manage.org_users',
+  'manage.users',
+  'manage.org_settings',
+  'manage.settings',
+  'manage.security',
+  'read.org_audit',
+  'manage.feature_flags',
+  'read.system_health',
+  'manage.export_naming',
+];
+
+/** IT Admin operational permissions for accounts created via Manage IT Admins. */
+export function permissionsForDelegatedItAdmin(): Permission[] {
+  const governance = new Set<string>(IT_ADMIN_GOVERNANCE_PERMISSIONS);
+  return PERMISSIONS_BY_ROLE['it.admin'].filter((p) => !governance.has(p));
+}

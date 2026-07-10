@@ -10,6 +10,7 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
+import { PasswordRevealToggle } from '../components/ui/PasswordRevealToggle';
 import type { ExportNamingSettings, OrgNotificationAlerts, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
 import { TIME_FORMAT_LABELS } from '../lib/timeFormat';
 import { useTimeDisplay } from '../store/timeFormat';
@@ -1032,30 +1033,6 @@ function ConfidentialityCard({ settings, canManage }: { settings: SettingsT; can
   );
 }
 
-function PasswordRevealToggle({ visible, onToggle }: { visible: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      className="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-text-muted hover:text-text hover:bg-surface2 rounded-r-md transition"
-      onClick={onToggle}
-      aria-label={visible ? 'Hide password' : 'Show password'}
-      aria-pressed={visible}
-    >
-      {visible ? (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1 4.24 4.24" />
-          <path d="M1 1l22 22" />
-        </svg>
-      ) : (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      )}
-    </button>
-  );
-}
-
 export function UsersManagementPanel() {
   const [openAdd, setOpenAdd] = useState(false);
   const [editUser, setEditUser] = useState<UserSummary | null>(null);
@@ -1262,6 +1239,11 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
   const [fieldErrors, setFieldErrors] = useState<AddUserFieldErrors>({});
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
+  const { data: mailStatus } = useQuery({
+    queryKey: ['users', 'mail-status'],
+    queryFn: usersApi.mailStatus,
+  });
+  const mailEnabled = mailStatus?.mailEnabled ?? false;
   const mutation = useMutation({
     mutationFn: () =>
       usersApi.create({
@@ -1277,7 +1259,12 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             : selectedPerms.filter((p) => p !== 'unmask.sensitive'),
       }),
     onSuccess: (created) => {
-      if (created.emailSent) {
+      if (created.emailSent && created.devSinkPath) {
+        toast(
+          `User created. Welcome email saved locally — open the HTML file in mams-server/data/mail-outbox/`,
+          'success'
+        );
+      } else if (created.emailSent) {
         toast('User created. Welcome email sent with sign-in instructions.', 'success');
       } else if (created.emailError) {
         toast('User created, but welcome email could not be sent. Check server logs.', 'error');
@@ -1346,6 +1333,15 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
       }
     >
       <form id={ADD_USER_FORM_ID} className="space-y-4" onSubmit={handleSubmit} noValidate>
+        {mailEnabled ? (
+          <p className="text-sm text-text-muted bg-surface2 border border-border rounded-md px-3 py-2">
+            A branded welcome email with sign-in instructions and the temporary password will be sent to the email address below.
+          </p>
+        ) : (
+          <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
+            Email is not configured on the server. You must share the temporary password with the new user manually.
+          </p>
+        )}
         <Field label="Name" required error={fieldErrors.name}>
           <Input
             value={name}

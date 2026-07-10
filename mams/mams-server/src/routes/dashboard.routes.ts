@@ -4,7 +4,7 @@ import { EmployeeModel } from '../models/Employee.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { DeviceModel } from '../models/Device.js';
 import { AdjustmentModel } from '../models/Adjustment.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAnyPermission } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
 import {
   dashboardKpiAuditPayload,
@@ -28,8 +28,9 @@ import { buildPlainXlsxBuffer, XLSX_CONTENT_TYPE } from '../services/plainXlsx.s
 
 const router = Router();
 router.use(requireAuth);
+const hrReadGate = requireAnyPermission('read.real', 'read.compliant');
 
-router.get('/stats', async (req, res, next) => {
+router.get('/stats', hrReadGate, async (req, res, next) => {
   try {
     const isCompliant = req.auth!.viewMode === 'compliant';
     const today = utcToIstDateString(new Date());
@@ -59,7 +60,7 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
-router.get('/layout', async (req, res, next) => {
+router.get('/layout', hrReadGate, async (req, res, next) => {
   try {
     res.json(await getDashboardLayout(req.auth!.sub));
   } catch (err) {
@@ -67,7 +68,7 @@ router.get('/layout', async (req, res, next) => {
   }
 });
 
-router.put('/layout', async (req, res, next) => {
+router.put('/layout', hrReadGate, async (req, res, next) => {
   try {
     const userId = req.auth!.sub;
     const before = await getDashboardLayout(userId);
@@ -95,7 +96,7 @@ router.put('/layout', async (req, res, next) => {
   }
 });
 
-router.get('/kpi', async (req, res, next) => {
+router.get('/kpi', hrReadGate, async (req, res, next) => {
   try {
     res.json(await getDashboardKpi(req.auth!.sub));
   } catch (err) {
@@ -103,7 +104,7 @@ router.get('/kpi', async (req, res, next) => {
   }
 });
 
-router.put('/kpi', async (req, res, next) => {
+router.put('/kpi', hrReadGate, async (req, res, next) => {
   try {
     const userId = req.auth!.sub;
     const before = await getDashboardKpi(userId);
@@ -130,7 +131,7 @@ router.put('/kpi', async (req, res, next) => {
   }
 });
 
-router.get('/charts', async (req, res, next) => {
+router.get('/charts', hrReadGate, async (req, res, next) => {
   try {
     const date = typeof req.query.date === 'string' ? req.query.date : undefined;
     res.json(await getDashboardCharts(date,req.auth!.viewMode));
@@ -139,7 +140,7 @@ router.get('/charts', async (req, res, next) => {
   }
 });
 
-router.get('/attendance/departments', async (_req, res, next) => {
+router.get('/attendance/departments', hrReadGate, async (_req, res, next) => {
   try {
     const departments = await listDashboardDepartments();
     res.json({ departments });
@@ -148,7 +149,7 @@ router.get('/attendance/departments', async (_req, res, next) => {
   }
 });
 
-router.get('/attendance', async (req, res, next) => {
+router.get('/attendance', hrReadGate, async (req, res, next) => {
   try {
     const q = DashboardAttendanceQuerySchema.parse(req.query);
     res.json(await listDashboardAttendance(q, req.auth!.viewMode));
@@ -157,7 +158,7 @@ router.get('/attendance', async (req, res, next) => {
   }
 });
 
-router.get('/attendance.xlsx', async (req, res, next) => {
+router.get('/attendance.xlsx', hrReadGate, async (req, res, next) => {
   try {
     const parsed = DashboardAttendanceQuerySchema.parse({ ...req.query, page: 1, pageSize: 50 });
     const { page: _p, pageSize: _ps, ...exportQuery } = parsed;
@@ -205,7 +206,7 @@ router.get('/attendance.xlsx', async (req, res, next) => {
   }
 });
 
-router.get('/week-trend', async (_req, res, next) => {
+router.get('/week-trend', hrReadGate, async (_req, res, next) => {
   try {
     const dates: string[] = [];
     for (let i = 6; i >= 0; i--) {

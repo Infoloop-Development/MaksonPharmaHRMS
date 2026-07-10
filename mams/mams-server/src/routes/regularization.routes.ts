@@ -11,7 +11,7 @@ import { RegularizationRequestModel } from '../models/RegularizationRequest.js';
 import { AttendanceDerivedModel } from '../models/AttendanceDerived.js';
 import { AttendanceRawModel } from '../models/AttendanceRaw.js';
 import { EmployeeModel } from '../models/Employee.js';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { audit } from '../services/audit.service.js';
 import {
@@ -23,6 +23,7 @@ import { utcToIstTimeString } from '../utils/time.js';
 
 const router = Router();
 router.use(requireAuth);
+const regularizationReadGate = requireAnyPermission('write.regularization', 'approve.regularization');
 
 router.use((req,res,next) => {
   if (req.auth?.viewMode === 'compliant'){
@@ -31,7 +32,7 @@ router.use((req,res,next) => {
   next();
 });
 
-router.get('/', async (req, res, next) => {
+router.get('/', regularizationReadGate, async (req, res, next) => {
   try {
     const q = RegularizationListQuerySchema.parse(req.query);
     const filter: Record<string, unknown> = {};
@@ -66,7 +67,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/preview', async (req, res, next) => {
+router.get('/preview', regularizationReadGate, async (req, res, next) => {
   try {
     const q = RegularizationPreviewQuerySchema.parse(req.query);
     if (!Types.ObjectId.isValid(q.employeeId)) {

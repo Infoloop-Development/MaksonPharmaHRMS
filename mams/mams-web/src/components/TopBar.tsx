@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
-import { hasOrgAdminLikeAccess } from '@mams/types';
 import { fmtIstHeaderDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
 import { formatIstInstantNoSeconds } from '../lib/timeFormat';
@@ -82,7 +81,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
             <div className="app-topbar-clock-date">{fmtIstHeaderDate(now)}</div>
           </div>
 
-          {user && hasOrgAdminLikeAccess(user.role) && (
+          {user && (
             <div className="app-topbar-bell">
               <NotificationBell />
             </div>
