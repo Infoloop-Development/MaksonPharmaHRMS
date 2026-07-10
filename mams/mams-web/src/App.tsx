@@ -31,8 +31,8 @@ import { AdminBugReporting } from './pages/admin/AdminBugReporting';
 import { AdminBugReportingBoard } from './pages/admin/AdminBugReportingBoard';
 import { AdminBugReportingPhaseSettings } from './pages/admin/AdminBugReportingPhaseSettings';
 import { AdminManageItAdmins } from './pages/admin/AdminManageItAdmins';
+import { AdminBugReportLegacyRedirect } from './pages/admin/AdminBugReportLegacyRedirect';
 import { BugReportingBoardChromelessLayout } from './components/admin/bugReporting/BugReportingBoardChromelessLayout';
-import { AdminBugReportDetail } from './pages/admin/AdminBugReportDetail';
 import { BugReportInstrumentationProvider } from './components/bugReport/BugReportInstrumentationProvider';
 import { BugReportProvider } from './components/bugReport/BugReportContext';
 import { isAutogenDemoEnabled } from './config/featureFlags';
@@ -43,7 +43,7 @@ import { defaultHomePath, type Permission } from '@mams/types';
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const user = useAuth((s) => s.user);
   const location = useLocation();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   if (user.mustChangePassword && location.pathname !== '/change-password') {
     return <Navigate to="/change-password" replace />;
   }
@@ -117,10 +117,11 @@ export function App() {
         <Route path="health" element={<AdminSystemHealth />} />
         <Route path="feature-flags" element={<AdminFeatureFlags />} />
         <Route path="recycle-bin" element={<AdminRecycleBin />} />
-        <Route path="bug-reporting" element={<AdminBugReporting />} />
         <Route path="bug-reporting/settings" element={<AdminBugReportingPhaseSettings />} />
         <Route path="bug-reporting/it-admins" element={<AdminManageItAdmins />} />
-        <Route path="bug-reporting/:id" element={<AdminBugReportDetail />} />
+        <Route path="bug-reporting/legacy/:id" element={<AdminBugReportLegacyRedirect />} />
+        <Route path="bug-reporting/:publicId" element={<AdminBugReporting />} />
+        <Route path="bug-reporting" element={<AdminBugReporting />} />
       </Route>
       <Route
         path="/admin/bug-reporting/board"
@@ -131,6 +132,7 @@ export function App() {
         }
       >
         <Route index element={<AdminBugReportingBoard />} />
+        <Route path=":publicId" element={<AdminBugReportingBoard />} />
       </Route>
       <Route
         path="/"

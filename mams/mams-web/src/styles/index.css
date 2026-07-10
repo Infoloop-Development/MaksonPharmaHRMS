@@ -1043,7 +1043,7 @@ html.mams-tour-scroll-lock body {
 .app-topbar-bell {
   @apply flex items-center shrink-0 pl-3 md:pl-4 border-l border-border;
 }
-.app-topbar-bell button {
+.app-topbar-bell .notification-bell-trigger {
   @apply w-9 h-9 min-w-9 min-h-9 max-w-9 max-h-9 shrink-0 rounded-md border border-border bg-surface2 hover:bg-surface flex items-center justify-center transition-colors text-text;
 }
 .app-topbar-logo {

@@ -1,11 +1,12 @@
 /**
- * Backfill attendance for the last N IST days (default 10) through today.
+ * Backfill attendance for the last N IST days (default 7) through an end date (default today).
  * Does not wipe employees, users, or devices — only replaces attendance for those dates.
  *
  * Run: npm run seed:attendance
- * Env: SEED_ATTENDANCE_DAYS (default 10)
+ * Env:
+ *   SEED_ATTENDANCE_DAYS (default 7) — number of days to seed
+ *   SEED_ATTENDANCE_END_DATE (optional, YYYY-MM-DD) — last day inclusive, e.g. 2026-07-10
  */
-import { fromZonedTime } from 'date-fns-tz';
 import type { Types } from 'mongoose';
 import { connectDb, disconnectDb } from '../src/config/db.js';
 import { EmployeeModel } from '../src/models/Employee.js';
@@ -14,33 +15,36 @@ import { AttendanceDerivedModel } from '../src/models/AttendanceDerived.js';
 import { LeaveApplicationModel } from '../src/models/LeaveApplication.js';
 import { recomputeDerived } from '../src/services/attendance.service.js';
 import { hashString, seededRandom } from '../src/utils/prng.js';
+import { utcToIstDateString } from '../src/utils/time.js';
 import { logger } from '../src/utils/logger.js';
-import { buildLastNSeedDays } from './seedDateRanges.js';
+import { buildLastNSeedDaysEnding } from './seedDateRanges.js';
+import { buildSeedPunchesForEmployee } from './attendancePunchGenerator.js';
 
-const IST = 'Asia/Kolkata';
 // Monday = 0 … Sunday = 6 — matches day.weekdayIdx from dayIdxFromDateString (seedDateRanges.ts).
 const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
-const ABS_RATES = [0.09, 0.065, 0.055, 0.07, 0.11, 0.16, 0.22];
-const LATE_RATES = [0.15, 0.10, 0.09, 0.11, 0.14, 0.07, 0.05];
-
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
+function resolveEndDate(): string {
+  const fromEnv = process.env.SEED_ATTENDANCE_END_DATE?.trim();
+  if (fromEnv && /^\d{4}-\d{2}-\d{2}$/.test(fromEnv)) return fromEnv;
+  return utcToIstDateString(new Date());
 }
 
 async function main() {
-  const dayCount = Number(process.env.SEED_ATTENDANCE_DAYS || 10);
+  const dayCount = Number(process.env.SEED_ATTENDANCE_DAYS || 7);
   if (!Number.isFinite(dayCount) || dayCount < 1 || dayCount > 90) {
     throw new Error('SEED_ATTENDANCE_DAYS must be between 1 and 90');
   }
 
+  const endDate = resolveEndDate();
+  const days = buildLastNSeedDaysEnding(endDate, dayCount);
+  const dateStrings = days.map((d) => d.date);
+
   await connectDb();
   const now = new Date();
-  const days = buildLastNSeedDays(dayCount, now);
-  const dateStrings = days.map((d) => d.date);
 
   logger.info('Attendance backfill starting', {
     dayCount,
+    endDate,
     from: dateStrings[0],
     to: dateStrings[dateStrings.length - 1],
   });
@@ -49,6 +53,14 @@ async function main() {
   if (empDocs.length === 0) {
     throw new Error('No active employees found — run npm run seed first');
   }
+
+  const dayShiftCount = empDocs.filter((e) => e.timeShift === 'Day').length;
+  const nightShiftCount = empDocs.length - dayShiftCount;
+  logger.info('Employee shift mix', {
+    active: empDocs.length,
+    dayShift: dayShiftCount,
+    nightShift: nightShiftCount,
+  });
 
   // Approved full-day leave always wins - don't fabricate punches for someone on
   // leave, otherwise the Leave module says "absent" while the raw punch feed and
@@ -80,6 +92,8 @@ async function main() {
   logger.info('Cleared existing attendance for target dates');
 
   let rawTotal = 0;
+  const source = 'seed:attendance-days';
+
   for (const day of days) {
     const rawBatch: Record<string, unknown>[] = [];
     for (const emp of empDocs) {
@@ -88,66 +102,18 @@ async function main() {
       if (leaveDatesByEmployee.get(String(emp._id))?.has(day.date)) continue;
 
       const r = seededRandom(hashString(`${emp.empCode}:${day.date}`));
-      const isAbsent = r() < (ABS_RATES[day.weekdayIdx] ?? 0.1);
-      if (isAbsent) continue;
-
-      const isLate = r() < (LATE_RATES[day.weekdayIdx] ?? 0.12);
-      const isDay = emp.timeShift === 'Day';
-      let bH: number;
-      let bM: number;
-      let bS: number;
-      if (isDay) {
-        if (isLate) {
-          bH = 9 + Math.floor(r() * 2);
-          bM = Math.floor(r() * 45) + 15;
-        } else {
-          bH = 6 + Math.floor(r() * 3);
-          bM = Math.floor(r() * 55);
-        }
-        bS = Math.floor(r() * 60);
-      } else {
-        if (isLate) {
-          bH = 20 + Math.floor(r() * 2);
-          bM = Math.floor(r() * 40) + 20;
-        } else {
-          bH = 18 + Math.floor(r() * 2);
-          bM = Math.floor(r() * 50);
-        }
-        bS = Math.floor(r() * 60);
-      }
-      const shiftLen = 7.5 + r() * 3.0;
-      const xH = bH + Math.floor(shiftLen);
-      const xM = Math.floor((shiftLen % 1) * 60);
-
-      const entryIst = `${day.date}T${pad(bH)}:${pad(bM)}:${pad(bS)}`;
-      const exitIst = `${day.date}T${pad(xH % 24)}:${pad(xM)}:00`;
-      const entryUtc = fromZonedTime(entryIst, IST);
-      const exitUtc = fromZonedTime(exitIst, IST);
-
-      rawBatch.push(
-        {
-          employeeId: emp._id,
-          biometricId: emp.biometricId,
-          deviceId: null,
-          punchType: 'IN',
-          rawTimestamp: entryUtc,
-          rawDate: day.date,
-          rawPayload: { source: 'seed:attendance-days' },
-          receivedAt: now,
-          sourceIp: '127.0.0.1',
-        },
-        {
-          employeeId: emp._id,
-          biometricId: emp.biometricId,
-          deviceId: null,
-          punchType: 'OUT',
-          rawTimestamp: exitUtc,
-          rawDate: day.date,
-          rawPayload: { source: 'seed:attendance-days' },
-          receivedAt: now,
-          sourceIp: '127.0.0.1',
-        }
-      );
+      const punches = buildSeedPunchesForEmployee({
+        employeeId: emp._id as Types.ObjectId,
+        biometricId: emp.biometricId,
+        empCode: emp.empCode,
+        timeShift: emp.timeShift === 'Night' ? 'Night' : 'Day',
+        date: day.date,
+        weekdayIdx: day.weekdayIdx,
+        receivedAt: now,
+        source,
+        r,
+      });
+      if (punches) rawBatch.push(...punches);
     }
     if (rawBatch.length > 0) {
       await AttendanceRawModel.insertMany(rawBatch, { ordered: false });
@@ -158,12 +124,19 @@ async function main() {
 
   const empIds = empDocs.map((e) => e._id);
   let derivedCount = 0;
-  const batchSize = 200;
+  const batchSize = 30;
   for (const day of days) {
     for (let i = 0; i < empIds.length; i += batchSize) {
       const slice = empIds.slice(i, i + batchSize);
-      await Promise.all(slice.map((id) => recomputeDerived(id as Types.ObjectId, day.date, 'seed:attendance-days')));
+      await Promise.all(slice.map((id) => recomputeDerived(id as Types.ObjectId, day.date, source)));
       derivedCount += slice.length;
+      if (derivedCount % 600 === 0 || i + batchSize >= empIds.length) {
+        logger.info('Derived recompute progress', {
+          date: day.date,
+          done: Math.min(i + batchSize, empIds.length),
+          total: empIds.length,
+        });
+      }
     }
   }
 

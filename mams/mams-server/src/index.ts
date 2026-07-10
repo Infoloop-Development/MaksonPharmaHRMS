@@ -9,6 +9,7 @@ import { startComplianceScheduler } from './services/complianceScheduler.service
 import { startReportJobRunner } from './services/reportJobRunner.service.js';
 import { startRecycleBinPurgeScheduler } from './services/recycleBinPurge.service.js';
 import { ensureBugPhases } from './seed/ensureBugPhases.js';
+import { syncBugReportSequenceFromDb } from './services/bugPublicId.service.js';
 
 async function main() {
   await connectDb();
@@ -16,6 +17,7 @@ async function main() {
   await backfillAllUsersRoleDefaultPermissions();
   await syncSoftDeleteIndexes();
   await ensureBugPhases();
+  await syncBugReportSequenceFromDb();
   startComplianceScheduler();
   startReportJobRunner();
   startRecycleBinPurgeScheduler();

@@ -51,7 +51,12 @@ export function useBugReportingBoard(enabled: boolean) {
   }, [search]);
 
   const filters = useMemo<BugBoardFilters>(
-    () => ({ severity, module, assigneeId, search: debouncedSearch.trim() }),
+    () => ({
+      severity,
+      module,
+      assigneeId,
+      search: debouncedSearch.trim(),
+    }),
     [severity, module, assigneeId, debouncedSearch]
   );
 
@@ -113,6 +118,9 @@ export function useBugReportingBoard(enabled: boolean) {
   const moveMu = useMutation({
     mutationFn: ({ reportId, phaseId }: { reportId: string; phaseId: string }) =>
       adminBugReportingApi.patch(reportId, { phaseId }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: BUG_REPORTING_QUERY_KEY });
+    },
     onError: (e: unknown) => {
       toast(e instanceof Error ? e.message : 'Failed to update phase', 'error');
       void qc.invalidateQueries({ queryKey: BUG_REPORTING_QUERY_KEY });

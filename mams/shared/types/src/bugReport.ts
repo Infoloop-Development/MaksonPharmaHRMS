@@ -38,6 +38,122 @@ export const BUG_REPORT_KANBAN_COLUMNS: ReadonlyArray<{ status: BugReportStatus;
 
 export const BUG_REPORT_ASSIGNEE_UNASSIGNED = 'unassigned' as const;
 
+/** Human-readable bug id format, e.g. BUG-1024 */
+export const BUG_PUBLIC_ID_PATTERN = /^BUG-\d+$/;
+
+export function isBugPublicId(ref: string): boolean {
+  return BUG_PUBLIC_ID_PATTERN.test(ref);
+}
+
+export const BugReportStatusHistoryEntrySchema = z.object({
+  phaseName: z.string(),
+  phaseId: z.string(),
+  changedAt: z.string(),
+  changedBy: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+});
+
+export type BugReportStatusHistoryEntry = z.infer<typeof BugReportStatusHistoryEntrySchema>;
+
+export const BugReportAssignmentHistoryEntrySchema = z.object({
+  assignedAt: z.string(),
+  deadline: z.string().nullable(),
+  assignedBy: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+  assignedTo: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+    })
+    .nullable(),
+});
+
+export type BugReportAssignmentHistoryEntry = z.infer<typeof BugReportAssignmentHistoryEntrySchema>;
+
+export const BugReportStatsQuerySchema = z.object({
+  raisedFrom: z.string().date().optional(),
+  raisedTo: z.string().date().optional(),
+});
+
+export type BugReportStatsQuery = z.infer<typeof BugReportStatsQuerySchema>;
+
+export const BugReportStatsSeverityBreakdownSchema = z.object({
+  low: z.number().int().min(0),
+  medium: z.number().int().min(0),
+  high: z.number().int().min(0),
+  critical: z.number().int().min(0),
+});
+
+export type BugReportStatsSeverityBreakdown = z.infer<typeof BugReportStatsSeverityBreakdownSchema>;
+
+export const BugReportStatsPhaseRowSchema = z.object({
+  phaseId: z.string(),
+  label: z.string(),
+  count: z.number().int().min(0),
+  isResolvedState: z.boolean(),
+});
+
+export type BugReportStatsPhaseRow = z.infer<typeof BugReportStatsPhaseRowSchema>;
+
+export const BugReportStatsModuleRowSchema = z.object({
+  module: z.string(),
+  count: z.number().int().min(0),
+});
+
+export type BugReportStatsModuleRow = z.infer<typeof BugReportStatsModuleRowSchema>;
+
+export const BugReportStatsAssigneeRowSchema = z.object({
+  assigneeId: z.string().nullable(),
+  name: z.string(),
+  count: z.number().int().min(0),
+});
+
+export type BugReportStatsAssigneeRow = z.infer<typeof BugReportStatsAssigneeRowSchema>;
+
+export const BugReportStatsReporterRowSchema = z.object({
+  reporterId: z.string(),
+  name: z.string(),
+  count: z.number().int().min(0),
+});
+
+export type BugReportStatsReporterRow = z.infer<typeof BugReportStatsReporterRowSchema>;
+
+export const BugReportStatsResponseSchema = z.object({
+  totalRaised: z.number().int().min(0),
+  totalOpen: z.number().int().min(0),
+  totalSolved: z.number().int().min(0),
+  unassigned: z.number().int().min(0),
+  criticalOpen: z.number().int().min(0),
+  overdue: z.number().int().min(0),
+  bySeverity: BugReportStatsSeverityBreakdownSchema,
+  byPhase: z.array(BugReportStatsPhaseRowSchema),
+  byModule: z.array(BugReportStatsModuleRowSchema),
+  byAssignee: z.array(BugReportStatsAssigneeRowSchema),
+  resolvedInRange: z.number().int().min(0),
+  avgResolutionHours: z.number().min(0).nullable(),
+  medianResolutionHours: z.number().min(0).nullable(),
+  withVideo: z.number().int().min(0),
+  withScreenshot: z.number().int().min(0),
+  withAttachments: z.number().int().min(0),
+  totalComments: z.number().int().min(0),
+  bugsWithComments: z.number().int().min(0),
+  uniqueReporters: z.number().int().min(0),
+  topReporters: z.array(BugReportStatsReporterRowSchema),
+});
+
+export type BugReportStatsResponse = z.infer<typeof BugReportStatsResponseSchema>;
+
+export const BugReportExportQuerySchema = z.object({
+  raisedFrom: z.string().date().optional(),
+  raisedTo: z.string().date().optional(),
+});
+
+export type BugReportExportQuery = z.infer<typeof BugReportExportQuerySchema>;
+
 export const BugReportAttachmentSchema = z.object({
   id: z.string(),
   filePath: z.string().max(500),
@@ -137,6 +253,8 @@ export const BugReportListQuerySchema = z.object({
   /** User id or `unassigned` to filter reports with no assignee. */
   assigneeId: z.string().max(64).optional(),
   search: z.string().max(200).optional(),
+  raisedFrom: z.string().date().optional(),
+  raisedTo: z.string().date().optional(),
   sortBy: z.enum(['createdAt', 'severity', 'status', 'module', 'title']).default('createdAt'),
   sortDir: z.enum(['asc', 'desc']).default('desc'),
 });
@@ -178,6 +296,7 @@ export interface BugReportAssignee {
 
 export interface BugReportListItem {
   id: string;
+  publicId: string;
   title: string;
   description: string;
   severity: BugReportSeverity;
@@ -205,6 +324,8 @@ export interface BugReportListResponse {
 }
 
 export interface BugReportDetail extends BugReportListItem {
+  statusHistory: BugReportStatusHistoryEntry[];
+  assignmentHistory: BugReportAssignmentHistoryEntry[];
   consoleLog: z.infer<typeof BugReportConsoleEntrySchema>[];
   breadcrumbs: z.infer<typeof BugReportBreadcrumbSchema>[];
   failedRequests: z.infer<typeof BugReportFailedRequestSchema>[];

@@ -1,107 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { BugReportListResponse } from '@mams/types';
 import type { BugPhase } from './useBugReportingBoard';
+import type { BugShareVariant } from '../../../lib/bugReport/bugShareUrl';
 import { BugReportKanbanBoard } from './BugReportKanbanBoard';
+import { BugReportExportModal } from './BugReportExportModal';
+import { BugReportStatsModal } from './BugReportStatsModal';
 
-type FilterProps = {
-  search: string;
-  onSearchChange: (v: string) => void;
-  module: string;
-  onModuleChange: (v: string) => void;
-  modules: string[];
-  severity: string;
-  onSeverityChange: (v: string) => void;
-  severityLabels: Record<string, string>;
-  assigneeId: string;
-  onAssigneeIdChange: (v: string) => void;
-  assigneeOptions: Array<{ _id: string; name: string }>;
-  unassignedValue: string;
-  compact?: boolean;
-};
-
-export function BugReportingFilters({
-  search,
-  onSearchChange,
-  module,
-  onModuleChange,
-  modules,
-  severity,
-  onSeverityChange,
-  severityLabels,
-  assigneeId,
-  onAssigneeIdChange,
-  assigneeOptions,
-  unassignedValue,
-  compact = false,
-}: FilterProps) {
-  const fieldClass = compact
-    ? 'grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 shrink-0'
-    : 'card p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3';
-  const labelClass = compact
-    ? 'text-[10px] font-semibold text-text-muted block mb-0.5'
-    : 'text-xs font-semibold text-text-muted block mb-1';
-
-  return (
-    <div className={fieldClass}>
-      <div>
-        <label className={labelClass}>Search title</label>
-        <input
-          type="search"
-          className="input w-full h-9 text-sm"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search…"
-        />
-      </div>
-      <div>
-        <label className={labelClass}>Module</label>
-        <select
-          className="input w-full h-9 text-sm"
-          value={module}
-          onChange={(e) => onModuleChange(e.target.value)}
-        >
-          <option value="">All modules</option>
-          {modules.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className={labelClass}>Severity</label>
-        <select
-          className="input w-full h-9 text-sm"
-          value={severity}
-          onChange={(e) => onSeverityChange(e.target.value)}
-        >
-          <option value="">All severities</option>
-          {Object.keys(severityLabels).map((s) => (
-            <option key={s} value={s}>
-              {severityLabels[s]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className={labelClass}>Assignee</label>
-        <select
-          className="input w-full h-9 text-sm"
-          value={assigneeId}
-          onChange={(e) => onAssigneeIdChange(e.target.value)}
-        >
-          <option value="">All assignees</option>
-          <option value={unassignedValue}>Unassigned</option>
-          {assigneeOptions.map((u) => (
-            <option key={u._id} value={u._id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
+export { BugReportingFilterPanel, BugReportingFilters } from './BugReportingFilterPanel';
 
 type BoardPanelProps = {
   variant?: 'default' | 'expanded';
@@ -110,11 +16,12 @@ type BoardPanelProps = {
   phasesLoading: boolean;
   columns: Record<string, BugReportListResponse | undefined>;
   loadingByPhaseId: Record<string, boolean>;
-  onOpen: (id: string) => void;
+  onOpen: (id: string, publicId?: string) => void;
   onMove: (reportId: string, fromPhaseId: string, toPhaseId: string, phaseLabel: string) => void;
   showSettingsLink?: boolean;
   showFullscreenLink?: boolean;
   filtersSlot?: React.ReactNode;
+  shareVariant?: BugShareVariant;
 };
 
 export function BugReportingBoardPanel({
@@ -129,8 +36,35 @@ export function BugReportingBoardPanel({
   showSettingsLink = true,
   showFullscreenLink = true,
   filtersSlot,
+  shareVariant = 'default',
 }: BoardPanelProps) {
   const expanded = variant === 'expanded' || chromeless;
+  const [reportOpen, setReportOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+
+  const statsButton = (
+    <button
+      type="button"
+      className="btn-outline btn-sm"
+      title="Bug reporting statistics"
+      aria-label="Bug reporting statistics"
+      onClick={() => setStatsOpen(true)}
+    >
+      📈 Stats
+    </button>
+  );
+
+  const reportButton = (
+    <button
+      type="button"
+      className="btn-outline btn-sm"
+      title="Bug report export"
+      aria-label="Bug report export"
+      onClick={() => setReportOpen(true)}
+    >
+      📊 Report
+    </button>
+  );
 
   const content = (
     <>
@@ -143,6 +77,8 @@ export function BugReportingBoardPanel({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {statsButton}
+            {reportButton}
             {showSettingsLink && (
               <Link
                 to="/admin/bug-reporting/settings"
@@ -172,6 +108,8 @@ export function BugReportingBoardPanel({
         <div className="mb-4 flex items-center justify-between gap-3">
           <h1 className="text-lg font-bold">Bug board</h1>
           <div className="flex items-center gap-2">
+            {statsButton}
+            {reportButton}
             <Link to="/admin/bug-reporting" className="btn-outline btn-sm">
               ← Compact view
             </Link>
@@ -179,6 +117,13 @@ export function BugReportingBoardPanel({
               ⚙
             </Link>
           </div>
+        </div>
+      )}
+
+      {chromeless && (
+        <div className="mb-2 flex justify-end gap-2 shrink-0">
+          {statsButton}
+          {reportButton}
         </div>
       )}
 
@@ -195,14 +140,23 @@ export function BugReportingBoardPanel({
             onOpen={onOpen}
             onMove={onMove}
             expanded={expanded}
+            shareVariant={shareVariant}
           />
         </div>
       )}
     </>
   );
 
+  const panel = (
+    <>
+      {content}
+      <BugReportExportModal open={reportOpen} onClose={() => setReportOpen(false)} />
+      <BugReportStatsModal open={statsOpen} onClose={() => setStatsOpen(false)} />
+    </>
+  );
+
   if (chromeless) {
-    return <div className="flex flex-1 min-h-0 flex-col">{content}</div>;
+    return <div className="flex flex-1 min-h-0 flex-col">{panel}</div>;
   }
-  return content;
+  return panel;
 }

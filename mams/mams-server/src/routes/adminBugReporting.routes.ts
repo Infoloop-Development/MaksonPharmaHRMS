@@ -6,8 +6,10 @@ import {
   BugPhaseDeleteBodySchema,
   BugPhasePatchBodySchema,
   BugPhaseReorderBodySchema,
+  BugReportExportQuerySchema,
   BugReportListQuerySchema,
   BugReportPatchBodySchema,
+  BugReportStatsQuerySchema,
 } from '@mams/types';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { audit } from '../services/audit.service.js';
@@ -20,12 +22,18 @@ import {
 } from '../services/bugPhase.service.js';
 import {
   getBugReportDetail,
+  getBugReportStats,
   listBugReportModules,
   listBugReports,
   patchBugReport,
   streamBugReportVideo,
   streamBugReportAttachment,
 } from '../services/bugReporting.service.js';
+import {
+  bugReportExportFilename,
+  exportBugReportsXlsx,
+  XLSX_CONTENT_TYPE,
+} from '../services/bugReportExport.service.js';
 import {
   createBugReportComment,
   listBugReportComments,
@@ -123,6 +131,30 @@ router.get('/', async (req, res, next) => {
   try {
     const query = BugReportListQuerySchema.parse(req.query);
     res.json(await listBugReports(query));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/stats', async (req, res, next) => {
+  try {
+    const query = BugReportStatsQuerySchema.parse(req.query);
+    res.json(await getBugReportStats(query));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/export.xlsx', async (req, res, next) => {
+  try {
+    const query = BugReportExportQuerySchema.parse(req.query);
+    const buffer = await exportBugReportsXlsx(query);
+    res.setHeader('Content-Type', XLSX_CONTENT_TYPE);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${bugReportExportFilename()}"`
+    );
+    res.send(buffer);
   } catch (err) {
     next(err);
   }
