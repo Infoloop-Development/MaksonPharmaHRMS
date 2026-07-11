@@ -78,23 +78,32 @@ function projectionFor(viewMode: 'real' | 'compliant') {
 }
 
 // Daily Attendance Report
-const DAILY_REPORT_ROW_CAP = 5000;
+// pageSize max is high enough (5000) to let Print-to-PDF/CSV-style callers fetch a
+// single large batch for a full report, while the on-screen table sticks to a much
+// smaller default (100) for a reasonable per-page render.
+const DailyPageSchema = FilterSchema.extend({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(5000).default(100),
+});
 
 router.get('/daily', hrReadGate, async (req, res, next) => {
   try {
-    const q = FilterSchema.parse(req.query);
+    const q = DailyPageSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
     const empIds = await buildEmployeeFilter(q);
     if (empIds) attFilter.employeeId = { $in: empIds };
 
-    // The row list is capped for response size/performance, but the summary tiles and
-    // truncation flag are computed from the full matching set - narrow date ranges used
-    // to silently drop older dates from both the table AND the present/absent counts.
+    const skip = (q.page - 1) * q.pageSize;
+
+    // The row list is paginated, but the summary tiles are always computed from the
+    // full matching set - narrow date ranges used to silently drop older dates from
+    // both the table AND the present/absent counts before this was fixed.
     const [rows, total, summaryAgg] = await Promise.all([
       AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
         .populate('employeeId', 'name empCode department location timeShift alternateShift')
         .sort({ date: -1, 'employeeId.empCode': 1 })
-        .limit(DAILY_REPORT_ROW_CAP)
+        .skip(skip)
+        .limit(q.pageSize)
         .lean(),
       AttendanceDerivedModel.countDocuments(attFilter),
       AttendanceDerivedModel.aggregate<{
@@ -125,7 +134,8 @@ router.get('/daily', hrReadGate, async (req, res, next) => {
       summary,
       rows,
       total,
-      truncated: total > rows.length,
+      page: q.page,
+      pageSize: q.pageSize,
     });
   } catch (err) {
     next(err);

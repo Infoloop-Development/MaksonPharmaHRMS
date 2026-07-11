@@ -21,6 +21,7 @@ import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { reportsTourScript } from '../lib/onboarding/scripts/reportsTourScript';
 import { SortableTh } from '../components/ui/SortableTh';
+import { TablePagination } from '../components/ui/TablePagination';
 import { useTableSort } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
@@ -91,7 +92,10 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   const [endDate, setEndDate] = useState(today);
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
+  const [page, setPage] = useState(1);
+  const [printing, setPrinting] = useState(false);
   const toast = useToast((s) => s.push);
+  const PAGE_SIZE = 100;
 
   const logDailyFilter = (patch: Partial<{ startDate: string; endDate: string; department: string; location: string }>) => {
     logReportsAction('ui.reports.filter', {
@@ -106,8 +110,16 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['reports', 'daily', startDate, endDate, department, location],
-    queryFn: () => reportsApi.daily({ startDate, endDate, department: department || undefined, location: location || undefined }),
+    queryKey: ['reports', 'daily', startDate, endDate, department, location, page],
+    queryFn: () =>
+      reportsApi.daily({
+        startDate,
+        endDate,
+        department: department || undefined,
+        location: location || undefined,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
   });
 
   type DailyRow = NonNullable<typeof data>['rows'][number];
@@ -126,17 +138,17 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
     },
     [isCompliant]
   );
-  const { sortCol, toggleSort, sortArrow, sortedRows: sortedDailyRows } = useTableSort(
+  const { sortCol, toggleSort, sortArrow, sortedRows: displayDailyRows } = useTableSort(
     data?.rows ?? [],
     getDailySortValue,
     { date: 'date', hours: 'number', ot: 'number' }
   );
-  const displayDailyRows = sortedDailyRows.slice(0, 500);
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
 
   const branding = brandingFromSettings(settings);
 
-  const onPrint = () => {
-    if (!data?.rows.length) {
+  const onPrint = async () => {
+    if (!data || data.summary.total === 0) {
       toast('No records to print', 'error');
       return;
     }
@@ -147,44 +159,65 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       department: department || undefined,
       location: location || undefined,
     });
-    const opened = openReportPrintWindow({
-      branding,
-      title: 'Daily Attendance Report',
-      subtitle: formatReportDateRange(startDate, endDate),
-      summaryLine: `${data.summary.total} records · ${data.summary.present} present · ${data.summary.absent} absent · ${data.summary.weeklyOff} weekly off`,
-      columns: [
-        { key: 'date', label: 'Date', mono: true },
-        { key: 'code', label: 'Code', mono: true },
-        { key: 'name', label: 'Name' },
-        { key: 'department', label: 'Department' },
-        { key: 'location', label: 'Location' },
-        { key: 'entry', label: 'Entry', mono: true },
-        { key: 'exit', label: 'Exit', mono: true },
-        { key: 'hours', label: isCompliant ? 'Hours' : 'Net Hrs', mono: true },
-        ...(isCompliant ? [] : [{ key: 'ot', label: 'OT', mono: true }]),
-        { key: 'status', label: 'Status' },
-      ],
-      rows: data.rows.map((r) => {
-        const emp = r.employeeId;
-        const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
-        const exit = isCompliant ? r.compliantExitAt : r.realExitAt;
-        const hrs = isCompliant ? r.compliantHours : r.realNetHours;
-        const row: Record<string, string | number> = {
-          date: fmtDate(r.date),
-          code: emp?.empCode ?? EMPTY_CELL,
-          name: emp?.name ?? EMPTY_CELL,
-          department: emp?.department ?? EMPTY_CELL,
-          location: emp?.location ?? EMPTY_CELL,
-          entry: entry ? fmtTime(entry) : EMPTY_CELL,
-          exit: exit ? fmtTime(exit) : EMPTY_CELL,
-          hours: typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL,
-          status: r.status ?? EMPTY_CELL,
-        };
-        if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : EMPTY_CELL;
-        return row;
-      }),
-    });
-    if (!opened) toast('Could not start print. Please try again.', 'error');
+    setPrinting(true);
+    try {
+      // Print should include the full matching set, not just the current on-screen
+      // page - fetch a single large batch (up to 5000) specifically for this.
+      const printData = await reportsApi.daily({
+        startDate,
+        endDate,
+        department: department || undefined,
+        location: location || undefined,
+        page: 1,
+        pageSize: 5000,
+      });
+      const opened = openReportPrintWindow({
+        branding,
+        title: 'Daily Attendance Report',
+        subtitle: formatReportDateRange(startDate, endDate),
+        summaryLine: `${printData.summary.total} records · ${printData.summary.present} present · ${printData.summary.absent} absent · ${printData.summary.weeklyOff} weekly off`,
+        columns: [
+          { key: 'date', label: 'Date', mono: true },
+          { key: 'code', label: 'Code', mono: true },
+          { key: 'name', label: 'Name' },
+          { key: 'department', label: 'Department' },
+          { key: 'location', label: 'Location' },
+          { key: 'entry', label: 'Entry', mono: true },
+          { key: 'exit', label: 'Exit', mono: true },
+          { key: 'hours', label: isCompliant ? 'Hours' : 'Net Hrs', mono: true },
+          ...(isCompliant ? [] : [{ key: 'ot', label: 'OT', mono: true }]),
+          { key: 'status', label: 'Status' },
+        ],
+        rows: printData.rows.map((r) => {
+          const emp = r.employeeId;
+          const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
+          const exit = isCompliant ? r.compliantExitAt : r.realExitAt;
+          const hrs = isCompliant ? r.compliantHours : r.realNetHours;
+          const row: Record<string, string | number> = {
+            date: fmtDate(r.date),
+            code: emp?.empCode ?? EMPTY_CELL,
+            name: emp?.name ?? EMPTY_CELL,
+            department: emp?.department ?? EMPTY_CELL,
+            location: emp?.location ?? EMPTY_CELL,
+            entry: entry ? fmtTime(entry) : EMPTY_CELL,
+            exit: exit ? fmtTime(exit) : EMPTY_CELL,
+            hours: typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL,
+            status: r.status ?? EMPTY_CELL,
+          };
+          if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : EMPTY_CELL;
+          return row;
+        }),
+      });
+      if (!opened) {
+        toast('Could not start print. Please try again.', 'error');
+      } else if (printData.total > printData.rows.length) {
+        toast(`Print includes first ${printData.rows.length.toLocaleString()} records (limit reached)`, 'success');
+      }
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not prepare print', 'error');
+    } finally {
+      setPrinting(false);
+    }
   };
 
   const onDownloadExcel = async () => {
@@ -215,18 +248,19 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
           setEndDate(today);
           setDepartment('');
           setLocation('');
+          setPage(1);
         }}
       >
-        <Field label="From"><Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); logDailyFilter({ startDate: e.target.value }); }} /></Field>
-        <Field label="To"><Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); logDailyFilter({ endDate: e.target.value }); }} /></Field>
+        <Field label="From"><Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); logDailyFilter({ startDate: e.target.value }); }} /></Field>
+        <Field label="To"><Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); logDailyFilter({ endDate: e.target.value }); }} /></Field>
         <Field label="Department">
-          <Select value={department} onChange={(e) => { setDepartment(e.target.value); logDailyFilter({ department: e.target.value }); }}>
+          <Select value={department} onChange={(e) => { setDepartment(e.target.value); setPage(1); logDailyFilter({ department: e.target.value }); }}>
             <option value="">All</option>
             {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
           </Select>
         </Field>
         <Field label="Location">
-          <Select value={location} onChange={(e) => { setLocation(e.target.value); logDailyFilter({ location: e.target.value }); }}>
+          <Select value={location} onChange={(e) => { setLocation(e.target.value); setPage(1); logDailyFilter({ location: e.target.value }); }}>
             <option value="">All</option>
             {LOCATIONS.map((l) => <option key={l}>{l}</option>)}
           </Select>
@@ -248,24 +282,14 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
           )}
         </div>
         <div className="flex gap-2 w-full sm:w-auto no-print shrink-0" data-tour-id="reports-export">
-          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
+          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={() => void onPrint()} disabled={printing}>
+            {printing ? 'Preparing…' : 'Print to PDF'}
+          </button>
           <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onDownloadExcel}>Download Excel</button>
         </div>
       </div>
 
-      {data?.truncated && (
-        <div className="mb-3 text-xs text-amber bg-amber-bg/40 border border-amber/30 rounded px-3 py-2">
-          Showing the first {data.rows.length.toLocaleString()} of {data.total.toLocaleString()} matching records. Narrow the date range for complete results — the totals above already reflect the full match.
-        </div>
-      )}
-
       <DailyReportCardList rows={displayDailyRows} isLoading={isLoading} isCompliant={isCompliant} />
-
-      {data && data.rows.length > 500 && (
-        <div className="mb-2 p-3 text-center text-xs text-text-muted bg-surface2 rounded-md md:hidden print:hidden">
-          Showing first 500 rows. Download Excel for full export.
-        </div>
-      )}
 
       <div className="card overflow-hidden hidden md:block">
         <div className="tbl-scroll">
@@ -322,12 +346,16 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
             </tbody>
           </table>
         </div>
-        {data && data.rows.length > 500 && (
-          <div className="p-3 text-center text-xs text-text-muted bg-surface2">
-            Showing first 500 rows. Download Excel for full export.
-          </div>
-        )}
       </div>
+
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={data?.total}
+        showTotal
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+      />
       </div>
     </div>
   );
