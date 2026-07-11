@@ -38,7 +38,7 @@ import { DashboardAttendanceTable } from '../../dashboard/DashboardAttendanceTab
 
 const PAGE_SIZE = 20;
 const DASH_SELECT =
-  'px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none w-full md:w-auto';
+  'px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none w-full md:w-auto chevron-select';
 
 const MONO_COLS = new Set(['empCode', 'deviceCode', 'biometricId', 'occurredAt', 'lastLogin', 'lastPing']);
 const TIMESTAMP_COLS = new Set(['occurredAt', 'lastLogin', 'lastPing']);

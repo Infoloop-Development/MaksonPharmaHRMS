@@ -321,7 +321,7 @@ export function DashboardAttendanceTable({
 
   const filterFields = (
     <>
-      <select className="w-full" value={department} onChange={(e) => setDepartment(e.target.value)}>
+      <select className="input w-full" value={department} onChange={(e) => setDepartment(e.target.value)}>
         <option value="">All Depts</option>
         {(departmentsData?.departments ?? []).map((d) => (
           <option key={d} value={d}>
@@ -329,13 +329,13 @@ export function DashboardAttendanceTable({
           </option>
         ))}
       </select>
-      <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+      <select className="input w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
         <option value="All">All Time Shifts</option>
         <option value="Day">{dayShiftLabel}</option>
         <option value="Night">{nightShiftLabel}</option>
       </select>
       <select
-        className="w-full"
+        className="input w-full"
         value={status}
         onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}
       >

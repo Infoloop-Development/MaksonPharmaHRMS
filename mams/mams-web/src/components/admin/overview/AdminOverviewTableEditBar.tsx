@@ -2,7 +2,7 @@ import type { AdminOverviewTableKind } from '@mams/types';
 import { TABLE_KIND_LABELS } from '../../../lib/adminOverviewTableUtils';
 
 const DASH_SELECT =
-  'px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none min-w-[180px]';
+  'px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none min-w-[180px] chevron-select';
 
 export function AdminOverviewTableEditBar({
   kind,
