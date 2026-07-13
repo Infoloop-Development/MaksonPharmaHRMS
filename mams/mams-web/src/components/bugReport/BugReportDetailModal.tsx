@@ -91,15 +91,22 @@ export function BugReportDetailModal({
   }, [open, data?.publicId, reportId, shareVariant, navigate]);
 
   const patchMu = useMutation({
-    mutationFn: (body: Parameters<typeof adminBugReportingApi.patch>[1]) =>
-      adminBugReportingApi.patch(reportId!, body),
+    mutationFn: (body: Parameters<typeof adminBugReportingApi.patch>[1]) => {
+      // Prefer stable Mongo id from loaded detail; fall back to route ref (publicId).
+      const ref = data?.id || reportId;
+      if (!ref) throw new Error('Bug report id missing');
+      return adminBugReportingApi.patch(ref, body);
+    },
     onSuccess: (updated) => {
       applyBugReportPatchToCache(qc, updated);
       setPhaseId(updated.phaseId);
       setAssigneeId(updated.assignee?.id ?? '');
       setDeadline(updated.deadline ?? '');
       toast('Bug report updated', 'success');
-      void qc.invalidateQueries({ queryKey: BUG_REPORTING_QUERY_KEY });
+      // Refresh board columns; keep detail cache from applyBugReportPatchToCache.
+      void qc.invalidateQueries({
+        queryKey: [...BUG_REPORTING_QUERY_KEY, 'board'],
+      });
     },
     onError: (e: unknown) => toast(e instanceof Error ? e.message : 'Update failed', 'error'),
   });
@@ -201,6 +208,7 @@ export function BugReportDetailModal({
                 <Select
                   className={`${controlClass} w-[9.5rem]`}
                   value={assigneeId}
+                  disabled={patchMu.isPending}
                   onChange={(e) => {
                     const v = e.target.value;
                     setAssigneeId(v);

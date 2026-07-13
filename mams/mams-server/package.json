@@ -12,6 +12,7 @@
     "seed:first-time-user": "tsx seed/firstTimeUser.ts",
     "seed:attendance": "tsx seed/seedAttendanceDays.ts",
     "seed:compliance-month": "tsx seed/complianceMonth.ts",
+    "seed:compliance-today": "tsx seed/complianceToday.ts",
     "purge:bug-reports": "tsx seed/purgeBugReports.ts",
     "backfill:bug-public-ids": "tsx scripts/backfillBugPublicIds.ts",
     "test": "vitest run",
