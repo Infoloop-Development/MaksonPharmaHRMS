@@ -149,6 +149,42 @@ function shuffleSeeded<T>(items: T[], seedKey: string): T[] {
   return copy;
 }
 
+/** True when two YYYY-MM-DD dates are adjacent calendar days (e.g. Mon–Tue). */
+function areAdjacentDates(a: string, b: string): boolean {
+  const da = Date.parse(`${a}T00:00:00Z`);
+  const db = Date.parse(`${b}T00:00:00Z`);
+  if (!Number.isFinite(da) || !Number.isFinite(db)) return false;
+  return Math.abs(da - db) === 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Pick leave dates with a seeded RNG so placement looks random (no even spacing /
+ * weekday pattern), while never choosing consecutive calendar days when possible.
+ * Deterministic for the same seedKey.
+ */
+function pickNonAdjacentLeaveDates(eligibleWeekdays: string[], count: number, seedKey: string): Set<string> {
+  if (count <= 0) return new Set();
+  const rand = seededRandom(hashString(seedKey));
+  const remaining = [...eligibleWeekdays];
+  const selected: string[] = [];
+
+  for (let n = 0; n < count; n++) {
+    if (remaining.length === 0) break;
+
+    const nonAdjacent = remaining.filter((d) => selected.every((s) => !areAdjacentDates(s, d)));
+    // Prefer non-adjacent; only fall back when spacing cannot fit more leave days.
+    const pool = nonAdjacent.length > 0 ? nonAdjacent : remaining;
+    const idx = Math.floor(rand() * pool.length);
+    const pick = pool[idx]!;
+    selected.push(pick);
+
+    const removeAt = remaining.indexOf(pick);
+    if (removeAt >= 0) remaining.splice(removeAt, 1);
+  }
+
+  return new Set(selected);
+}
+
 function generatePunches(
   date: string,
   seedNs: string,
@@ -334,15 +370,21 @@ export function computeMonthlyPlan(input: MonthlyPlanInput): MonthlyPlanResult |
     eligibleWeekdays.length < BASELINE_WORKING_DAYS ||
     calendarPresentDays + calendarLeaveDays < presentDays + leaveDays;
 
-  // Real leave dates are placed directly, never left to chance; the seeded shuffle
-  // only fills in the remainder of calendarLeaveDays from the non-leave pool.
+  // Real leave dates are fixed; remaining shortfall leave is picked non-adjacent
+  // (seeded) so placement looks random and avoids consecutive days when possible.
   const shuffleCandidates = eligibleWeekdays.filter((d) => !realLeaveSet.has(d));
-  const shuffled = shuffleSeeded(shuffleCandidates, `${seedNs}:leave`);
   const extraLeaveNeeded = Math.max(0, calendarLeaveDays - realLeaveSet.size);
-  const leaveSet = new Set([...realLeaveInEligible, ...shuffled.slice(0, extraLeaveNeeded)]);
-  const presentSet = new Set(
-    shuffled.filter((d) => !leaveSet.has(d)).slice(0, calendarPresentDays)
+  const extraLeave = pickNonAdjacentLeaveDates(
+    shuffleCandidates,
+    extraLeaveNeeded,
+    `${seedNs}:leave:${calendarLeaveDays}:${Math.round(realHours * 100)}`
   );
+  const leaveSet = new Set([...realLeaveInEligible, ...extraLeave]);
+  const remainingForPresent = shuffleSeeded(
+    eligibleWeekdays.filter((d) => !leaveSet.has(d)),
+    `${seedNs}:present:${calendarLeaveDays}:${Math.round(realHours * 100)}`
+  );
+  const presentSet = new Set(remainingForPresent.slice(0, calendarPresentDays));
 
   const personnel = parseInvolvedPersonnel(input.involvedPersonnel);
   const dayByDate = new Map<string, MonthlyPlanDay>();

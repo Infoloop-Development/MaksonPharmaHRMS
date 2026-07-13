@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   COMPLIANCE_SHIFT_BUFFER_PRESETS,
+  formatHoursAsHrMin,
+  formatHoursAsHrMinFromMs,
   generateDailyCompliancePunches,
   isSundayIstDate,
   parseTimeHmsMs,
@@ -41,6 +43,16 @@ describe('complianceDailyGenerator', () => {
     expect(punches.hoursWorked).toBeGreaterThanOrEqual(7 + 50 / 60);
     expect(punches.hoursWorked).toBeLessThanOrEqual(8 + 10 / 60);
     expect(punches.hoursWorked).not.toBe(8);
+  });
+
+  it('formats hours as hr and min', () => {
+    expect(formatHoursAsHrMin(7.85)).toBe('7 hr 51 min');
+    expect(formatHoursAsHrMinFromMs((7 * 60 + 53) * 60 * 1000)).toBe('7 hr 53 min');
+    const punches = generateDailyCompliancePunches({
+      seedBase: 'emp3:2026-06-25',
+      alternateShift: 'B',
+    });
+    expect(punches.hoursWorkedFormatted).toMatch(/^\d+ hr \d+ min$/);
   });
 
   it('detects Sunday IST dates', () => {

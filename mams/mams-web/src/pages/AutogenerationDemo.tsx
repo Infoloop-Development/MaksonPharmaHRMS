@@ -221,6 +221,8 @@ export function AutogenerationDemo() {
         bufferEnd: monthlyBufferEnd,
         realHours: parseFloat(realHours) || 0,
         involvedPersonnel,
+        // Unique seed so leave days reshuffle with hours/shift/people (still deterministic).
+        seedNamespace: `${yearMonth}:${monthlyShift}:${realHours}:${involvedPersonnel}`,
       }),
     [yearMonth, monthlyShift, monthlyBufferStart, monthlyBufferEnd, realHours, involvedPersonnel]
   );
@@ -391,7 +393,7 @@ export function AutogenerationDemo() {
             <h3 className="font-semibold mb-3 text-text">Daily attendance</h3>
             <p className="text-xs text-text-subtle mb-3">
               Present days show who was involved, check-in/check-out times (<span className="font-mono">HH:mm:ss</span>
-              ), and decimal hours.
+              ), and hours as hr / min.
             </p>
 
             <div className="md:hidden space-y-2 mb-2">

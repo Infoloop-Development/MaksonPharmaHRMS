@@ -1,3 +1,4 @@
+import { formatHoursAsHrMin } from '@mams/types';
 import type { ComplianceAttendanceRow } from '../../api/complianceAttendance';
 import { EMPTY_CELL, fmtDate } from '../../lib/format';
 import { useTimeDisplay } from '../../store/timeFormat';
@@ -57,7 +58,7 @@ export function ComplianceAttendanceCardList({
             </div>
             <div className="col-span-2">
               <dt className="text-text-subtle uppercase tracking-wider">Hours</dt>
-              <dd className="font-mono dash-time">{row.hoursWorked.toFixed(2)}</dd>
+              <dd className="font-mono dash-time">{formatHoursAsHrMin(row.hoursWorked)}</dd>
             </div>
           </dl>
           {onEditRow && (

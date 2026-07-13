@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
+import { formatHoursAsHrMin } from '@mams/types';
 import {
   complianceAttendanceApi,
   type ComplianceAttendanceRow,
@@ -363,7 +364,7 @@ export function ComplianceAttendancePanel({
                     {fmtTime(row.checkOutAt)}
                     {row.checkOutNextDay ? ' (+1)' : ''}
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{row.hoursWorked.toFixed(2)}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs">{formatHoursAsHrMin(row.hoursWorked)}</td>
                   <td className="px-4 py-2.5">
                     <AttendanceStatusPill status={row.status} />
                   </td>

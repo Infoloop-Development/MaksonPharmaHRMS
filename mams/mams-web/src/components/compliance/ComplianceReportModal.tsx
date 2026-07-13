@@ -230,6 +230,13 @@ export function ComplianceReportModal({
           </div>
         )}
 
+        <p className="text-xs text-text-muted">
+          Monthly baseline is 208 hours (26 working days × 8 h). Sundays are weekly off. When total hours are below
+          208, leave days are scattered randomly across weekdays (never on consecutive calendar days when spacing
+          allows). Values above 208 are capped at 208 in the report (26 present days, no leave). Example: 160 h → 6
+          leave days and 20 present days.
+        </p>
+
         {submitAttempted && validationErrors.length > 0 && (
           <div className="p-3 rounded-md bg-red/10 border border-red/30 text-sm text-red">
             {validationErrors[0]}

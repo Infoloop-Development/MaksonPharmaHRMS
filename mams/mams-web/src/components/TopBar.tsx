@@ -12,6 +12,16 @@ import { authApi } from '../api/auth';
 import { clearFirstLoginSession } from '../lib/onboarding/session';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 
+function initials(name?: string | null) {
+  return (name ?? '??')
+    .split(' ')
+    .map((s) => s[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
 export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const user = useAuth((s) => s.user);
   const isOnline = useOnlineStatus();
@@ -69,8 +79,15 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
         </button>
 
         <div className="app-topbar-actions ml-auto">
-          <ThemeToggle compact />
-          <div className="app-topbar-clock">
+          {/* Mobile: one cycle button. Desktop: 3-way segment control. */}
+          <div className="sm:hidden">
+            <ThemeToggle cycle />
+          </div>
+          <div className="hidden sm:block">
+            <ThemeToggle compact />
+          </div>
+
+          <div className="app-topbar-clock" aria-live="polite">
             <div className="app-topbar-clock-time">
               <span
                 className={isOnline ? 'live-dot' : 'live-dot live-dot-offline'}
@@ -87,22 +104,16 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
             </div>
           )}
 
-          <div className="relative flex items-center shrink-0 pl-3 md:pl-4 border-l border-border" ref={profileMenuRef}>
+          <div className="app-topbar-profile relative flex items-center shrink-0" ref={profileMenuRef}>
             <button
               type="button"
               onClick={() => setProfileMenuOpen((v) => !v)}
               aria-haspopup="menu"
               aria-expanded={profileMenuOpen}
               aria-label={user?.name ? `Account menu for ${user.name}` : 'Account menu'}
-              className="flex items-center px-1"
+              className="app-topbar-avatar-btn"
             >
-              <span className="w-8 h-8 rounded-md bg-primary-bg flex items-center justify-center font-bold text-[11px] text-primary-on-bg shrink-0">
-                {(user?.name ?? '??')
-                  .split(' ')
-                  .map((s) => s[0])
-                  .slice(0, 2)
-                  .join('')}
-              </span>
+              <span className="app-topbar-avatar">{initials(user?.name)}</span>
             </button>
 
             {profileMenuOpen && (
@@ -120,7 +131,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
                   to="/settings"
                   role="menuitem"
                   onClick={() => setProfileMenuOpen(false)}
-                  className="block px-3 py-2 text-sm hover:bg-surface2 transition-colors"
+                  className="block px-3 py-2.5 text-sm hover:bg-surface2 transition-colors min-h-[44px] flex items-center"
                 >
                   Profile
                 </Link>
@@ -128,7 +139,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
                   type="button"
                   role="menuitem"
                   onClick={onLogout}
-                  className="block w-full text-left px-3 py-2 text-sm text-red hover:bg-surface2 transition-colors"
+                  className="block w-full text-left px-3 py-2.5 text-sm text-red hover:bg-surface2 transition-colors min-h-[44px]"
                 >
                   Sign Out
                 </button>

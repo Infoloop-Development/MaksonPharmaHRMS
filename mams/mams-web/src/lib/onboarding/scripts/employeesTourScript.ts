@@ -20,17 +20,9 @@ export const employeesTourScript: TourScript = {
           id: 'employees-actions',
           title: 'Add and import',
           description:
-            'Add employees individually or bulk-import from CSV. Download the template first to match required columns.',
+            'Add employees individually or bulk-import from CSV. When adding, set Biometric ID to match the device user ID so punches link correctly.',
           side: 'left',
           when: () => tourElementExists('employees-actions'),
-        },
-        {
-          id: 'employees-biometric-banner',
-          title: 'Biometric IDs',
-          description:
-            'Employees missing a biometric ID cannot match device punches. Resolve gaps before go-live.',
-          side: 'bottom',
-          when: () => tourElementExists('employees-biometric-banner'),
         },
       ],
     },

@@ -99,8 +99,22 @@ export function addMsFromAnchor(
   return { time: formatTimeHmsMs(ms), ms, nextDay: dayOffset > 0 };
 }
 
-function formatHoursDecimal(totalMs: number): string {
-  return `${(totalMs / (60 * 60 * 1000)).toFixed(2)} h`;
+/** Display duration as "7 hr 51 min" (whole minutes; no decimal hours). */
+export function formatHoursAsHrMinFromMs(totalMs: number): string {
+  const safeMs = Number.isFinite(totalMs) && totalMs > 0 ? totalMs : 0;
+  const totalMinutes = Math.floor(safeMs / (60 * 1000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours} hr ${minutes} min`;
+}
+
+/** Convert decimal hours (e.g. 7.85) to "7 hr 51 min". */
+export function formatHoursAsHrMin(hours: number): string {
+  if (!Number.isFinite(hours) || hours < 0) return '—';
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h} hr ${m} min`;
 }
 
 function randomClockInMs(seedBase: string, bufferStartMs: number, bufferEndMs: number): number {
@@ -145,7 +159,7 @@ export function generateDailyCompliancePunches(
     checkOut: formatTimeHmsMs(out.ms),
     checkOutNextDay: out.nextDay,
     hoursWorked: durationMs / (60 * 60 * 1000),
-    hoursWorkedFormatted: formatHoursDecimal(durationMs),
+    hoursWorkedFormatted: formatHoursAsHrMinFromMs(durationMs),
   };
 }
 

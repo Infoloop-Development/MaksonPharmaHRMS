@@ -12,7 +12,6 @@ import { CollapsibleInfoBox } from '../components/ui/CollapsibleInfoBox';
 import { EMPTY_CELL, fmtDate } from '../lib/format';
 import { EmployeesAddModal } from './EmployeesAddModal';
 import { EmployeeDeleteModal } from './EmployeeDeleteModal';
-import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 import { EmployeeCardList } from '../components/employees/EmployeeCardList';
 import { MobileFilterBar } from '../components/ui/MobileFilterBar';
 import { useActivityLog } from '../hooks/useActivityLog';
@@ -149,12 +148,6 @@ export function Employees() {
         )}
         </div>
       </div>
-
-      {canManage && !isCompliant && (
-        <div data-tour-id="employees-biometric-banner">
-          <BiometricIdBanner />
-        </div>
-      )}
 
       {!isCompliant && flaggedRequests && flaggedRequests.counts.Flagged > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">

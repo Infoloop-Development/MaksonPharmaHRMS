@@ -19,11 +19,16 @@ export function RegularizationPageHeader({
       </div>
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         {tourButton}
-      {canCreate && (
-        <button className="btn-primary" data-tour-id="regularization-create" onClick={onCreate}>
-          + New request
-        </button>
-      )}
+        {canCreate && (
+          <button
+            type="button"
+            className="btn-primary h-10 min-h-10 whitespace-nowrap"
+            data-tour-id="regularization-create"
+            onClick={onCreate}
+          >
+            + New request
+          </button>
+        )}
       </div>
     </div>
   );

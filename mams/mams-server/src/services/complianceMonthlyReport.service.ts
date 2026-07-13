@@ -161,7 +161,7 @@ function dailyRowsForEmployee(
       shiftName,
       day.checkIn ?? '',
       day.checkOut ? formatCheckOutLabel(day.checkOut, day.checkOutNextDay) : '',
-      day.hoursWorked ?? '',
+      day.hoursWorkedFormatted ?? day.hoursWorked ?? '',
     ]);
   }
   return rows;
