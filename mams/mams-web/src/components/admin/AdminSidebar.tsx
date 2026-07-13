@@ -25,7 +25,6 @@ const HR_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/attendance', label: 'Attendance Log', icon: 'attendance' },
   { to: '/reports', label: 'Reports', icon: 'reports' },
   { to: '/adjustments', label: 'Adjustments', icon: 'adjustments' },
-  { to: '/regularization', label: 'Regularization', icon: 'regularization' },
   { to: '/leave', label: 'Leave', icon: 'leave' },
   { to: '/visitors', label: 'Visitors', icon: 'visitors' },
   { to: '/devices', label: 'Devices', icon: 'devices' },

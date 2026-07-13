@@ -31,11 +31,6 @@ export const TOUR_META: Record<OnboardingTourId, TourMeta> = {
     welcomeDescription:
       'Submit attendance corrections and review pending approvals in one place.',
   },
-  regularization: {
-    welcomeTitle: 'Welcome to Regularization',
-    welcomeDescription:
-      'Request missed-punch corrections and track approval status.',
-  },
   leave: {
     welcomeTitle: 'Welcome to Leave',
     welcomeDescription:

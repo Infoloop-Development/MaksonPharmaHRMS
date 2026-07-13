@@ -62,8 +62,6 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'read.compliant': 'Read compliant (8h) attendance data',
   'write.adjust': 'Submit attendance adjustments (pending approval)',
   'approve.adjust': 'Approve/reject adjustments',
-  'write.regularization': 'Submit regularization requests (pending approval)',
-  'approve.regularization': 'Approve/reject regularization requests',
   'unmask.sensitive': 'Unmask PAN, bank, Aadhaar, PF, ESI',
   'manage.users': 'Manage users (legacy)',
   'manage.employees': 'Manage employee records',
@@ -93,7 +91,6 @@ const PERMISSION_LABELS: Record<Permission, string> = {
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
   { label: 'Attendance data', permissions: ['read.real', 'read.compliant'] },
   { label: 'Adjustments', permissions: ['write.adjust', 'approve.adjust'] },
-  { label: 'Regularization', permissions: ['write.regularization', 'approve.regularization'] },
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
   { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
@@ -478,7 +475,7 @@ function TimeDisplayCard({ settings, canManage }: { settings: SettingsT; canMana
       }
     >
       <p className="text-sm text-text-muted">
-        Applies to all HR and manager users across the app: how times are shown and entered (clocks, attendance, reports, regularization).
+        Applies to all HR and manager users across the app: how times are shown and entered (clocks, attendance, reports).
       </p>
       <div className="space-y-2 pt-1">
         {options.map((opt) => (

@@ -14,7 +14,6 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/employees', label: 'Employees', icon: 'employees' },
   { to: '/attendance', label: 'Attendance Log', icon: 'attendance' },
   { to: '/adjustments', label: 'Adjustments', icon: 'adjustments' },
-  { to: '/regularization', label: 'Regularization', icon: 'regularization' },
   { to: '/leave', label: 'Leave', icon: 'leave' },
   // Change Requests injected here by buildNav (after Leave, before Reports)
   { to: '/reports', label: 'Reports', icon: 'reports' },
@@ -24,7 +23,7 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
 ];
 
 const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
-const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/regularization', '/visitors', '/devices', '/autogeneration-demo']);
+const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/visitors', '/devices', '/autogeneration-demo']);
 
 const COMPLIANCE_ATTENDANCE_NAV = {
   to: '/compliance-attendance',

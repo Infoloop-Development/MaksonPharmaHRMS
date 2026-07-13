@@ -9,17 +9,3 @@ describe('PERMISSIONS_BY_ROLE leave', () => {
     expect(perms).not.toContain('manage.leave');
   });
 });
-
-describe('PERMISSIONS_BY_ROLE regularization', () => {
-  it('hr.admin includes write and approve regularization', () => {
-    const perms = PERMISSIONS_BY_ROLE['hr.admin'];
-    expect(perms).toContain('write.regularization');
-    expect(perms).toContain('approve.regularization');
-  });
-
-  it('hr.compliance is fully locked out of regularization', () => {
-    const perms = PERMISSIONS_BY_ROLE['hr.compliance'];
-    expect(perms).not.toContain('write.regularization');
-    expect(perms).not.toContain('approve.regularization');
-  });
-});

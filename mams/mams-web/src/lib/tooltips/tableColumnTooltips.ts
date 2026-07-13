@@ -94,12 +94,6 @@ export const TABLE_COLUMN_TOOLTIPS = {
     lastLogin: 'Most recent successful sign-in.',
     user: 'User who performed the action or owns the record.',
   },
-  regularization: {
-    employee: 'Employee requesting regularization.',
-    date: 'Attendance date being corrected.',
-    status: 'Pending, approved, or rejected.',
-    reason: 'Reason provided for the request.',
-  },
   changeRequests: {
     changeType: 'Type of employee change requested.',
     initiatedBy: 'User who submitted the request.',

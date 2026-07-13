@@ -19,7 +19,7 @@ describe('validatePermissionsForRole', () => {
   });
 
   it('accepts HR request-raiser profile for hr.admin', () => {
-    const r = validatePermissionsForRole('hr.admin', ['read.leave', 'write.leave', 'write.regularization']);
+    const r = validatePermissionsForRole('hr.admin', ['read.leave', 'write.leave', 'approve.adjust']);
     expect(r.ok).toBe(true);
   });
 

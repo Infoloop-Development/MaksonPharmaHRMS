@@ -79,7 +79,7 @@ export function formatIstDateTimeMs(d: Date | string | null, format: TimeFormat)
   return `${base}.${ms}`;
 }
 
-/** Format HH:mm clock string (shift windows, regularization stored times). */
+/** Format HH:mm clock string (shift windows, stored times). */
 export function formatHhmm(hhmm: string | null | undefined, format: TimeFormat): string {
   if (!hhmm) return '-';
   const parts = splitHhmmTo12h(hhmm);

@@ -21,14 +21,6 @@ export function canConfigureLeave(permissions: Permission[]): boolean {
   return permissions.includes('manage.leave');
 }
 
-export function canWriteRegularization(permissions: Permission[]): boolean {
-  return permissions.includes('write.regularization');
-}
-
-export function canApproveRegularization(permissions: Permission[]): boolean {
-  return permissions.includes('approve.regularization');
-}
-
 export function canViewVisitors(permissions: Permission[]): boolean {
   return (
     permissions.includes('read.visitors') ||
