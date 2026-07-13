@@ -45,3 +45,19 @@ export function istDateStartUtc(dateStr: string): Date {
 export function istDateEndUtc(dateStr: string): Date {
   return fromZonedTime(`${dateStr}T23:59:59.999`, IST);
 }
+
+/**
+ * Noon of an IST calendar day, as UTC. Used as the cutover point between a Night
+ * shift's previous-evening start and next-morning end - neither Day shift (6AM-6PM)
+ * nor Night shift (6PM-6AM) ever has real activity anywhere near noon, so it's a safe
+ * boundary for splitting the timeline into one bucket per shift day.
+ */
+export function istNoonUtc(dateStr: string): Date {
+  return fromZonedTime(`${dateStr}T12:00:00.000`, IST);
+}
+
+/** Add (or subtract) whole days to an IST calendar date string. India has no DST. */
+export function addIstCalendarDays(dateStr: string, days: number): string {
+  const shifted = new Date(istNoonUtc(dateStr).getTime() + days * 24 * 60 * 60 * 1000);
+  return utcToIstDateString(shifted);
+}

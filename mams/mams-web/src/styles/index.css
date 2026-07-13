@@ -28,10 +28,10 @@
   --color-brand-primary-light: #2e3f99;
   --color-brand-primary-light-rgb: 46 63 153;
   --color-brand-primary-text: #ffffff;
-  --app-topbar-height: 3rem;
-  --app-main-top-gap: 0.75rem;
+  --app-topbar-height: 4rem;
+  --app-main-top-gap: 1.25rem;
   --app-sidebar-width: 15.625rem;
-  --dash-stat-card-min-h: 5.75rem;
+  --dash-stat-card-min-h: 5rem;
   --dash-chart-card-min-h: 17.5rem;
   --color-brand-secondary: #e82c2c;
   --color-brand-secondary-rgb: 232 44 44;
@@ -40,7 +40,7 @@
   --sidebar-text-muted: rgba(255, 255, 255, 0.72);
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --sidebar-hover-bg: rgba(255, 255, 255, 0.1);
-  --sidebar-active-bg: color-mix(in srgb, var(--color-brand-secondary) 25%, transparent);
+  --sidebar-active-bg: #2563EB;
   --font-brand-sans: "DM Sans", system-ui, sans-serif;
 }
 
@@ -128,13 +128,30 @@ input, select, textarea {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
   }
   .btn-outline {
-    @apply btn border border-border bg-surface text-text hover:bg-surface2 disabled:opacity-50;
+    @apply btn bg-surface text-text hover:bg-surface2 disabled:opacity-50;
+    border: 1px solid color-mix(in srgb, var(--color-border) 60%, var(--color-text-muted));
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs min-h-[36px] sm:min-h-0;
   }
   .input {
     @apply w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 text-text focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition;
+  }
+  /* Shared custom dropdown chevron - replaces the native select arrow (which renders
+     inconsistently across browsers/OSes, and previously overflowed its box) with a
+     fixed SVG. Apply to any bare <select> alongside its own box styling. */
+  .chevron-select {
+    @apply appearance-none pr-8;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23718096' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 12px 12px;
+  }
+  .dark .chevron-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  select.input {
+    @apply chevron-select;
   }
   .label {
     @apply block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1;
@@ -179,12 +196,15 @@ input, select, textarea {
     color: inherit;
     border-color: color-mix(in srgb, currentColor 40%, var(--color-border));
     background: color-mix(in srgb, currentColor 8%, var(--color-surface2));
+    @apply w-2.5 h-2.5 min-w-2.5 min-h-2.5 text-[7px] ml-1.5 align-top;
+    margin-top: -2px;
   }
   .dark .tbl-scroll th.sorted,
   .dark .dash-table-scroll th.sorted {
     color: var(--color-link);
   }
   .tbl-scroll tbody td {
+    @apply whitespace-nowrap;
     color: var(--color-text);
   }
   .page-toolbar {
@@ -230,6 +250,9 @@ input, select, textarea {
   .dash-table-filters input,
   .dash-table-filters select {
     @apply px-3 py-2 border-[1.5px] border-border rounded-md text-xs bg-surface2 outline-none;
+  }
+  .dash-table-filters select {
+    @apply chevron-select;
   }
   .dash-table-hint {
     @apply text-[11px] text-text-subtle px-5 py-1.5 bg-surface2 border-b border-border;
@@ -293,6 +316,23 @@ input, select, textarea {
   .dash-pill-red {
     @apply dash-pill bg-red-bg text-red;
   }
+  /*
+   * Shift column pill: the soft dash-pill-* fills read as washed-out on a white row
+   * (low contrast, no edge). A thin border at the same hue gives it definition as a
+   * "chip" without the loudness of a solid fill. Scoped to the shift column only.
+   */
+  .dash-pill-shift-blue {
+    @apply dash-pill bg-primary-bg text-primary-on-bg border border-primary/35;
+  }
+  .dash-pill-shift-amber {
+    @apply dash-pill bg-amber-bg text-[var(--color-pill-amber-text)] border border-amber/45;
+  }
+  .dash-pill-shift-green {
+    @apply dash-pill bg-green-bg text-[var(--color-pill-green-text)] border border-green/45;
+  }
+  .dash-pill-shift-red {
+    @apply dash-pill bg-red-bg text-red border border-red/45;
+  }
   .dash-time {
     @apply font-mono text-xs text-text-muted;
   }
@@ -303,7 +343,7 @@ input, select, textarea {
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl text-[11px] font-semibold bg-primary-bg text-primary-on-bg cursor-pointer transition-colors hover:bg-primary hover:text-white;
   }
   .btn-green {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-[11px] font-semibold bg-green text-white border-none cursor-pointer transition-colors hover:bg-[#5f9420] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply btn min-h-[44px] sm:min-h-0 bg-green text-white border-none hover:bg-[#5f9420] disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .settings-section-footer {
     @apply flex flex-col-reverse sm:flex-row sm:justify-end gap-2 [&_.btn]:w-full sm:[&_.btn]:w-auto;
@@ -379,16 +419,16 @@ input, select, textarea {
     @apply -translate-y-0.5 shadow-[0_4px_20px_rgba(26,40,120,0.15)];
   }
   .dash-stat-card.selected.accent-primary {
-    @apply border-primary bg-primary-bg;
+    @apply bg-primary-bg;
   }
   .dash-stat-card.selected.accent-green {
-    @apply border-green bg-green-bg;
+    @apply bg-green-bg;
   }
   .dash-stat-card.selected.accent-red {
-    @apply border-red bg-red-bg;
+    @apply bg-red-bg;
   }
   .dash-stat-card.selected.accent-amber {
-    @apply border-amber bg-amber-bg;
+    @apply bg-amber-bg;
   }
   .dash-stat-card.accent-primary {
     @apply border-l-primary;
@@ -412,17 +452,18 @@ input, select, textarea {
     @apply fixed z-[100] px-2.5 py-1.5 rounded-md border border-border bg-surface text-xs text-text leading-snug shadow-floating pointer-events-none;
   }
   .info-tip {
-    @apply inline-flex items-center justify-center w-4 h-4 min-w-4 min-h-4 rounded-full border border-border bg-surface2 text-[10px] font-bold text-text-muted leading-none shrink-0 cursor-help transition-colors;
+    @apply inline-flex items-center justify-center w-3 h-3 min-w-3 min-h-3 rounded-full border border-border bg-surface2 text-[8px] font-bold text-text-muted leading-none shrink-0 cursor-help transition-colors;
   }
   .info-tip:hover,
   .info-tip:focus-visible {
     @apply border-primary text-primary-on-bg bg-primary-bg outline-none;
   }
   .dash-stat-card .info-tip {
-    @apply absolute top-2 right-2.5 z-[1];
+    @apply absolute top-2 right-2 z-[1] w-3 h-3 min-w-3 min-h-3 text-[8px];
   }
   .sortable-th .info-tip {
-    @apply ml-1 align-middle;
+    @apply ml-1.5 align-top;
+    margin-top: -2px;
   }
   .dash-donut-legend-item {
     @apply flex items-center gap-2 text-xs text-text-muted cursor-pointer py-1 px-2 rounded-md transition-colors;
@@ -503,7 +544,7 @@ input, select, textarea {
     @apply bg-primary-bg text-primary-on-bg font-semibold;
   }
   .theme-toggle {
-    @apply inline-flex rounded-md border border-border bg-surface2 p-0.5 shrink-0;
+    @apply inline-flex rounded-md border border-border bg-surface p-0.5 shrink-0 shadow-sm;
   }
   .theme-toggle--busy {
     @apply opacity-50 pointer-events-none;
@@ -513,7 +554,7 @@ input, select, textarea {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface2;
   }
   .theme-toggle-btn--compact {
-    @apply p-2 w-8 h-8;
+    @apply p-2.5 w-9 h-9;
   }
   .theme-toggle-btn:not(.theme-toggle-btn--compact) {
     @apply px-2.5 py-1.5 text-xs font-semibold;
@@ -691,9 +732,9 @@ input, select, textarea {
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 22px;
+  height: 26px;
   border-radius: 0 3px 3px 0;
-  background: var(--color-brand-secondary, var(--color-red));
+  background: #ffffff;
 }
 .sidebar-shell {
   background-color: var(--color-brand-primary);
@@ -713,23 +754,27 @@ input, select, textarea {
   color: var(--sidebar-text);
 }
 .sidebar-shell .sidebar-nav-link--active {
-  background: var(--sidebar-active-bg);
+  background: rgba(255, 255, 255, 0.22);
   color: var(--sidebar-text);
 }
 .sidebar-shell .sidebar-icon-btn:hover {
   background: var(--sidebar-hover-bg);
 }
+.sidebar-collapse-btn {
+  background: var(--color-brand-primary);
+  color: var(--sidebar-text);
+}
+.sidebar-collapse-btn:hover {
+  background: var(--color-brand-primary-light);
+}
 .sidebar-shell .sidebar-logo-bg {
   background: var(--sidebar-hover-bg);
 }
 .sidebar-brand-name {
-  word-break: break-word;
-  hyphens: auto;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
-  font-size: 11px;
+  text-overflow: ellipsis;
+  font-size: 13px;
   line-height: 1.25;
 }
 .sidebar-brand {
@@ -737,8 +782,8 @@ input, select, textarea {
   height: var(--app-topbar-height);
   min-height: var(--app-topbar-height);
   max-height: var(--app-topbar-height);
-  padding-left: 0.625rem;
-  padding-right: 0.625rem;
+  padding-left: 1rem;
+  padding-right: 0.75rem;
 }
 .sidebar-shell .sidebar-avatar-bg {
   background: color-mix(in srgb, var(--color-brand-secondary) 30%, transparent);
@@ -978,7 +1023,7 @@ html.mams-tour-scroll-lock body {
   @apply w-9 h-9 rounded-md border border-border bg-surface2 hover:bg-surface flex flex-col items-center justify-center gap-1 transition-colors;
 }
 .app-topbar-actions {
-  @apply flex items-center gap-2 md:gap-2.5 shrink-0;
+  @apply flex items-center gap-3 md:gap-4 shrink-0;
 }
 .app-topbar-view-badge {
   @apply shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap;
@@ -996,7 +1041,7 @@ html.mams-tour-scroll-lock body {
   @apply hidden md:inline;
 }
 .app-topbar-clock {
-  @apply text-right leading-tight shrink-0 hidden sm:block;
+  @apply text-right leading-tight shrink-0 hidden sm:block pl-4 md:pl-5 border-l border-border;
 }
 .app-topbar-clock-date {
   @apply text-[10px] text-text-subtle whitespace-nowrap;
@@ -1005,7 +1050,7 @@ html.mams-tour-scroll-lock body {
   @apply font-mono text-xs font-semibold tracking-wide text-text whitespace-nowrap;
 }
 .app-topbar-bell {
-  @apply flex items-center shrink-0 pl-2 md:pl-2.5 ml-0.5 border-l border-border;
+  @apply flex items-center shrink-0 pl-3 md:pl-4 border-l border-border;
 }
 .app-topbar-bell .notification-bell-trigger {
   @apply w-9 h-9 min-w-9 min-h-9 max-w-9 max-h-9 shrink-0 rounded-md border border-border bg-surface2 hover:bg-surface flex items-center justify-center transition-colors text-text;
@@ -1075,12 +1120,15 @@ html.mams-tour-scroll-lock body {
   user-select: none;
 }
 .bug-report-sidebar-btn {
-  background: rgba(0, 0, 0, 0.35);
-  color: var(--sidebar-text);
-  border: 1px solid var(--sidebar-border);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
 }
 .bug-report-sidebar-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 .bug-report-sidebar-btn:disabled {
   opacity: 0.55;

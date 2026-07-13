@@ -22,7 +22,8 @@ interface OverrideRow extends ComplianceReportOverride {
 }
 
 function defaultYearMonth() {
-  return '2026-05';
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export function ComplianceReportModal({
@@ -87,6 +88,8 @@ export function ComplianceReportModal({
     for (const row of overrides) {
       if (!Number.isFinite(row.totalHours) || row.totalHours < 0) {
         errors.push(`${row.empCode}: enter a valid hours value`);
+      } else if (row.totalHours > BASELINE_HOURS) {
+        errors.push(`${row.empCode}: hours can't exceed the ${BASELINE_HOURS} h baseline`);
       }
     }
     return errors;
@@ -142,8 +145,7 @@ export function ComplianceReportModal({
 
         <p className="text-sm text-text-muted">
           The report includes <strong className="text-text">all active employees</strong> for the selected month.
-          Search below only to override total hours for specific employees; everyone else uses their generated
-          attendance totals (or 208 h baseline if none exist).
+          Search below to adjust total hours for specific employees, if needed.
         </p>
 
         <div className="border-b border-border pb-4">
@@ -207,8 +209,9 @@ export function ComplianceReportModal({
                     <Input
                       type="number"
                       min={0}
+                      max={BASELINE_HOURS}
                       step={0.5}
-                      className="w-28 font-mono"
+                      className={`w-28 font-mono ${row.totalHours > BASELINE_HOURS ? 'border-red text-red' : ''}`}
                       value={row.totalHours}
                       onChange={(e) => updateHours(row.employeeId, Number(e.target.value))}
                     />
@@ -226,12 +229,6 @@ export function ComplianceReportModal({
             </div>
           </div>
         )}
-
-        <p className="text-xs text-text-muted">
-          Monthly baseline is 208 hours (26 working days × 8 h). Sundays are weekly off. Leave days are placed on
-          weekdays using a deterministic shuffle per employee when total hours are below 208. Values above 208 are
-          capped at 208 in the report (26 present days, no leave). Example: 160 h → 6 leave days and 20 present days.
-        </p>
 
         {submitAttempted && validationErrors.length > 0 && (
           <div className="p-3 rounded-md bg-red/10 border border-red/30 text-sm text-red">

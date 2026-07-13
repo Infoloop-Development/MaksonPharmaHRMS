@@ -21,12 +21,12 @@ import { AttendanceRawModel } from '../src/models/AttendanceRaw.js';
 import { AttendanceDerivedModel } from '../src/models/AttendanceDerived.js';
 import { AuditLogModel } from '../src/models/AuditLog.js';
 import { recomputeDerived } from '../src/services/attendance.service.js';
-import { smartAnchorV2 } from '../src/services/smartAnchor.js';
+import { smartAnchorV3 } from '../src/services/smartAnchor.js';
 import { PERMISSIONS_BY_ROLE, type ComplianceShift } from '@mams/types';
 import { generateEmployees } from './generators.js';
 import { utcToIstDateString } from '../src/utils/time.js';
 import { logger } from '../src/utils/logger.js';
-import { seededRandom } from '../src/utils/prng.js';
+import { hashString, seededRandom } from '../src/utils/prng.js';
 import { fromZonedTime } from 'date-fns-tz';
 import type { Types } from 'mongoose';
 import { seedLeaveData, wipeLeaveCollections } from './leaveSeed.js';
@@ -52,7 +52,7 @@ const SeedUsersEnvSchema = z.object({
   SEED_IT_ADMIN_NAME: z.string().min(1).default('IT Administrator'),
   SEED_DEFAULT_PASSWORD: z.string().min(8).default('makson2026'),
   SEED_HR_ADMIN_NAME: z.string().min(1).default('Priya Patel'),
-  SEED_HR_COMPLIANCE_NAME: z.string().min(1).default('Compliance Auditor'),
+  SEED_HR_COMPLIANCE_NAME: z.string().min(1).default('Priya Patel'),
 });
 
 function seedUserOptions() {
@@ -197,8 +197,9 @@ async function main() {
     const rawBatch: any[] = [];
     for (const emp of empDocs) {
       if (emp.status !== 'Active') continue;
-      const r = seededRandom(emp.empCode.charCodeAt(3) * 731 + parseInt(day.date.replace(/-/g, '')) * 13);
-      const isWeeklyOff = (emp.weeklyOff ?? []).includes(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day.weekdayIdx]!);
+      const r = seededRandom(hashString(`${emp.empCode}:${day.date}`));
+      // Monday = 0 … Sunday = 6 — matches day.weekdayIdx from dayIdxFromDateString (seedDateRanges.ts).
+      const isWeeklyOff = (emp.weeklyOff ?? []).includes(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][day.weekdayIdx]!);
       if (isWeeklyOff) continue;
       const isAbsent = r() < (ABS_RATES[day.weekdayIdx] ?? 0.1);
       if (isAbsent) continue;
@@ -215,7 +216,7 @@ async function main() {
         else { bH = 18 + Math.floor(r() * 2); bM = Math.floor(r() * 50); }
         bS = Math.floor(r() * 60);
       }
-      const shiftLen = 9.5 + r() * 2.0;
+      const shiftLen = 7.5 + r() * 3.0;
       const xH = bH + Math.floor(shiftLen);
       const xM = Math.floor((shiftLen % 1) * 60);
 
@@ -388,7 +389,7 @@ async function applyDashboardDayDemo(
       emp.timeShift === 'Day' ? `${demoDate}T19:00:00` : `${demoDate}T06:00:00`;
     const realEntryAt = fromZonedTime(entryIst, IST);
     const realExitAt = fromZonedTime(exitIst, IST);
-    const saDelay = smartAnchorV2({employeeId: String(emp._id), date: demoDate, alternateShift: emp.alternateShift,realEntryAt,realExitAt});
+    const saDelay = smartAnchorV3({employeeId: String(emp._id), date: demoDate, alternateShift: emp.alternateShift,realEntryAt,realExitAt});
     await AttendanceDerivedModel.updateOne(
       { employeeId: emp._id, date: demoDate },
       {
@@ -400,7 +401,7 @@ async function applyDashboardDayDemo(
           realGrossHours: 8,
           realNetHours: 7.5,
           breakMinutes: 30,
-          compliantHours: 8,
+          compliantHours: saDelay.compliantHours,
           otHours: 0,
           compliantEntryAt: saDelay.compliantEntryAt,
           compliantExitAt: saDelay.compliantExitAt,
@@ -416,7 +417,7 @@ async function applyDashboardDayDemo(
       emp.timeShift === 'Day' ? `${demoDate}T17:30:00` : `${demoDate}T03:30:00`;
     const realEntryAt = fromZonedTime(entryIst, IST);
     const realExitAt = fromZonedTime(exitIst, IST);
-    const saOnTime = smartAnchorV2({ employeeId: String(emp._id), date: demoDate, alternateShift: emp.alternateShift,realEntryAt,realExitAt});
+    const saOnTime = smartAnchorV3({ employeeId: String(emp._id), date: demoDate, alternateShift: emp.alternateShift,realEntryAt,realExitAt});
     await AttendanceDerivedModel.updateOne(
       { employeeId: emp._id, date: demoDate },
       {
@@ -428,7 +429,7 @@ async function applyDashboardDayDemo(
           realGrossHours: 8,
           realNetHours: 7.5,
           breakMinutes: 30,
-          compliantHours: 8,
+          compliantHours: saOnTime.compliantHours,
           otHours: 0,
           compliantEntryAt: saOnTime.compliantEntryAt,
           compliantExitAt: saOnTime.compliantExitAt,

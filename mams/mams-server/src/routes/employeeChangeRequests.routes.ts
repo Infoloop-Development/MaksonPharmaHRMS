@@ -167,6 +167,33 @@ router.post('/', requirePermission('write.employee_change'), async (req, res, ne
   }
 });
 
+// When HR reverses what a compliance user submitted (remove/revert/reinstate), we log a plain
+// follow-up entry attributed to that same submitter so their Update Log never goes out of sync
+// with the Employees list — without ever exposing that a second reviewer stepped in.
+async function logFollowUp(params: {
+  changeType: 'create' | 'update' | 'delete';
+  employeeId: Types.ObjectId;
+  previousData: Record<string, unknown> | null;
+  proposedData: Record<string, unknown> | null;
+  initiatedBy: Types.ObjectId;
+  reviewedBy: Types.ObjectId;
+  reason: string;
+}) {
+  await EmployeeChangeRequestModel.create({
+    changeType: params.changeType,
+    employeeId: params.employeeId,
+    proposedData: params.proposedData,
+    previousData: params.previousData,
+    reason: params.reason,
+    status: 'Reviewed',
+    initiatedBy: params.initiatedBy,
+    initiatedAt: new Date(),
+    reviewedBy: params.reviewedBy,
+    reviewedAt: new Date(),
+    reviewNote: null,
+  });
+}
+
 // HR reviews a flagged action — optionally corrects timeShift for compliance-created employees
 router.post('/:id/review', requirePermission('approve.employee_change'), async (req, res, next) => {
   try {
@@ -190,10 +217,23 @@ router.post('/:id/review', requirePermission('approve.employee_change'), async (
     } else if (body.action === 'remove'){
       if (doc.changeType !== 'create') throw new ApiError(400, 'invalid_action','remove is only valid for create requests');
       if (!doc.employeeId) throw new ApiError(400, 'missing_employee', 'No employee linked to this request');
+      const empBefore = await EmployeeModel.findOne({ _id: doc.employeeId }).lean();
       await EmployeeModel.updateOne(
         { _id: doc.employeeId },
         { $set: { isDeleted: true, status: 'Inactive', ...softDeleteFields(req.auth!.sub) } }
       );
+      if (empBefore) {
+        const { _id, __v, ...rest } = empBefore as Record<string, unknown>;
+        await logFollowUp({
+          changeType: 'delete',
+          employeeId: doc.employeeId,
+          previousData: { id: String(_id), ...rest },
+          proposedData: null,
+          initiatedBy: doc.initiatedBy,
+          reviewedBy: new Types.ObjectId(req.auth!.sub),
+          reason: 'Employee record deactivated.',
+        });
+      }
     } else if (body.action === 'revert') {
       if (doc.changeType !== 'update') throw new ApiError(400, 'invalid_action', 'revert is only valid for update requests');
       if (!doc.employeeId || !doc.previousData) throw new ApiError(400, 'missing_data','No previous data to revert to');
@@ -212,15 +252,42 @@ router.post('/:id/review', requirePermission('approve.employee_change'), async (
       for (const key of restoreFields){
         if (prev[key] !== undefined) restore[key] = prev[key];
       }
+      const empBefore = await EmployeeModel.findOne({ _id: doc.employeeId }).lean();
       await EmployeeModel.updateOne({ _id: doc.employeeId}, {$set: restore});
+      if (empBefore) {
+        const { _id, __v, ...rest } = empBefore as Record<string, unknown>;
+        await logFollowUp({
+          changeType: 'update',
+          employeeId: doc.employeeId,
+          previousData: { id: String(_id), ...rest },
+          proposedData: restore,
+          initiatedBy: doc.initiatedBy,
+          reviewedBy: new Types.ObjectId(req.auth!.sub),
+          reason: 'Follow-up correction to employee record.',
+        });
+      }
     } else if (body.action === 'reinstate'){
       if (doc.changeType !== 'delete') throw new ApiError(400, 'invalid_action', 'reinstate is only valid for delete requests');
       if (!doc.employeeId || !doc.previousData) throw new ApiError(400, 'missing_data', 'No previous data to reinstate from');
       const prev = doc.previousData as Record<string, unknown>;
+      const empBefore = await EmployeeModel.findOne({ _id: doc.employeeId }).lean();
+      const reinstatedStatus = prev.status ?? 'Active';
       await EmployeeModel.updateOne(
         { _id: doc.employeeId },
-        { $set: { isDeleted: false, status: prev.status ?? 'Active', ...clearSoftDeleteFields() } }
+        { $set: { isDeleted: false, status: reinstatedStatus, ...clearSoftDeleteFields() } }
       );
+      if (empBefore) {
+        const { _id, __v, ...rest } = empBefore as Record<string, unknown>;
+        await logFollowUp({
+          changeType: 'update',
+          employeeId: doc.employeeId,
+          previousData: { id: String(_id), ...rest },
+          proposedData: { status: reinstatedStatus },
+          initiatedBy: doc.initiatedBy,
+          reviewedBy: new Types.ObjectId(req.auth!.sub),
+          reason: 'Employee record reactivated.',
+        });
+      }
     }
 
     doc.status = 'Reviewed';

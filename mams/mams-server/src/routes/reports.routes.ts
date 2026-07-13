@@ -78,21 +78,65 @@ function projectionFor(viewMode: 'real' | 'compliant') {
 }
 
 // Daily Attendance Report
+// pageSize max is high enough (5000) to let Print-to-PDF/CSV-style callers fetch a
+// single large batch for a full report, while the on-screen table sticks to a much
+// smaller default (100) for a reasonable per-page render.
+const DailyPageSchema = FilterSchema.extend({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(5000).default(100),
+});
+
 router.get('/daily', hrReadGate, async (req, res, next) => {
   try {
-    const q = FilterSchema.parse(req.query);
+    const q = DailyPageSchema.parse(req.query);
     const attFilter = buildAttendanceFilter(q);
     const empIds = await buildEmployeeFilter(q);
     if (empIds) attFilter.employeeId = { $in: empIds };
 
-    const rows = await AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
-      .populate('employeeId', 'name empCode department location timeShift alternateShift')
-      .sort({ date: -1, 'employeeId.empCode': 1 })
-      .limit(5000)
-      .lean();
+    const skip = (q.page - 1) * q.pageSize;
 
-    const summary = summarise(rows);
-    res.json({ viewMode: req.auth!.viewMode, summary, rows });
+    // The row list is paginated, but the summary tiles are always computed from the
+    // full matching set - narrow date ranges used to silently drop older dates from
+    // both the table AND the present/absent counts before this was fixed.
+    const [rows, total, summaryAgg] = await Promise.all([
+      AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
+        .populate('employeeId', 'name empCode department location timeShift alternateShift')
+        .sort({ date: -1, 'employeeId.empCode': 1 })
+        .skip(skip)
+        .limit(q.pageSize)
+        .lean(),
+      AttendanceDerivedModel.countDocuments(attFilter),
+      AttendanceDerivedModel.aggregate<{
+        _id: null;
+        present: number;
+        absent: number;
+        weeklyOff: number;
+        halfDay: number;
+      }>([
+        { $match: attFilter },
+        {
+          $group: {
+            _id: null,
+            present: { $sum: { $cond: [{ $eq: ['$status', 'Present'] }, 1, 0] } },
+            absent: { $sum: { $cond: [{ $eq: ['$status', 'Absent'] }, 1, 0] } },
+            weeklyOff: { $sum: { $cond: [{ $eq: ['$status', 'Weekly Off'] }, 1, 0] } },
+            halfDay: { $sum: { $cond: [{ $eq: ['$status', 'Half Day'] }, 1, 0] } },
+          },
+        },
+      ]),
+    ]);
+
+    const agg = summaryAgg[0] ?? { present: 0, absent: 0, weeklyOff: 0, halfDay: 0 };
+    const summary = { total, present: agg.present, absent: agg.absent, weeklyOff: agg.weeklyOff, halfDay: agg.halfDay };
+
+    res.json({
+      viewMode: req.auth!.viewMode,
+      summary,
+      rows,
+      total,
+      page: q.page,
+      pageSize: q.pageSize,
+    });
   } catch (err) {
     next(err);
   }
@@ -137,7 +181,12 @@ router.get('/monthly', hrReadGate, async (req, res, next) => {
           totalCompliantHours: 1,
           totalRealNetHours: 1,
           totalOtHours: 1,
-          equivalentDays: { $divide: [req.auth!.viewMode === 'compliant' ? '$totalCompliantHours' : '$totalRealNetHours', 9.5] },
+          equivalentDays: {
+            $divide: [
+              req.auth!.viewMode === 'compliant' ? '$totalCompliantHours' : '$totalRealNetHours',
+              req.auth!.viewMode === 'compliant' ? 8 : 9.5,
+            ],
+          },
         },
       },
       { $sort: { empCode: 1 } },
@@ -269,11 +318,14 @@ router.get('/daily.csv', hrReadGate, async (req, res, next) => {
     const empIds = await buildEmployeeFilter(q);
     if (empIds) attFilter.employeeId = { $in: empIds };
 
-    const rows = await AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
-      .populate('employeeId', 'name empCode department location')
-      .sort({ date: -1 })
-      .limit(10000)
-      .lean();
+    const [rows, dailyCsvTotal] = await Promise.all([
+      AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
+        .populate('employeeId', 'name empCode department location')
+        .sort({ date: -1 })
+        .limit(10000)
+        .lean(),
+      AttendanceDerivedModel.countDocuments(attFilter),
+    ]);
 
     const isCompliant = req.auth!.viewMode === 'compliant';
     const header = isCompliant
@@ -323,6 +375,14 @@ router.get('/daily.csv', hrReadGate, async (req, res, next) => {
       '',
       ...dataLines,
       '',
+      ...(dailyCsvTotal > rows.length
+        ? [
+            csvEscape(
+              `NOTE: This export is limited to the first ${rows.length.toLocaleString()} of ${dailyCsvTotal.toLocaleString()} matching records. Narrow the date range for a complete export.`
+            ),
+            '',
+          ]
+        : []),
       ...buildCsvFooter(branding),
     ];
 
@@ -354,11 +414,14 @@ router.get('/daily.xlsx', hrReadGate, async (req, res, next) => {
     const empIds = await buildEmployeeFilter(q);
     if (empIds) attFilter.employeeId = { $in: empIds };
 
-    const rows = await AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
-      .populate('employeeId', 'name empCode department location')
-      .sort({ date: -1 })
-      .limit(10000)
-      .lean();
+    const [rows, dailyXlsxTotal] = await Promise.all([
+      AttendanceDerivedModel.find(attFilter, projectionFor(req.auth!.viewMode))
+        .populate('employeeId', 'name empCode department location')
+        .sort({ date: -1 })
+        .limit(10000)
+        .lean(),
+      AttendanceDerivedModel.countDocuments(attFilter),
+    ]);
 
     const isCompliant = req.auth!.viewMode === 'compliant';
     const headers = isCompliant
@@ -388,6 +451,11 @@ router.get('/daily.xlsx', hrReadGate, async (req, res, next) => {
         r.status ?? '',
       ];
     });
+
+    if (dailyXlsxTotal > rows.length) {
+      const note = `NOTE: This export is limited to the first ${rows.length.toLocaleString()} of ${dailyXlsxTotal.toLocaleString()} matching records. Narrow the date range for a complete export.`;
+      dataRows.push([note, ...Array(headers.length - 1).fill('')]);
+    }
 
     const settingsDoc = await SettingsModel.findOne().lean();
     const filename = buildExportFileName(
@@ -448,7 +516,7 @@ router.get('/monthly.xlsx', hrReadGate, async (req, res, next) => {
           equivalentDays: {
             $divide: [
               req.auth!.viewMode === 'compliant' ? '$totalCompliantHours' : '$totalRealNetHours',
-              9.5,
+              req.auth!.viewMode === 'compliant' ? 8 : 9.5,
             ],
           },
         },
@@ -541,7 +609,7 @@ router.get('/monthly.csv', hrReadGate, async (req, res, next) => {
           equivalentDays: {
             $divide: [
               req.auth!.viewMode === 'compliant' ? '$totalCompliantHours' : '$totalRealNetHours',
-              9.5,
+              req.auth!.viewMode === 'compliant' ? 8 : 9.5,
             ],
           },
         },
@@ -972,15 +1040,5 @@ function csvEscape(s: string) {
   return s;
 }
 
-function summarise(rows: any[]) {
-  const out = { total: rows.length, present: 0, absent: 0, weeklyOff: 0, halfDay: 0 };
-  for (const r of rows) {
-    if (r.status === 'Present') out.present += 1;
-    else if (r.status === 'Absent') out.absent += 1;
-    else if (r.status === 'Weekly Off') out.weeklyOff += 1;
-    else if (r.status === 'Half Day') out.halfDay += 1;
-  }
-  return out;
-}
 
 export default router;

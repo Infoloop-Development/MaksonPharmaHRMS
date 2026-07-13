@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { smartAnchorV2, decomposeHours, COMPLIANCE_WINDOWS } from '../src/services/smartAnchor.js';
+import { smartAnchorV3, decomposeHours, COMPLIANCE_WINDOWS } from '../src/services/smartAnchor.js';
 import { hashString, seededRandom } from '../src/utils/prng.js';
 
 describe('PRNG', () => {
@@ -40,7 +40,7 @@ describe('PRNG', () => {
   });
 });
 
-describe('Smart Anchor v2 - determinism', () => {
+describe('Smart Anchor v3 - determinism', () => {
   const baseInput = {
     employeeId: '507f1f77bcf86cd799439011',
     date: '2026-04-30',
@@ -50,30 +50,49 @@ describe('Smart Anchor v2 - determinism', () => {
   };
 
   it('same input always produces same output', () => {
-    const out1 = smartAnchorV2(baseInput);
-    const out2 = smartAnchorV2(baseInput);
-    const out3 = smartAnchorV2(baseInput);
+    const out1 = smartAnchorV3(baseInput);
+    const out2 = smartAnchorV3(baseInput);
+    const out3 = smartAnchorV3(baseInput);
     expect(out1.compliantEntryAt.getTime()).toBe(out2.compliantEntryAt.getTime());
     expect(out2.compliantEntryAt.getTime()).toBe(out3.compliantEntryAt.getTime());
     expect(out1.compliantExitAt.getTime()).toBe(out2.compliantExitAt.getTime());
+    expect(out1.compliantHours).toBe(out2.compliantHours);
   });
 
   it('different employees on same date produce different outputs', () => {
-    const a = smartAnchorV2({ ...baseInput, employeeId: 'emp-a' });
-    const b = smartAnchorV2({ ...baseInput, employeeId: 'emp-b' });
+    const a = smartAnchorV3({ ...baseInput, employeeId: 'emp-a' });
+    const b = smartAnchorV3({ ...baseInput, employeeId: 'emp-b' });
     // Almost certainly different given different seed - statistical, not absolute.
     expect(a.compliantEntryAt.getTime()).not.toBe(b.compliantEntryAt.getTime());
   });
 
-  it('compliant exit is exactly 8 hours after compliant entry', () => {
-    const out = smartAnchorV2(baseInput);
-    const diffMs = out.compliantExitAt.getTime() - out.compliantEntryAt.getTime();
-    expect(diffMs).toBe(8 * 60 * 60 * 1000);
+  it('compliant hours vary across employees instead of being pinned to a flat 8.0', () => {
+    const hours = Array.from({ length: 20 }, (_, i) =>
+      smartAnchorV3({ ...baseInput, employeeId: `emp-${i}` }).compliantHours
+    );
+    const distinctValues = new Set(hours);
+    // v2 produced the same 8.0 for every employee, every day - that was the bug.
+    expect(distinctValues.size).toBeGreaterThan(1);
+  });
+
+  it('compliant exit stays close to shift start + 8 hours, never collapsing the shift', () => {
+    for (const shift of ['A', 'B', 'C'] as const) {
+      for (let i = 0; i < 10; i++) {
+        const out = smartAnchorV3({ ...baseInput, alternateShift: shift, employeeId: `emp-${i}` });
+        const diffMs = out.compliantExitAt.getTime() - out.compliantEntryAt.getTime();
+        const diffHours = diffMs / 3_600_000;
+        // Entry offset up to 30min late, exit jitter -15..+9min around shift end:
+        // worst case duration is 8h - 30min - 15min = 7h15m; best case 8h + 9min.
+        expect(diffHours).toBeGreaterThanOrEqual(7.25);
+        expect(diffHours).toBeLessThanOrEqual(8 + 9 / 60);
+        expect(out.compliantExitAt.getTime()).toBeGreaterThan(out.compliantEntryAt.getTime());
+      }
+    }
   });
 
   it('compliant entry falls within the assigned shift window', () => {
     for (const shift of ['A', 'B', 'C'] as const) {
-      const out = smartAnchorV2({ ...baseInput, alternateShift: shift });
+      const out = smartAnchorV3({ ...baseInput, alternateShift: shift });
       const istHours = out.compliantEntryAt.getUTCHours() + 5.5; // crude IST projection for test
       const istHourLocal = ((istHours % 24) + 24) % 24;
       const expectedStart = COMPLIANCE_WINDOWS[shift].startHour;
@@ -84,8 +103,8 @@ describe('Smart Anchor v2 - determinism', () => {
   });
 
   it('returns a smartAnchorVersion tag', () => {
-    const out = smartAnchorV2(baseInput);
-    expect(out.smartAnchorVersion).toBe('v2.0.0');
+    const out = smartAnchorV3(baseInput);
+    expect(out.smartAnchorVersion).toBe('v3.0.0');
   });
 });
 

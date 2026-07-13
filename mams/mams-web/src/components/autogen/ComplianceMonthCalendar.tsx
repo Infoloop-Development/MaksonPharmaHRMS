@@ -128,6 +128,9 @@ export function ComplianceMonthCalendar({ weeks }: { weeks: MonthlyPlanDay[][] }
         <span className="inline-flex items-center gap-1.5">
           <span className="w-3 h-3 rounded bg-surface2 border border-border" /> Weekly Off
         </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-surface border border-border/70" /> Unassigned
+        </span>
       </div>
       <p className="mt-2 text-[11px] text-text-subtle">
         Times are <span className="font-mono">HH:mm:ss</span> (24-hour). Hours are decimal. Hover a day for full

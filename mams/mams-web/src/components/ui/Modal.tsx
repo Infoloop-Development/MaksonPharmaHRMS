@@ -41,16 +41,18 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 sm:px-6 py-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface rounded-t-lg">
-          <h2 className="text-base sm:text-lg font-bold pr-2">{title}</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center"
+            className="w-8 h-8 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0"
             aria-label="Close"
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
         </div>
-        <div className="px-4 sm:px-6 py-5 overflow-y-auto flex-1">{children}</div>
+        <div className="px-8 sm:px-10 py-8 overflow-y-auto flex-1">{children}</div>
         {footer && (
           <div className="px-4 sm:px-6 py-4 border-t border-border bg-surface2 rounded-b-lg flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sticky bottom-0 [&_.btn]:w-full sm:[&_.btn]:w-auto">
             {footer}

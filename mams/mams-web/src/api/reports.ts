@@ -5,6 +5,9 @@ export interface DailyReport {
   viewMode: 'real' | 'compliant';
   summary: { total: number; present: number; absent: number; weeklyOff: number; halfDay: number };
   rows: Array<Record<string, any>>;
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface MonthlyReport {
@@ -63,8 +66,20 @@ function buildParams(q: Record<string, string | undefined>) {
 }
 
 export const reportsApi = {
-  daily: (q: { date?: string; startDate?: string; endDate?: string; department?: string; location?: string } = {}) =>
-    api.get<DailyReport>(`/reports/daily?${buildParams(q)}`),
+  daily: (
+    q: {
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      department?: string;
+      location?: string;
+      page?: number;
+      pageSize?: number;
+    } = {}
+  ) =>
+    api.get<DailyReport>(
+      `/reports/daily?${buildParams({ ...q, page: q.page?.toString(), pageSize: q.pageSize?.toString() })}`
+    ),
   monthly: (q: { yearMonth: string; department?: string; location?: string }) =>
     api.get<MonthlyReport>(`/reports/monthly?${buildParams(q)}`),
   department: (q: { yearMonth?: string; startDate?: string; endDate?: string; location?: string } = {}) =>

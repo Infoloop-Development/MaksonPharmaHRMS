@@ -1,4 +1,4 @@
-import { useState, useCallback, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ComplianceShift } from '@mams/types';
 import {
@@ -78,6 +78,7 @@ export type ComplianceAttendancePanelProps = {
   tableToolbar?: ReactNode | ((ctx: { shiftFilter: ShiftFilter }) => ReactNode);
   onEditRow?: (row: ComplianceAttendanceRow) => void;
   emptyDefaultMessage?: string;
+  onTotalChange?: (total: number | null) => void;
 };
 
 export function ComplianceAttendancePanel({
@@ -89,6 +90,7 @@ export function ComplianceAttendancePanel({
   tableToolbar,
   onEditRow,
   emptyDefaultMessage = 'No attendance records yet. Use Generate or wait for nightly autogen at 00:00 IST.',
+  onTotalChange,
 }: ComplianceAttendancePanelProps) {
   const { fmtTime } = useTimeDisplay();
   const qc = useQueryClient();
@@ -101,7 +103,7 @@ export function ComplianceAttendancePanel({
   const pageSize = 50;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['compliance-attendance', { search, date, shiftFilter, page, sortBy, sortDir }],
+    queryKey: ['compliance-attendance', { search, date, shiftFilter, page, sortBy, sortDir, pageSize }],
     queryFn: () =>
       complianceAttendanceApi.list({
         search: search.trim() || undefined,
@@ -113,6 +115,10 @@ export function ComplianceAttendancePanel({
         sortDir,
       }),
   });
+
+  useEffect(() => {
+    onTotalChange?.(isLoading ? null : (data?.total ?? 0));
+  }, [onTotalChange, isLoading, data?.total]);
 
   const toggleSort = useCallback((col: string) => {
     setSortBy((prev) => {
@@ -255,6 +261,8 @@ export function ComplianceAttendancePanel({
           ) : undefined
         }
         desktopClassName="hidden md:flex flex-row gap-3 flex-wrap"
+        noCard
+        className="mb-3"
       >
         <div className="w-full sm:w-auto">
           <input
@@ -329,8 +337,13 @@ export function ComplianceAttendancePanel({
               )}
               {!isLoading && items.length === 0 && (
                 <tr>
-                  <td colSpan={colSpan} className="px-4 py-10 text-center text-text-muted">
-                    {emptyMessage}
+                  <td colSpan={colSpan} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3 text-text-muted">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-25">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      <p className="text-sm">{emptyMessage}</p>
+                    </div>
                   </td>
                 </tr>
               )}

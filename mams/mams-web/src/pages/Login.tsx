@@ -8,6 +8,7 @@ import { useAuth } from '../store/auth';
 import { defaultHomePath } from '@mams/types';
 import { resetSessionStart } from '../lib/bugReport';
 import { AuthBrandHeader } from '../components/AuthBrandHeader';
+import { PasswordInput } from '../components/ui/PasswordInput';
 import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
 import { safeReturnPath } from '../lib/safeReturnPath';
 
@@ -55,9 +56,9 @@ export function Login() {
         <h1 className="text-2xl font-bold text-text mb-1">Attendance Management</h1>
         <p className="text-text-muted text-sm mb-7">Sign in to continue</p>
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-5">
           <div>
-            <label className="label">Email</label>
+            <label className="label !mb-2">Email</label>
             <input
               className="input"
               value={email}
@@ -67,9 +68,8 @@ export function Login() {
             />
           </div>
           <div>
-            <label className="label">Password</label>
-            <input
-              type="password"
+            <label className="label !mb-2">Password</label>
+            <PasswordInput
               className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

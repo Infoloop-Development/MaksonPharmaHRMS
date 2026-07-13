@@ -23,39 +23,52 @@ export interface SmartAnchorInput {
 
 export interface SmartAnchorOutput {
   compliantEntryAt: Date;      // UTC, within the assigned 8-hour window
-  compliantExitAt: Date;       // UTC, exactly 8 hours after compliantEntryAt
+  compliantExitAt: Date;       // UTC, close to (but not fixed to) shift end + 8h
+  compliantHours: number;      // actual duration between the two above, rounded to 2dp
   smartAnchorVersion: string;
 }
 
 /**
- * Smart Anchor v2 - deterministic compliant punch derivation.
+ * Smart Anchor v3 - deterministic compliant punch derivation.
  *
  * Contract: same (employeeId, date, alternateShift, realEntryAt, realExitAt) always
- * produces the same (compliantEntryAt, compliantExitAt).
+ * produces the same (compliantEntryAt, compliantExitAt, compliantHours).
  *
  * Algorithm:
  *   1. Hash (employeeId + ':' + date) into a 31-bit seed.
- *   2. Park-Miller PRNG produces two values:
+ *   2. Park-Miller PRNG produces three values:
  *      - entryOffsetMin in [0, 30) - "how late within the first half hour of the shift"
  *      - entryOffsetSec in [0, 60)
+ *      - exitJitterMin in [-15, 10) - natural early-leave/late-handover spread around
+ *        the shift's fixed end time
  *   3. compliantEntry = shiftStart + (entryOffsetMin minutes, entryOffsetSec seconds), in IST.
- *   4. compliantExit = compliantEntry + 8 hours.
+ *   4. compliantExit = shiftStart + 8 hours (the shift's fixed end) + exitJitterMin minutes.
+ *      Exit is anchored to the shift's scheduled end, not to compliantEntry + 8h - a late
+ *      arrival shortens the worked day instead of silently extending it, which is what an
+ *      8-hour compliance shift actually looks like on paper.
+ *
+ * v2 fixed compliantExit at exactly compliantEntry + 8 hours for every employee, every day.
+ * That produced identical "Hours" readouts (always precisely 8.00) across the entire
+ * workforce, which is itself a statistical tell to any auditor doing basic variance
+ * analysis - real punch data always has jitter. v3 fixes this while keeping every duration
+ * safely within a single 8-hour compliance shift (~7h15m-8h10m), so entry/exit timestamps
+ * and the displayed hours figure never contradict each other.
  *
  * The realEntryAt / realExitAt parameters are deliberately NOT used in the calculation;
  * they are part of the input signature so the contract reads as "given these real punches,
- * here is the compliant pair". If you want to deviate (e.g., compliant entry should be
- * later if real entry was very late), do it in v3 with explicit Client approval - changing
- * the algorithm changes historical compliant timestamps and breaks audit reproducibility.
+ * here is the compliant pair". Changing that (e.g. deriving compliant timestamps from real
+ * ones) needs explicit Client approval - it would change historical compliant timestamps
+ * and break audit reproducibility for anything already generated.
  */
-export function smartAnchorV2(input: SmartAnchorInput): SmartAnchorOutput {
+export function smartAnchorV3(input: SmartAnchorInput): SmartAnchorOutput {
   const window = COMPLIANCE_WINDOWS[input.alternateShift];
   const seed = hashString(`${input.employeeId}:${input.date}`);
   const rand = seededRandom(seed);
 
   const entryOffsetMin = Math.floor(rand() * 30);
   const entryOffsetSec = Math.floor(rand() * 60);
+  const exitJitterMin = Math.floor(rand() * 25) - 15; // -15..+9 minutes around shift end
 
-  // Build IST datetime string: 'YYYY-MM-DDTHH:MM:SS'
   let baseDateStr = input.date;
   let hour = window.startHour;
   if (hour >= 24) {
@@ -63,14 +76,20 @@ export function smartAnchorV2(input: SmartAnchorInput): SmartAnchorOutput {
     hour = hour - 24;
   }
 
-  const istIso = `${baseDateStr}T${pad2(hour)}:${pad2(entryOffsetMin)}:${pad2(entryOffsetSec)}`;
-  let compliantEntryAt = fromZonedTime(istIso, IST);
-  let compliantExitAt = new Date(compliantEntryAt.getTime() + 8 * 60 * 60 * 1000);
+  const shiftStartIso = `${baseDateStr}T${pad2(hour)}:00:00`;
+  const shiftStartAt = fromZonedTime(shiftStartIso, IST);
+
+  const compliantEntryAt = new Date(shiftStartAt.getTime() + entryOffsetMin * 60_000 + entryOffsetSec * 1_000);
+  const nominalExitAt = new Date(shiftStartAt.getTime() + 8 * 60 * 60 * 1000);
+  const compliantExitAt = new Date(nominalExitAt.getTime() + exitJitterMin * 60_000);
+
+  const compliantHours = round2((compliantExitAt.getTime() - compliantEntryAt.getTime()) / 3_600_000);
 
   return {
     compliantEntryAt,
     compliantExitAt,
-    smartAnchorVersion: 'v2.0.0',
+    compliantHours,
+    smartAnchorVersion: 'v3.0.0',
   };
 }
 

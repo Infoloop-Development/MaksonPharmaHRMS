@@ -8,12 +8,9 @@ const SHIFT_LABELS: Record<ComplianceShift, string> = {
 
 export { AttendanceStatusPill } from '../dashboard/dashboardAttendanceUi';
 
+// Matches the shift accent colors used by the stat tiles in ComplianceAttendancePanel (A=green, B=amber, C=red).
 export function ComplianceShiftPill({ shift }: { shift: ComplianceShift }) {
   const className =
-    shift === 'A'
-      ? 'dash-pill-blue'
-      : shift === 'B'
-        ? 'dash-pill-amber'
-        : 'dash-pill bg-surface2 text-text-muted';
+    shift === 'A' ? 'dash-pill-green' : shift === 'B' ? 'dash-pill-amber' : 'dash-pill-red';
   return <span className={className}>{SHIFT_LABELS[shift]}</span>;
 }

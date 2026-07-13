@@ -9,6 +9,7 @@ import { ApiError } from '../middleware/error.js';
 import {
   buildComplianceMonthlyReportXlsx,
   complianceReportFilename,
+  realLeaveDatesByEmployeeForMonth,
   REPORT_BUILD_MAX_MS,
   REPORT_BUILD_YIELD_EVERY,
   resolveComplianceReportEmployees,
@@ -20,6 +21,7 @@ import {
   financialReportFilename,
 } from './complianceFinancialReport.service.js';
 import { XLSX_CONTENT_TYPE } from './plainXlsx.service.js';
+import { saveReportFile, readReportFile, deleteReportFile } from './reportFile.storage.js';
 import { logger } from '../utils/logger.js';
 
 export const REPORT_TOO_LARGE_EMPLOYEES = 3000;
@@ -116,12 +118,14 @@ export async function getReportJobDownload(
     throw new ApiError(403, 'forbidden', 'Not allowed to download this report');
   }
 
-  if (doc.status !== 'completed' || !doc.fileData || !doc.filename) {
+  if (doc.status !== 'completed' || !doc.filePath || !doc.filename) {
     throw new ApiError(409, 'not_ready', 'Report is not ready for download yet');
   }
 
+  const buffer = await readReportFile(doc.filePath);
+
   return {
-    buffer: doc.fileData,
+    buffer,
     filename: doc.filename,
     mimeType: doc.mimeType ?? XLSX_CONTENT_TYPE,
   };
@@ -164,6 +168,7 @@ async function completeJob(
   filename: string,
   employeeCount: number | null
 ): Promise<void> {
+  const filePath = await saveReportFile(String(jobId), buffer, filename);
   await ReportJobModel.updateOne(
     { _id: jobId },
     {
@@ -171,7 +176,7 @@ async function completeJob(
         status: 'completed',
         filename,
         mimeType: XLSX_CONTENT_TYPE,
-        fileData: buffer,
+        filePath,
         employeeCount,
         processedCount: employeeCount,
         completedAt: new Date(),
@@ -205,6 +210,7 @@ export async function runReportJob(job: ReportJobDoc): Promise<void> {
     const overrides = (job.overrides ?? []) as ComplianceReportOverride[];
     const employees = await resolveComplianceReportEmployees(job.yearMonth, overrides);
     const employeeCount = employees.length;
+    const realLeaveDatesByEmployee = await realLeaveDatesByEmployeeForMonth(job.yearMonth);
 
     await ReportJobModel.updateOne({ _id: jobId }, { $set: { employeeCount } });
 
@@ -216,7 +222,7 @@ export async function runReportJob(job: ReportJobDoc): Promise<void> {
     let buffer: Buffer;
     try {
       buffer = await buildComplianceMonthlyReportXlsx(
-        { yearMonth: job.yearMonth, employees },
+        { yearMonth: job.yearMonth, employees, realLeaveDatesByEmployee },
         { startedAt, onProgress }
       );
     } catch (err) {
@@ -252,6 +258,15 @@ export async function runReportJob(job: ReportJobDoc): Promise<void> {
 }
 
 export async function purgeExpiredReportJobs(): Promise<number> {
+  const expired = await ReportJobModel.find({
+    expiresAt: { $lte: new Date() },
+    filePath: { $ne: null },
+  })
+    .select('filePath')
+    .lean();
+
+  await Promise.all(expired.map((doc) => deleteReportFile(doc.filePath!)));
+
   const result = await ReportJobModel.deleteMany({
     expiresAt: { $lte: new Date() },
   });

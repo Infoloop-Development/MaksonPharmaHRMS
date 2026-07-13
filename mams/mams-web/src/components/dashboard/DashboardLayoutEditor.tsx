@@ -100,9 +100,9 @@ export function DashboardLayoutEditor({
       return true;
     }
     if (activeBlockId === 'table' || overBlockId === 'table') {
-      setDragBlockedMsg('Table must stay full width; use presets or drag onto a chart to move top/bottom.');
+      setDragBlockedMsg('The table must stay full width — drag it onto a chart to move it above or below, or use the presets.');
     } else {
-      setDragBlockedMsg('Drag Bar onto Donut (or vice versa) to swap chart order.');
+      setDragBlockedMsg('Drag one chart onto the other to swap their order.');
     }
     return false;
   };

@@ -20,9 +20,9 @@ export function DashboardLayoutGuide({
 
   return (
     <div className="dash-layout-guide" data-tour-id="dashboard-layout-guide">
-      <p className="text-xs text-text-muted mb-2">
-        Drag Bar ↔ Donut to swap charts. Drag table onto a chart to move it top or bottom. Table is
-        always full width. Save to apply.
+      <p className="text-xs text-text-muted mb-4">
+        Drag the two charts onto each other to swap their order, or drag the table onto a chart to
+        move it above or below. The table always spans full width.
       </p>
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
         <div className="min-w-0">

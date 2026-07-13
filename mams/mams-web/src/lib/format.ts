@@ -79,10 +79,24 @@ export function fmtIstDateTimeMs(d: Date | string | null): string {
 }
 
 export function fmtDate(yyyymmdd: string): string {
-  // 'YYYY-MM-DD' -> 'DD/MM/YYYY' for Indian display convention.
   if (!yyyymmdd) return '-';
-  const [y, m, d] = yyyymmdd.split('-');
-  return `${d}/${m}/${y}`;
+  const date = new Date(`${yyyymmdd}T12:00:00+05:30`);
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
+/** Full weekday name from YYYY-MM-DD in IST (e.g. Monday, Friday). */
+export function fmtWeekdayFull(yyyymmdd: string): string {
+  if (!yyyymmdd) return '-';
+  const date = new Date(`${yyyymmdd}T12:00:00+05:30`);
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: IST,
+    weekday: 'long',
+  }).format(date);
 }
 
 /** Short weekday from YYYY-MM-DD in IST (e.g. Mon, Tue). */

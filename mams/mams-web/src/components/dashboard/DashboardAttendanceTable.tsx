@@ -17,7 +17,7 @@ import { brandingFromSettings } from '../../lib/companyBranding';
 import { useTimeDisplay } from '../../store/timeFormat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useToast } from '../ui/Toast';
-import { EMPTY_CELL, fmtHours, fmtWeekdayShort } from '../../lib/format';
+import { EMPTY_CELL, fmtDate, fmtHours, fmtWeekdayFull } from '../../lib/format';
 import { useTableSort } from '../../lib/tableSort';
 import { DashboardAttendanceCardList } from './DashboardAttendanceCardList';
 import {
@@ -283,7 +283,7 @@ export function DashboardAttendanceTable({
   };
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
-  const weekday = selectedDate ? fmtWeekdayShort(selectedDate) : '';
+  const weekday = selectedDate ? fmtWeekdayFull(selectedDate) : '';
   const filterDefaults = { department: '', shift: 'All' as ShiftFilter, status: 'All' as StatusFilter };
   const activeCount = countActiveFilters({ department, shift, status }, filterDefaults);
 
@@ -291,7 +291,7 @@ export function DashboardAttendanceTable({
     <>
       <button
         type="button"
-        className="btn-outline shrink-0"
+        className="btn-outline shrink-0 min-h-[44px] sm:min-h-0"
         onClick={() => void onExportExcel()}
         disabled={exporting !== null || isInitialLoad}
       >
@@ -321,7 +321,7 @@ export function DashboardAttendanceTable({
 
   const filterFields = (
     <>
-      <select className="w-full" value={department} onChange={(e) => setDepartment(e.target.value)}>
+      <select className="input w-full" value={department} onChange={(e) => setDepartment(e.target.value)}>
         <option value="">All Depts</option>
         {(departmentsData?.departments ?? []).map((d) => (
           <option key={d} value={d}>
@@ -329,13 +329,13 @@ export function DashboardAttendanceTable({
           </option>
         ))}
       </select>
-      <select className="w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
+      <select className="input w-full" value={shift} onChange={(e) => onShiftFilterChange(e.target.value as ShiftFilter)}>
         <option value="All">All Time Shifts</option>
         <option value="Day">{dayShiftLabel}</option>
         <option value="Night">{nightShiftLabel}</option>
       </select>
       <select
-        className="w-full"
+        className="input w-full"
         value={status}
         onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}
       >
@@ -358,7 +358,7 @@ export function DashboardAttendanceTable({
     <div className="dash-table-card" data-tour-id={cardTourId ?? 'dashboard-attendance-table'}>
       <div className="dash-table-header">
         <h3>
-          Attendance - {selectedDate}
+          Attendance — {fmtDate(selectedDate)}
           {weekday !== '-' && ` (${weekday})`}
         </h3>
         <MobileFilterBar
@@ -444,33 +444,33 @@ export function DashboardAttendanceTable({
               ) : (
                 <>
                   <th
-                    className={sortCol === 'name' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'name' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('name')}
                   >
                     Employee <span className="sort-arrow">{dashboardSortArrow('name')}</span>
                   </th>
-                  <th className={sortCol === 'id' ? 'sorted' : ''} onClick={() => toggleDashboardSort('id')}>
+                  <th className={`!text-center ${sortCol === 'id' ? 'sorted' : ''}`} onClick={() => toggleDashboardSort('id')}>
                     ID <span className="sort-arrow">{dashboardSortArrow('id')}</span>
                   </th>
                   <th
-                    className={sortCol === 'dept' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'dept' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('dept')}
                   >
                     Department <span className="sort-arrow">{dashboardSortArrow('dept')}</span>
                   </th>
                   <th
-                    className={sortCol === 'shift' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'shift' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('shift')}
                   >
                     Shift <span className="sort-arrow">{dashboardSortArrow('shift')}</span>
                   </th>
-                  <th>Entry</th>
-                  <th>Exit</th>
-                  <th className={sortCol === 'hrs' ? 'sorted' : ''} onClick={() => toggleDashboardSort('hrs')}>
+                  <th className="!text-center">Entry</th>
+                  <th className="!text-center">Exit</th>
+                  <th className={`!text-center ${sortCol === 'hrs' ? 'sorted' : ''}`} onClick={() => toggleDashboardSort('hrs')}>
                     Hours <span className="sort-arrow">{dashboardSortArrow('hrs')}</span>
                   </th>
                   <th
-                    className={sortCol === 'status' ? 'sorted' : ''}
+                    className={`!text-center ${sortCol === 'status' ? 'sorted' : ''}`}
                     onClick={() => toggleDashboardSort('status')}
                   >
                     Status <span className="sort-arrow">{dashboardSortArrow('status')}</span>
@@ -509,22 +509,22 @@ export function DashboardAttendanceTable({
                     ))
                   ) : (
                     <>
-                      <td>
+                      <td className="text-center">
                         <Link to={`/employees/${row.employeeId}`} className="dash-emp-link">
                           {row.employeeName}
                         </Link>
                       </td>
-                      <td className="font-mono text-[11px]">{row.empCode}</td>
-                      <td>{row.department}</td>
-                      <td>
+                      <td className="font-mono text-[11px] text-center">{row.empCode}</td>
+                      <td className="text-center">{row.department}</td>
+                      <td className="text-center">
                         <AttendanceShiftPill shift={row.timeShift} />
                       </td>
-                      <td className="dash-time">{formatCell(row.entryStamp)}</td>
-                      <td className="dash-time">{formatCell(row.exitStamp)}</td>
-                      <td className="dash-time">
+                      <td className="dash-time text-center">{formatCell(row.entryStamp)}</td>
+                      <td className="dash-time text-center">{formatCell(row.exitStamp)}</td>
+                      <td className="dash-time text-center">
                         {row.totalHoursWorked != null ? fmtHours(row.totalHoursWorked) : '-'}
                       </td>
-                      <td>
+                      <td className="text-center">
                         <AttendanceStatusPill status={row.displayStatus} />
                       </td>
                     </>
@@ -581,7 +581,7 @@ export function DashboardAttendanceTable({
             </span>
           )}
         </div>
-        <span>{selectedDate}</span>
+        <span>{fmtDate(selectedDate)}</span>
       </div>
     </div>
   );

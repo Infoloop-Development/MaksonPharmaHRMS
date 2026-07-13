@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 import { fmtIstHeaderDate } from '../lib/format';
 import { useTimeDisplay } from '../store/timeFormat';
+import { formatIstInstantNoSeconds } from '../lib/timeFormat';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { NotificationBell } from './notifications/NotificationBell';
@@ -21,7 +22,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
     return () => clearInterval(t);
   }, []);
 
-  const { fmtTime } = useTimeDisplay();
+  const { format } = useTimeDisplay();
   const refreshToken = useAuth((s) => s.refreshToken);
   const clear = useAuth((s) => s.clear);
   const qc = useQueryClient();
@@ -75,7 +76,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
                 className={isOnline ? 'live-dot' : 'live-dot live-dot-offline'}
                 aria-label={isOnline ? 'Online' : 'Offline'}
               />
-              {fmtTime(now)}
+              {formatIstInstantNoSeconds(now, format)}
             </div>
             <div className="app-topbar-clock-date">{fmtIstHeaderDate(now)}</div>
           </div>
@@ -86,7 +87,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
             </div>
           )}
 
-          <div className="relative flex items-center shrink-0 pl-2 md:pl-3 border-l border-border" ref={profileMenuRef}>
+          <div className="relative flex items-center shrink-0 pl-3 md:pl-4 border-l border-border" ref={profileMenuRef}>
             <button
               type="button"
               onClick={() => setProfileMenuOpen((v) => !v)}
@@ -95,7 +96,7 @@ export function TopBar({ onOpenMenu }: { onOpenMenu: () => void }) {
               aria-label={user?.name ? `Account menu for ${user.name}` : 'Account menu'}
               className="flex items-center px-1"
             >
-              <span className="w-7 h-7 rounded-md bg-primary-bg flex items-center justify-center font-bold text-[10px] text-primary-on-bg shrink-0">
+              <span className="w-8 h-8 rounded-md bg-primary-bg flex items-center justify-center font-bold text-[11px] text-primary-on-bg shrink-0">
                 {(user?.name ?? '??')
                   .split(' ')
                   .map((s) => s[0])

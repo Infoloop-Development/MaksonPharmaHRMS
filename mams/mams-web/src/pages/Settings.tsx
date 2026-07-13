@@ -10,7 +10,7 @@ import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { UserCardList } from '../components/settings/UserCardList';
 import { Field, Input, Select, Textarea, Toggle } from '../components/ui/Field';
-import { PasswordRevealToggle } from '../components/ui/PasswordRevealToggle';
+import { PasswordRevealToggle } from '../components/ui/PasswordInput';
 import type { ExportNamingSettings, OrgNotificationAlerts, Permission, Role, SensitiveUnmaskField, TimeFormat, UserPublic } from '@mams/types';
 import { TIME_FORMAT_LABELS } from '../lib/timeFormat';
 import { useTimeDisplay } from '../store/timeFormat';

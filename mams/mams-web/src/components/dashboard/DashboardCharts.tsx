@@ -18,6 +18,7 @@ export function DashboardCharts(props: UseDashboardChartStateProps) {
         barLabel={state.barLabel}
         barMetric={state.barMetric}
         hasChartData={state.hasChartData}
+        resetBarHover={state.resetBarHover}
       />
       <DashboardDonutChartCard
         isInitialLoad={state.isInitialLoad}

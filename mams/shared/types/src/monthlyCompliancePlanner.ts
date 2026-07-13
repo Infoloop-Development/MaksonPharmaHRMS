@@ -59,6 +59,8 @@ export interface MonthlyPlanInput {
   involvedPersonnel?: string;
   /** Per-employee seed namespace (defaults to yearMonth). */
   seedNamespace?: string;
+  /** Employee's real approved (full-day) leave dates within this month, if known. */
+  realLeaveDates?: string[];
 }
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -312,6 +314,17 @@ export function computeMonthlyPlan(input: MonthlyPlanInput): MonthlyPlanResult |
     presentDays = BASELINE_WORKING_DAYS - leaveDays;
   }
 
+  // Real approved leave always counts, even if the hours math alone wouldn't have
+  // implied this many leave days (e.g. an hour shortfall from something other than
+  // leave elsewhere in the month) - leave shouldn't get silently dropped from the
+  // calendar just because the reconciliation math didn't strictly need it.
+  const eligibleSet = new Set(eligibleWeekdays);
+  const realLeaveInEligible = (input.realLeaveDates ?? []).filter((d) => eligibleSet.has(d));
+  const realLeaveSet = new Set(realLeaveInEligible);
+
+  leaveDays = Math.max(leaveDays, realLeaveSet.size);
+  presentDays = Math.max(0, BASELINE_WORKING_DAYS - leaveDays);
+
   const calendarLeaveDays = Math.min(leaveDays, eligibleWeekdays.length);
   const calendarPresentDays = Math.min(
     presentDays,
@@ -321,8 +334,12 @@ export function computeMonthlyPlan(input: MonthlyPlanInput): MonthlyPlanResult |
     eligibleWeekdays.length < BASELINE_WORKING_DAYS ||
     calendarPresentDays + calendarLeaveDays < presentDays + leaveDays;
 
-  const shuffled = shuffleSeeded(eligibleWeekdays, `${seedNs}:leave`);
-  const leaveSet = new Set(shuffled.slice(0, calendarLeaveDays));
+  // Real leave dates are placed directly, never left to chance; the seeded shuffle
+  // only fills in the remainder of calendarLeaveDays from the non-leave pool.
+  const shuffleCandidates = eligibleWeekdays.filter((d) => !realLeaveSet.has(d));
+  const shuffled = shuffleSeeded(shuffleCandidates, `${seedNs}:leave`);
+  const extraLeaveNeeded = Math.max(0, calendarLeaveDays - realLeaveSet.size);
+  const leaveSet = new Set([...realLeaveInEligible, ...shuffled.slice(0, extraLeaveNeeded)]);
   const presentSet = new Set(
     shuffled.filter((d) => !leaveSet.has(d)).slice(0, calendarPresentDays)
   );

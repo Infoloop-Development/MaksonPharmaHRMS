@@ -12,6 +12,7 @@ import { connectDb, disconnectDb } from '../src/config/db.js';
 import { EmployeeModel } from '../src/models/Employee.js';
 import { AttendanceRawModel } from '../src/models/AttendanceRaw.js';
 import { AttendanceDerivedModel } from '../src/models/AttendanceDerived.js';
+import { LeaveApplicationModel } from '../src/models/LeaveApplication.js';
 import { recomputeDerived } from '../src/services/attendance.service.js';
 import { hashString, seededRandom } from '../src/utils/prng.js';
 import { utcToIstDateString } from '../src/utils/time.js';
@@ -19,7 +20,8 @@ import { logger } from '../src/utils/logger.js';
 import { buildLastNSeedDaysEnding } from './seedDateRanges.js';
 import { buildSeedPunchesForEmployee } from './attendancePunchGenerator.js';
 
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+// Monday = 0 … Sunday = 6 — matches day.weekdayIdx from dayIdxFromDateString (seedDateRanges.ts).
+const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 
 function resolveEndDate(): string {
   const fromEnv = process.env.SEED_ATTENDANCE_END_DATE?.trim();
@@ -60,6 +62,31 @@ async function main() {
     nightShift: nightShiftCount,
   });
 
+  // Approved full-day leave always wins - don't fabricate punches for someone on
+  // leave, otherwise the Leave module says "absent" while the raw punch feed and
+  // Attendance show them clocking in for a full shift the same day.
+  const approvedLeaves = await LeaveApplicationModel.find({
+    status: 'Approved',
+    halfDayPortion: null,
+    fromDate: { $lte: dateStrings[dateStrings.length - 1] },
+    toDate: { $gte: dateStrings[0] },
+  })
+    .select('employeeId fromDate toDate')
+    .lean();
+
+  const leaveDatesByEmployee = new Map<string, Set<string>>();
+  for (const leave of approvedLeaves) {
+    const empKey = String(leave.employeeId);
+    let dates = leaveDatesByEmployee.get(empKey);
+    if (!dates) {
+      dates = new Set();
+      leaveDatesByEmployee.set(empKey, dates);
+    }
+    for (const d of dateStrings) {
+      if (d >= leave.fromDate && d <= leave.toDate) dates.add(d);
+    }
+  }
+
   await AttendanceRawModel.collection.deleteMany({ rawDate: { $in: dateStrings } });
   await AttendanceDerivedModel.deleteMany({ date: { $in: dateStrings } });
   logger.info('Cleared existing attendance for target dates');
@@ -72,6 +99,7 @@ async function main() {
     for (const emp of empDocs) {
       const isWeeklyOff = (emp.weeklyOff ?? []).includes(WEEKDAY_NAMES[day.weekdayIdx]!);
       if (isWeeklyOff) continue;
+      if (leaveDatesByEmployee.get(String(emp._id))?.has(day.date)) continue;
 
       const r = seededRandom(hashString(`${emp.empCode}:${day.date}`));
       const punches = buildSeedPunchesForEmployee({

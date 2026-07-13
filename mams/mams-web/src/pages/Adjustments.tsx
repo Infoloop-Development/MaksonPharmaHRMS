@@ -17,11 +17,8 @@ const ORG_ADMIN_SHIFT_LABELS = {
   C: 'Night Shift',
 };
 
-const REPORT_DEFAULT_MONTH = '2026-05';
-
 export function Adjustments() {
   const user = useAuth((s) => s.user);
-  const canView = user?.permissions.includes('read.compliant') ?? false;
   const isOrgAdmin = user?.role === 'org.admin';
 
   const [editRow, setEditRow] = useState<ComplianceAttendanceRow | null>(null);
@@ -30,19 +27,9 @@ export function Adjustments() {
   const { data, isLoading } = useQuery({
     queryKey: ['compliance-attendance', { search: '', date: '', shiftFilter: 'all', page: 1, sortBy: undefined, sortDir: 'asc' }],
     queryFn: () => complianceAttendanceApi.list({ page: 1, pageSize: 1 }),
-    enabled: canView,
   });
 
   const total = data?.total ?? 0;
-
-  if (!canView) {
-    return (
-      <div className="card p-8 text-center">
-        <h1 className="text-xl font-bold mb-2">Compliance Adjustments</h1>
-        <p className="text-text-muted">You do not have permission to view compliance attendance.</p>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -77,10 +64,7 @@ export function Adjustments() {
       )}
 
       {financialOpen && (
-        <FinancialReportModal
-          initialYearMonth={REPORT_DEFAULT_MONTH}
-          onClose={() => setFinancialOpen(false)}
-        />
+        <FinancialReportModal onClose={() => setFinancialOpen(false)} />
       )}
     </div>
   );

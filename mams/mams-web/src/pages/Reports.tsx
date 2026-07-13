@@ -21,6 +21,7 @@ import { usePageTourController } from '../hooks/usePageTourController';
 import { GiveMeATourButton } from '../components/onboarding/GiveMeATourButton';
 import { reportsTourScript } from '../lib/onboarding/scripts/reportsTourScript';
 import { SortableTh } from '../components/ui/SortableTh';
+import { TablePagination } from '../components/ui/TablePagination';
 import { useTableSort } from '../lib/tableSort';
 import { tableColumnTooltip } from '../lib/tooltips/tableColumnTooltips';
 
@@ -38,38 +39,40 @@ export function Reports() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
+      <div className="mb-5 flex items-center justify-between flex-wrap gap-3" data-tour-id="reports-header">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Reports</h1>
-          <div className="text-sm text-text-muted">
-            View mode: <Badge tone={isCompliant ? 'amber' : 'blue'}>{isCompliant ? 'COMPLIANT (8-hour)' : 'REAL (12-hour)'}</Badge>
-          </div>
+          <p className="text-sm text-text-muted mt-0.5">Attendance records and summaries</p>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
       </div>
 
-      <div className="card mb-4 p-1.5 inline-flex gap-1 flex-wrap" data-tour-id="reports-tabs">
-        {[
-          ['daily', 'Daily Attendance'],
-          ['monthly', 'Monthly Summary'],
-          ['department', 'Department-wise'],
-          ['location', 'Location-wise'],
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => {
-              const next = key as Tab;
-              setTab(next);
-              logReportsAction('ui.reports.filter', { tab: next });
-            }}
-            className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-              tab === key ? 'bg-primary text-white' : 'text-text-muted hover:bg-surface2'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-        <span className="sr-only" data-tour-id="reports-monthly-hint" aria-hidden="true" />
+      <div className="card mb-6 overflow-hidden" data-tour-id="reports-tabs">
+        <div className="flex flex-wrap border-b border-border">
+          {[
+            ['daily', 'Daily Attendance'],
+            ['monthly', 'Monthly Summary'],
+            ['department', 'Department-wise'],
+            ['location', 'Location-wise'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => {
+                const next = key as Tab;
+                setTab(next);
+                logReportsAction('ui.reports.filter', { tab: next });
+              }}
+              className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === key
+                  ? 'tab-link--active'
+                  : 'border-transparent text-text-muted hover:text-text hover:bg-surface2'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <span className="sr-only" data-tour-id="reports-monthly-hint" aria-hidden="true" />
+        </div>
       </div>
 
       {tab === 'daily' && <DailyReport isCompliant={isCompliant} />}
@@ -89,7 +92,10 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   const [endDate, setEndDate] = useState(today);
   const [department, setDepartment] = useState('');
   const [location, setLocation] = useState('');
+  const [page, setPage] = useState(1);
+  const [printing, setPrinting] = useState(false);
   const toast = useToast((s) => s.push);
+  const PAGE_SIZE = 100;
 
   const logDailyFilter = (patch: Partial<{ startDate: string; endDate: string; department: string; location: string }>) => {
     logReportsAction('ui.reports.filter', {
@@ -104,8 +110,16 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: settingsApi.get, staleTime: 60_000 });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['reports', 'daily', startDate, endDate, department, location],
-    queryFn: () => reportsApi.daily({ startDate, endDate, department: department || undefined, location: location || undefined }),
+    queryKey: ['reports', 'daily', startDate, endDate, department, location, page],
+    queryFn: () =>
+      reportsApi.daily({
+        startDate,
+        endDate,
+        department: department || undefined,
+        location: location || undefined,
+        page,
+        pageSize: PAGE_SIZE,
+      }),
   });
 
   type DailyRow = NonNullable<typeof data>['rows'][number];
@@ -124,17 +138,17 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
     },
     [isCompliant]
   );
-  const { sortCol, toggleSort, sortArrow, sortedRows: sortedDailyRows } = useTableSort(
+  const { sortCol, toggleSort, sortArrow, sortedRows: displayDailyRows } = useTableSort(
     data?.rows ?? [],
     getDailySortValue,
     { date: 'date', hours: 'number', ot: 'number' }
   );
-  const displayDailyRows = sortedDailyRows.slice(0, 500);
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
 
   const branding = brandingFromSettings(settings);
 
-  const onPrint = () => {
-    if (!data?.rows.length) {
+  const onPrint = async () => {
+    if (!data || data.summary.total === 0) {
       toast('No records to print', 'error');
       return;
     }
@@ -145,44 +159,65 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       department: department || undefined,
       location: location || undefined,
     });
-    const opened = openReportPrintWindow({
-      branding,
-      title: 'Daily Attendance Report',
-      subtitle: formatReportDateRange(startDate, endDate),
-      summaryLine: `${data.summary.total} records · ${data.summary.present} present · ${data.summary.absent} absent · ${data.summary.weeklyOff} weekly off`,
-      columns: [
-        { key: 'date', label: 'Date', mono: true },
-        { key: 'code', label: 'Code', mono: true },
-        { key: 'name', label: 'Name' },
-        { key: 'department', label: 'Department' },
-        { key: 'location', label: 'Location' },
-        { key: 'entry', label: 'Entry', mono: true },
-        { key: 'exit', label: 'Exit', mono: true },
-        { key: 'hours', label: isCompliant ? 'Hours' : 'Net Hrs', mono: true },
-        ...(isCompliant ? [] : [{ key: 'ot', label: 'OT', mono: true }]),
-        { key: 'status', label: 'Status' },
-      ],
-      rows: data.rows.map((r) => {
-        const emp = r.employeeId;
-        const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
-        const exit = isCompliant ? r.compliantExitAt : r.realExitAt;
-        const hrs = isCompliant ? r.compliantHours : r.realNetHours;
-        const row: Record<string, string | number> = {
-          date: fmtDate(r.date),
-          code: emp?.empCode ?? EMPTY_CELL,
-          name: emp?.name ?? EMPTY_CELL,
-          department: emp?.department ?? EMPTY_CELL,
-          location: emp?.location ?? EMPTY_CELL,
-          entry: entry ? fmtTime(entry) : EMPTY_CELL,
-          exit: exit ? fmtTime(exit) : EMPTY_CELL,
-          hours: typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL,
-          status: r.status ?? EMPTY_CELL,
-        };
-        if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : EMPTY_CELL;
-        return row;
-      }),
-    });
-    if (!opened) toast('Could not start print. Please try again.', 'error');
+    setPrinting(true);
+    try {
+      // Print should include the full matching set, not just the current on-screen
+      // page - fetch a single large batch (up to 5000) specifically for this.
+      const printData = await reportsApi.daily({
+        startDate,
+        endDate,
+        department: department || undefined,
+        location: location || undefined,
+        page: 1,
+        pageSize: 5000,
+      });
+      const opened = openReportPrintWindow({
+        branding,
+        title: 'Daily Attendance Report',
+        subtitle: formatReportDateRange(startDate, endDate),
+        summaryLine: `${printData.summary.total} records · ${printData.summary.present} present · ${printData.summary.absent} absent · ${printData.summary.weeklyOff} weekly off`,
+        columns: [
+          { key: 'date', label: 'Date', mono: true },
+          { key: 'code', label: 'Code', mono: true },
+          { key: 'name', label: 'Name' },
+          { key: 'department', label: 'Department' },
+          { key: 'location', label: 'Location' },
+          { key: 'entry', label: 'Entry', mono: true },
+          { key: 'exit', label: 'Exit', mono: true },
+          { key: 'hours', label: isCompliant ? 'Hours' : 'Net Hrs', mono: true },
+          ...(isCompliant ? [] : [{ key: 'ot', label: 'OT', mono: true }]),
+          { key: 'status', label: 'Status' },
+        ],
+        rows: printData.rows.map((r) => {
+          const emp = r.employeeId;
+          const entry = isCompliant ? r.compliantEntryAt : r.realEntryAt;
+          const exit = isCompliant ? r.compliantExitAt : r.realExitAt;
+          const hrs = isCompliant ? r.compliantHours : r.realNetHours;
+          const row: Record<string, string | number> = {
+            date: fmtDate(r.date),
+            code: emp?.empCode ?? EMPTY_CELL,
+            name: emp?.name ?? EMPTY_CELL,
+            department: emp?.department ?? EMPTY_CELL,
+            location: emp?.location ?? EMPTY_CELL,
+            entry: entry ? fmtTime(entry) : EMPTY_CELL,
+            exit: exit ? fmtTime(exit) : EMPTY_CELL,
+            hours: typeof hrs === 'number' ? fmtHours(hrs) : EMPTY_CELL,
+            status: r.status ?? EMPTY_CELL,
+          };
+          if (!isCompliant) row.ot = r.otHours ? fmtHours(r.otHours) : EMPTY_CELL;
+          return row;
+        }),
+      });
+      if (!opened) {
+        toast('Could not start print. Please try again.', 'error');
+      } else if (printData.total > printData.rows.length) {
+        toast(`Print includes first ${printData.rows.length.toLocaleString()} records (limit reached)`, 'success');
+      }
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not prepare print', 'error');
+    } finally {
+      setPrinting(false);
+    }
   };
 
   const onDownloadExcel = async () => {
@@ -213,18 +248,19 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
           setEndDate(today);
           setDepartment('');
           setLocation('');
+          setPage(1);
         }}
       >
-        <Field label="From"><Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); logDailyFilter({ startDate: e.target.value }); }} /></Field>
-        <Field label="To"><Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); logDailyFilter({ endDate: e.target.value }); }} /></Field>
+        <Field label="From"><Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); logDailyFilter({ startDate: e.target.value }); }} /></Field>
+        <Field label="To"><Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); logDailyFilter({ endDate: e.target.value }); }} /></Field>
         <Field label="Department">
-          <Select value={department} onChange={(e) => { setDepartment(e.target.value); logDailyFilter({ department: e.target.value }); }}>
+          <Select value={department} onChange={(e) => { setDepartment(e.target.value); setPage(1); logDailyFilter({ department: e.target.value }); }}>
             <option value="">All</option>
             {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
           </Select>
         </Field>
         <Field label="Location">
-          <Select value={location} onChange={(e) => { setLocation(e.target.value); logDailyFilter({ location: e.target.value }); }}>
+          <Select value={location} onChange={(e) => { setLocation(e.target.value); setPage(1); logDailyFilter({ location: e.target.value }); }}>
             <option value="">All</option>
             {LOCATIONS.map((l) => <option key={l}>{l}</option>)}
           </Select>
@@ -233,30 +269,27 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       </div>
 
       <div data-tour-id="reports-results">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1 flex-1">
+          <span className="font-medium text-text">{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
           {data && (
             <>
+              <span className="hidden sm:block w-px h-4 bg-border" />
               <Badge tone="green">{data.summary.present} present</Badge>
               <Badge tone="red">{data.summary.absent} absent</Badge>
               <Badge tone="gray">{data.summary.weeklyOff} weekly off</Badge>
             </>
           )}
         </div>
-        <div className="flex gap-2 w-full sm:w-auto no-print" data-tour-id="reports-export">
-          <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>Print to PDF</button>
-          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onDownloadExcel}>Download Excel</button>
+        <div className="flex gap-2 w-full sm:w-auto no-print shrink-0" data-tour-id="reports-export">
+          <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={() => void onPrint()} disabled={printing}>
+            {printing ? 'Preparing…' : 'Print to PDF'}
+          </button>
+          <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onDownloadExcel}>Download Excel</button>
         </div>
       </div>
 
       <DailyReportCardList rows={displayDailyRows} isLoading={isLoading} isCompliant={isCompliant} />
-
-      {data && data.rows.length > 500 && (
-        <div className="mb-2 p-3 text-center text-xs text-text-muted bg-surface2 rounded-md md:hidden print:hidden">
-          Showing first 500 rows. Download Excel for full export.
-        </div>
-      )}
 
       <div className="card overflow-hidden hidden md:block">
         <div className="tbl-scroll">
@@ -280,7 +313,13 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
                 <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">Loading…</td></tr>
               )}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={isCompliant ? 9 : 10} className="p-10 text-center text-text-muted">No records for this date range.</td></tr>
+                <tr><td colSpan={isCompliant ? 9 : 10} className="py-14 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span className="text-sm font-medium">No records found</span>
+                    <span className="text-xs">Try widening the date range or adjusting the filters</span>
+                  </div>
+                </td></tr>
               )}
               {displayDailyRows.map((r, i) => {
                 const emp = r.employeeId;
@@ -307,12 +346,16 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
             </tbody>
           </table>
         </div>
-        {data && data.rows.length > 500 && (
-          <div className="p-3 text-center text-xs text-text-muted bg-surface2">
-            Showing first 500 rows. Download Excel for full export.
-          </div>
-        )}
       </div>
+
+      <TablePagination
+        page={page}
+        totalPages={totalPages}
+        total={data?.total}
+        showTotal
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+      />
       </div>
     </div>
   );
@@ -468,7 +511,13 @@ function MonthlyReport() {
             <tbody className="divide-y divide-border">
               {isLoading && <tr><td colSpan={9} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={9} className="p-10 text-center text-text-muted">No records for this month.</td></tr>
+                <tr><td colSpan={9} className="py-14 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span className="text-sm font-medium">No records found</span>
+                    <span className="text-xs">Try selecting a different month or adjusting the filters</span>
+                  </div>
+                </td></tr>
               )}
               {sortedMonthlyRows.map((r) => (
                 <tr key={r.employeeId} className="hover:bg-surface2/50">
@@ -602,7 +651,13 @@ function DepartmentReport() {
           <tbody className="divide-y divide-border">
             {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
             {!isLoading && !data?.rows.length && (
-              <tr><td colSpan={7} className="p-10 text-center text-text-muted">No department data for this month.</td></tr>
+              <tr><td colSpan={7} className="py-14 text-center">
+                <div className="flex flex-col items-center gap-2 text-text-muted">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span className="text-sm font-medium">No department data</span>
+                  <span className="text-xs">Try selecting a different month</span>
+                </div>
+              </td></tr>
             )}
             {sortedDeptRows.map((r) => (
               <tr key={r.department} className="hover:bg-surface2/50">
@@ -768,7 +823,13 @@ function LocationReport() {
             <tbody className="divide-y divide-border">
               {isLoading && <tr><td colSpan={7} className="p-10 text-center text-text-muted">Loading…</td></tr>}
               {!isLoading && !data?.rows.length && (
-                <tr><td colSpan={7} className="p-10 text-center text-text-muted">No location data for this month.</td></tr>
+                <tr><td colSpan={7} className="py-14 text-center">
+                  <div className="flex flex-col items-center gap-2 text-text-muted">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <span className="text-sm font-medium">No location data</span>
+                    <span className="text-xs">Try selecting a different month</span>
+                  </div>
+                </td></tr>
               )}
               {sortedLocRows.map((r) => (
                 <tr key={r.location} className="hover:bg-surface2/50">
@@ -801,15 +862,15 @@ function ReportExportBar({
   onDownloadExcel: () => void | Promise<void>;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-      <div className="text-sm text-text-muted">
-        {isLoading ? 'Loading...' : `${recordCount ?? 0} records`}
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <div className="text-sm flex-1">
+        <span className="font-medium text-text">{isLoading ? 'Loading...' : `${recordCount ?? 0} records`}</span>
       </div>
-      <div className="flex gap-2 w-full sm:w-auto no-print">
-        <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onPrint}>
+      <div className="flex gap-2 w-full sm:w-auto no-print shrink-0">
+        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={onPrint}>
           Print to PDF
         </button>
-        <button type="button" className="btn-primary flex-1 sm:flex-none" onClick={() => void onDownloadExcel()}>
+        <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={() => void onDownloadExcel()}>
           Download Excel
         </button>
       </div>

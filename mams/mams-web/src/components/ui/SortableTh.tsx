@@ -26,18 +26,18 @@ export function SortableTh({
   children?: ReactNode;
 }) {
   const headerContent = (
-    <>
-      <span>{children ?? label}</span>
+    <span className={`relative inline-block${tooltip ? ' pr-4' : ''}`}>
+      {children ?? label}
       {tooltip ? (
         <span
-          className="inline-flex align-middle"
+          className="absolute top-0 right-0 inline-flex"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
           <InfoTip content={tooltip} label={`About ${label ?? sortKey ?? 'column'}`} />
         </span>
       ) : null}
-    </>
+    </span>
   );
 
   const tone = `${TABLE_HEADER_TH_CLASS} ${className}`.trim();

@@ -11,7 +11,7 @@ import {
   BulkIdsBodySchema,
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
-import { toMaskedEmployee } from '../services/employee.service.js';
+import { toMaskedEmployee, toUnmaskedEmployee } from '../services/employee.service.js';
 import { allocateNextEmpCode, previewNextEmpCode } from '../services/employeeCode.service.js';
 import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
@@ -83,7 +83,12 @@ router.get('/:id', hrReadGate, async (req, res, next) => {
     }
     const doc = await EmployeeModel.findById(req.params.id);
     if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
-    res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
+    const canUnmask =
+      req.auth!.permissions.includes('unmask.sensitive') || req.auth!.viewMode === 'compliant';
+    const payload = canUnmask
+      ? toUnmaskedEmployee(doc.toObject() as any, req.auth!.viewMode)
+      : toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode);
+    res.json(payload);
   } catch (err) {
     next(err);
   }

@@ -20,7 +20,7 @@ const EnvSchema = z.object({
   PUBLIC_APP_URL: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.string().default('info'),
   TZ: z.string().default('Asia/Kolkata'),
-  SMART_ANCHOR_VERSION: z.string().default('v2.0.0'),
+  SMART_ANCHOR_VERSION: z.string().default('v3.0.0'),
   COMPLIANCE_AUTOGEN_ENABLED: z
     .string()
     .optional()
@@ -31,6 +31,7 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => v !== 'false' && v !== '0'),
   BUG_REPORT_MEDIA_DIR: z.string().default('./data/bug-reports'),
+  REPORT_MEDIA_DIR: z.string().default('./data/reports'),
   BUG_REPORT_TRANSCRIPTION_TEMP_DIR: z.string().default('./data/transcription-temp'),
   VOSK_SERVICE_URL: z.string().default('http://127.0.0.1:8765'),
   VOSK_MODELS_DIR: z.string().default('./vosk-models'),

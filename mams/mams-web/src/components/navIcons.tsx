@@ -14,6 +14,7 @@ export const NAV_ICON_NAMES = [
   'settings',
   'autogen',
   'signOut',
+  'bug',
 ] as const;
 
 export type NavIconName = (typeof NAV_ICON_NAMES)[number];
@@ -145,6 +146,20 @@ const ICON_PATHS: Record<NavIconName, ReactNode> = {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
+    </>
+  ),
+  bug: (
+    <>
+      <rect x="8" y="6" width="8" height="12" rx="4" />
+      <path d="M12 2v4" />
+      <path d="M9 8l-3-3" />
+      <path d="M15 8l3-3" />
+      <path d="M3 12h5" />
+      <path d="M16 12h5" />
+      <path d="M4 19l4.5-3" />
+      <path d="M20 19l-4.5-3" />
+      <path d="M4 6l4 3" />
+      <path d="M20 6l-4 3" />
     </>
   ),
 };
