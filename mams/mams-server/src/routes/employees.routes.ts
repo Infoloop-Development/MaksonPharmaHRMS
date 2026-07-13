@@ -11,7 +11,7 @@ import {
   BulkIdsBodySchema,
 } from '@mams/types';
 import { EmployeeModel } from '../models/Employee.js';
-import { toMaskedEmployee, toUnmaskedEmployee } from '../services/employee.service.js';
+import { toMaskedEmployee } from '../services/employee.service.js';
 import { allocateNextEmpCode, previewNextEmpCode } from '../services/employeeCode.service.js';
 import { requireAuth, requirePermission, requireAnyPermission } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
@@ -75,7 +75,10 @@ router.get('/', hrReadGate, async (req, res, next) => {
   }
 });
 
-// GET ONE - masked
+// Plain profile view - always masked. Sensitive fields are only ever revealed via the
+// per-field, password-gated, audit-logged /:id/unmask endpoint below. The employee edit
+// form never needs real values either - sensitive inputs start blank and only overwrite
+// a field when the admin types a new one (see EmployeesAddModal.tsx).
 router.get('/:id', hrReadGate, async (req, res, next) => {
   try {
     if (!Types.ObjectId.isValid(req.params.id ?? '')) {
@@ -83,12 +86,7 @@ router.get('/:id', hrReadGate, async (req, res, next) => {
     }
     const doc = await EmployeeModel.findById(req.params.id);
     if (!doc || doc.isDeleted) throw new ApiError(404, 'not_found', 'Employee not found');
-    const canUnmask =
-      req.auth!.permissions.includes('unmask.sensitive') || req.auth!.viewMode === 'compliant';
-    const payload = canUnmask
-      ? toUnmaskedEmployee(doc.toObject() as any, req.auth!.viewMode)
-      : toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode);
-    res.json(payload);
+    res.json(toMaskedEmployee(doc.toObject() as any, req.auth!.viewMode));
   } catch (err) {
     next(err);
   }

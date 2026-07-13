@@ -1,6 +1,6 @@
 import type { EmployeeDoc } from '../models/Employee.js';
 import { maskAadhaar, maskTail } from '../utils/mask.js';
-import type { EmployeeMasked, EmployeeUnmasked } from '@mams/types';
+import type { EmployeeMasked } from '@mams/types';
 
 /**
  * Convert a raw Mongoose Employee doc to the masked API response shape.
@@ -24,29 +24,17 @@ export function toMaskedEmployee(doc: EmployeeDoc, viewMode: 'real' | 'compliant
     aadhaar: maskAadhaar(doc.aadhaar),
     bankAccountNumber: maskTail(doc.bankAccountNumber, 4),
     ifsc: maskTail(doc.ifsc, 4),
-    accountHolderName: maskTail(doc.accountHolderName, 4),
+    // Not masked for the real view - a bank name and its account holder's name aren't
+    // exploitable on their own. Still masked for compliant viewMode, same as timeShift
+    // above: the compliance login never sees real underlying data, no exceptions.
+    accountHolderName: viewMode === 'compliant' ? maskTail(doc.accountHolderName, 4) : doc.accountHolderName,
     accountType: doc.accountType as EmployeeMasked['accountType'],
-    bankName: maskTail(doc.bankName, 4),
+    bankName: viewMode === 'compliant' ? maskTail(doc.bankName, 4) : doc.bankName,
     pfNumber: maskTail(doc.pfNumber, 4),
     esiNumber: maskTail(doc.esiNumber, 4),
     status: doc.status as 'Active' | 'Inactive',
     isMasked: true,
     createdAt: (doc as any).createdAt?.toISOString?.() ?? new Date().toISOString(),
     updatedAt: (doc as any).updatedAt?.toISOString?.() ?? new Date().toISOString(),
-  };
-}
-
-export function toUnmaskedEmployee(doc: EmployeeDoc, viewMode: 'real' | 'compliant' = 'real'): EmployeeUnmasked {
-  return {
-    ...toMaskedEmployee(doc, viewMode),
-    pan: doc.pan,
-    aadhaar: doc.aadhaar,
-    bankAccountNumber: doc.bankAccountNumber,
-    ifsc: doc.ifsc,
-    accountHolderName: doc.accountHolderName,
-    bankName: doc.bankName,
-    pfNumber: doc.pfNumber,
-    esiNumber: doc.esiNumber,
-    isMasked: false,
   };
 }
