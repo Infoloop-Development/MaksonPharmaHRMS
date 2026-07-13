@@ -3,7 +3,7 @@ import type { CanonicalPunchEvent } from '@mams/types';
 import { AttendanceRawModel } from '../models/AttendanceRaw.js';
 import { EmployeeModel } from '../models/Employee.js';
 import type { DeviceDoc } from '../models/Device.js';
-import { recomputeDerived } from './attendance.service.js';
+import { recomputeDerived, shiftDayFor } from './attendance.service.js';
 import { audit } from './audit.service.js';
 import { istStringToUtc, utcToIstDateString } from '../utils/time.js';
 import { logger } from '../utils/logger.js';
@@ -25,6 +25,7 @@ export async function ingestCanonicalPunches(
   const bioIds = [...new Set(events.map((e) => e.biometricId))];
   const employees = await EmployeeModel.find({ biometricId: { $in: bioIds } }).lean();
   const empByBio = new Map(employees.map((e) => [e.biometricId, e]));
+  const timeShiftByEmployeeId = new Map(employees.map((e) => [String(e._id), e.timeShift]));
 
   const orphans: string[] = [];
   const rawDocs = events
@@ -72,7 +73,16 @@ export async function ingestCanonicalPunches(
     if (toInsert.length > 0) {
       const result = await AttendanceRawModel.insertMany(toInsert, { ordered: false });
       inserted = result.length;
-      const pairs = new Set(toInsert.map((d) => `${d.employeeId}:${d.rawDate}`));
+      // Group by shift day, not literal rawDate - a Night-shift punch after midnight
+      // belongs to the shift that started the evening before, otherwise recomputeDerived
+      // gets triggered for the wrong date and never sees both halves of the shift.
+      const pairs = new Set(
+        toInsert.map((d) => {
+          const timeShift = timeShiftByEmployeeId.get(String(d.employeeId)) === 'Night' ? 'Night' : 'Day';
+          const shiftDay = shiftDayFor(timeShift, d.rawTimestamp);
+          return `${d.employeeId}:${shiftDay}`;
+        })
+      );
       await Promise.all(
         [...pairs].map(async (key) => {
           const [empId, date] = key.split(':') as [string, string];

@@ -5,10 +5,26 @@ import { EmployeeModel, type EmployeeDoc } from '../models/Employee.js';
 import { SettingsModel } from '../models/Settings.js';
 import { LeaveApplicationModel } from '../models/LeaveApplication.js';
 import { decomposeHours, smartAnchorV3 } from './smartAnchor.js';
+import { istNoonUtc, utcToIstDateString, addIstCalendarDays } from '../utils/time.js';
 import type { ComplianceShift } from '@mams/types';
 
 /**
- * Recompute attendance_derived for a given (employeeId, date) pair.
+ * Which "shift day" a raw punch belongs to. Day shift (6AM-6PM) always matches its own
+ * calendar date. Night shift (6PM-6AM) crosses midnight - a punch before noon IST
+ * belongs to the PREVIOUS calendar day's shift (the one that started the evening
+ * before), not its own date. Used both to widen recomputeDerived's raw-punch lookup
+ * and to tell the ingestion pipeline which date to recompute when a punch arrives.
+ */
+export function shiftDayFor(timeShift: 'Day' | 'Night', rawTimestamp: Date): string {
+  const dateStr = utcToIstDateString(rawTimestamp);
+  if (timeShift !== 'Night') return dateStr;
+  return rawTimestamp < istNoonUtc(dateStr) ? addIstCalendarDays(dateStr, -1) : dateStr;
+}
+
+/**
+ * Recompute attendance_derived for a given (employeeId, date) pair, where `date` is
+ * the shift day (see shiftDayFor), not necessarily the calendar date every punch in
+ * the shift literally falls on.
  * Called whenever new raw punches arrive for a day or an adjustment is approved.
  *
  * Pure function over the raw collection - never mutates raw records, only inserts
@@ -37,11 +53,23 @@ export async function recomputeDerived(
     toDate: { $gte: date },
   });
 
+  // Night shift (6PM-6AM) crosses midnight, so its clock-in and clock-out can land on
+  // two different calendar dates - a plain rawDate match would only ever see one of
+  // them. Use a noon-to-noon window instead, wide enough to hold a full night shift
+  // with buffer on both sides, while Day shift keeps the simple single-day window it
+  // never needed to leave.
+  const isNight = employee.timeShift === 'Night';
+  const noon = istNoonUtc(date);
+  const windowStartDate = isNight ? noon : new Date(noon.getTime() - 12 * 60 * 60 * 1000);
+  const windowEndDate = isNight
+    ? new Date(noon.getTime() + 24 * 60 * 60 * 1000)
+    : new Date(noon.getTime() + 12 * 60 * 60 * 1000);
+
   const raws = onApprovedLeave
     ? []
     : await AttendanceRawModel.find({
         employeeId,
-        rawDate: date,
+        rawTimestamp: { $gte: windowStartDate, $lt: windowEndDate },
       })
         .sort({ rawTimestamp: 1 })
         .lean();
