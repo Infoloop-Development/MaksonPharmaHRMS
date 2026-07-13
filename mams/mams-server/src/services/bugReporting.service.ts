@@ -318,7 +318,10 @@ export async function listBugReports(query: BugReportListQuery): Promise<BugRepo
   };
 }
 
-export async function getBugReportDetail(ref: string): Promise<BugReportDetail> {
+export async function getBugReportDetail(
+  ref: string,
+  options?: { probeVideoAudio?: boolean }
+): Promise<BugReportDetail> {
   const id = await resolveBugReportRef(ref);
   const doc = await BugReportModel.findById(id).lean();
   if (!doc) throw new ApiError(404, 'not_found', 'Bug report not found');
@@ -342,8 +345,10 @@ export async function getBugReportDetail(ref: string): Promise<BugReportDetail> 
   const videoAvailableOnDisk = videoFilePath
     ? await bugReportVideoExists(videoFilePath)
     : false;
+  // Skip ffprobe on PATCH responses — it can hang tens of seconds and make assign feel broken.
+  const probeVideoAudio = options?.probeVideoAudio !== false;
   const videoHasAudio =
-    videoAvailableOnDisk && videoFilePath
+    probeVideoAudio && videoAvailableOnDisk && videoFilePath
       ? await videoHasAudioStream(resolveBugReportVideoPath(videoFilePath))
       : false;
 
@@ -398,6 +403,7 @@ export async function patchBugReport(
       doc.phaseId = new Types.ObjectId(parsed.phaseId);
       if (phase.legacyKey) doc.status = phase.legacyKey as BugReportStatus;
       if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
+        if (!Array.isArray(doc.statusHistory)) doc.statusHistory = [];
         doc.statusHistory.push({
           phaseName: phase.label,
           phaseId: new Types.ObjectId(parsed.phaseId),
@@ -413,6 +419,7 @@ export async function patchBugReport(
       doc.status = parsed.status;
       doc.phaseId = new Types.ObjectId(phase.id);
       if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
+        if (!Array.isArray(doc.statusHistory)) doc.statusHistory = [];
         doc.statusHistory.push({
           phaseName: phase.label,
           phaseId: new Types.ObjectId(phase.id),
@@ -435,8 +442,8 @@ export async function patchBugReport(
         throw new ApiError(400, 'validation_error', 'Assignee must be an active IT Admin');
       }
     }
-    const newAssigneeId = parsed.assigneeId ? String(parsed.assigneeId) : null;
-    if (newAssigneeId !== prevAssigneeId) {
+    const nextAssigneeId = parsed.assigneeId ? String(parsed.assigneeId) : null;
+    if (nextAssigneeId !== prevAssigneeId) {
       doc.assigneeId = parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null;
       if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
         const deadlineSnapshot =
@@ -445,12 +452,14 @@ export async function patchBugReport(
               ? new Date(`${parsed.deadline}T00:00:00.000Z`)
               : null
             : doc.deadline;
+        if (!Array.isArray(doc.assignmentHistory)) doc.assignmentHistory = [];
         doc.assignmentHistory.push({
           assignedById: new Types.ObjectId(actorUserId),
           assignedToId: parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null,
           assignedAt: now,
           deadline: deadlineSnapshot,
         });
+        doc.markModified('assignmentHistory');
       }
     }
   }
@@ -463,6 +472,7 @@ export async function patchBugReport(
 
   const newPhaseId = doc.phaseId ? String(doc.phaseId) : null;
   const newAssigneeId = doc.assigneeId ? String(doc.assigneeId) : null;
+  const notifyEntityId = doc.publicId || id;
 
   if (
     newPhaseId &&
@@ -475,7 +485,7 @@ export async function patchBugReport(
       buildBugResolvedNotification({
         title: doc.title,
         phaseLabel: phase.label,
-        entityId: id,
+        entityId: notifyEntityId,
       })
     );
     void emailBugResolved({
@@ -500,7 +510,7 @@ export async function patchBugReport(
         buildBugAssignedNotification({
           title: doc.title,
           assignerName: actor?.name ?? 'Someone',
-          entityId: id,
+          entityId: notifyEntityId,
         })
       );
       void emailBugAssigned({
@@ -512,7 +522,8 @@ export async function patchBugReport(
     }
   }
 
-  return getBugReportDetail(id);
+  // Avoid ffprobe on the PATCH response path so assignee/phase updates stay snappy.
+  return getBugReportDetail(id, { probeVideoAudio: false });
 }
 
 export { getBugReportStats, resolveBugReportRef };

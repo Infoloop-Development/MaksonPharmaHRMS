@@ -29,6 +29,7 @@ function makeReportDoc() {
     attachments: [],
     createdAt: new Date(),
     updatedAt: new Date(),
+    markModified: vi.fn(),
     save: vi.fn(async function save(this: typeof doc) {
       return this;
     }),
@@ -98,8 +99,18 @@ describe('patchBugReport assignee validation', () => {
 
   it('accepts active it.admin assignee', async () => {
     const { patchBugReport } = await import('../src/services/bugReporting.service.js');
-    const result = await patchBugReport(reportId, { assigneeId: itAdminId });
+    const result = await patchBugReport(reportId, { assigneeId: itAdminId }, itAdminId);
     expect(result).toBeDefined();
+    expect(reportDoc.save).toHaveBeenCalled();
+    expect(reportDoc.assigneeId).toEqual(new Types.ObjectId(itAdminId));
+  });
+
+  it('initializes assignmentHistory when missing on legacy docs', async () => {
+    (reportDoc as { assignmentHistory?: unknown }).assignmentHistory = undefined;
+    const { patchBugReport } = await import('../src/services/bugReporting.service.js');
+    await patchBugReport(reportId, { assigneeId: itAdminId }, itAdminId);
+    expect(Array.isArray(reportDoc.assignmentHistory)).toBe(true);
+    expect(reportDoc.assignmentHistory).toHaveLength(1);
     expect(reportDoc.save).toHaveBeenCalled();
   });
 });

@@ -62,7 +62,7 @@ export async function exportBugReportsXlsx(query: BugReportExportQuery): Promise
   bugsSheet.getRow(1).font = { bold: true };
 
   for (const item of listItems) {
-    const detail = await getBugReportDetail(item.id);
+    const detail = await getBugReportDetail(item.id, { probeVideoAudio: false });
     const latestAssignment = detail.assignmentHistory.at(-1);
     const phaseIsResolved = (phaseId: string) => phaseMap.get(phaseId)?.isResolvedState === true;
     const resolvedAt = resolveBugResolvedTimestamp(detail, phaseIsResolved);

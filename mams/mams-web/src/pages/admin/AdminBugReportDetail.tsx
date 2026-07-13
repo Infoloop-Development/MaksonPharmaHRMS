@@ -60,14 +60,16 @@ export function AdminBugReportDetail() {
 
   const patchMu = useMutation({
     mutationFn: (body: Parameters<typeof adminBugReportingApi.patch>[1]) =>
-      adminBugReportingApi.patch(id, body),
+      adminBugReportingApi.patch(data?.id || id, body),
     onSuccess: (updated) => {
       applyBugReportPatchToCache(qc, updated);
       setPhaseId(updated.phaseId);
       setAssigneeId(updated.assignee?.id ?? '');
       setDeadline(updated.deadline ?? '');
       toast('Bug report updated', 'success');
-      void qc.invalidateQueries({ queryKey: BUG_REPORTING_QUERY_KEY });
+      void qc.invalidateQueries({
+        queryKey: [...BUG_REPORTING_QUERY_KEY, 'board'],
+      });
     },
     onError: (e: unknown) => toast(e instanceof Error ? e.message : 'Update failed', 'error'),
   });
