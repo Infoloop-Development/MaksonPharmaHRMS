@@ -6,7 +6,7 @@ type State = { error: Error | null };
 
 function clearSessionStorage(): void {
   try {
-    localStorage.removeItem('mams-auth');
+    sessionStorage.removeItem('mams-auth');
     localStorage.removeItem(THEME_STORAGE_KEY);
   } catch {
     /* ignore */

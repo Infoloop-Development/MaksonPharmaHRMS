@@ -16,6 +16,16 @@ type PersistedAuth = Pick<AuthState, 'user' | 'accessToken' | 'refreshToken'>;
 const AUTH_STORAGE_KEY = 'mams-auth';
 const AUTH_PERSIST_VERSION = 1;
 
+// One-time purge of the pre-fix localStorage copy of this key (auth now lives
+// in sessionStorage only — see safeStorage below). Without this, an old token
+// written before the sessionStorage migration would linger in localStorage
+// indefinitely, unused but still readable.
+try {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+} catch {
+  /* ignore */
+}
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null;
 }
@@ -38,24 +48,28 @@ function sanitizePersistedState(raw: unknown): PersistedAuth | null {
   return { user, accessToken, refreshToken };
 }
 
+// sessionStorage, not localStorage: each browser tab must require its own
+// explicit login. localStorage is shared across same-origin tabs, which let a
+// refresh in one tab silently inherit another tab's (differently-privileged)
+// session — a compliance-boundary violation for the dual-credential model.
 const safeStorage = createJSONStorage<PersistedAuth>(() => ({
   getItem: (name) => {
     try {
-      return localStorage.getItem(name);
+      return sessionStorage.getItem(name);
     } catch {
       return null;
     }
   },
   setItem: (name, value) => {
     try {
-      localStorage.setItem(name, value);
+      sessionStorage.setItem(name, value);
     } catch {
       /* ignore quota / private mode */
     }
   },
   removeItem: (name) => {
     try {
-      localStorage.removeItem(name);
+      sessionStorage.removeItem(name);
     } catch {
       /* ignore */
     }
@@ -92,7 +106,7 @@ export const useAuth = create<AuthState>()(
       onRehydrateStorage: () => (state, err) => {
         if (err) {
           console.warn('[MAMS] Auth rehydration failed, clearing session:', err);
-          try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* ignore */ }
+          try { sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* ignore */ }
           useAuth.setState({ user: null, accessToken: null, refreshToken: null });
           return;
         }
@@ -100,7 +114,7 @@ export const useAuth = create<AuthState>()(
         const clean = sanitizePersistedState({ state });
         if (!clean) {
           console.warn('[MAMS] Corrupt auth storage cleared');
-          try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* ignore */ }
+          try { sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* ignore */ }
           useAuth.setState({ user: null, accessToken: null, refreshToken: null });
           return;
         }

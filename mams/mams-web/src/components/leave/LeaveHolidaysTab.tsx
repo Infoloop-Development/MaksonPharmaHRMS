@@ -268,7 +268,7 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
                       return;
                     }
                     const res = await leaveApi.importHolidaysCsv(rows);
-                    toast(`Imported ${res.imported} holiday(s)`, 'success');
+                    toast(`Imported ${res.imported} holiday${res.imported === 1 ? '' : 's'}`, 'success');
                     setImportOpen(false);
                     setImportFile(null);
                     qc.invalidateQueries({ queryKey: ['leave', 'holidays'] });

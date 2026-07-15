@@ -39,7 +39,7 @@ export function LeaveDecideModal({
       }
     >
       <p className="text-sm text-text-muted mb-3">
-        {item.employeeId?.name} ({item.employeeId?.empCode}): {item.totalDays} day(s)
+        {item.employeeId?.name} ({item.employeeId?.empCode}): {item.totalDays} day{item.totalDays === 1 ? '' : 's'}
       </p>
       <Field label={action === 'reject' ? 'Reason (required)' : 'Note (optional)'}>
         <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
