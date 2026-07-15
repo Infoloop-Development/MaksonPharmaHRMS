@@ -19,6 +19,7 @@ import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
 import { useAuth } from '../store/auth';
 import { employeeChangeRequestsApi } from '../api/employeeChangeRequests';
 import { EMPTY_CELL } from '../lib/format';
+import { BiometricIdBanner } from '../components/goLive/BiometricIdBanner';
 
 const WEEKDAYS = WeekdaySchema.options;
 
@@ -430,6 +431,7 @@ export function EmployeesAddModal({
 
         {step === 1 && (
           <div className="space-y-8 animate-[fadeIn_0.15s_ease-out]">
+            <BiometricIdBanner />
             <section>
               <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Assignment</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

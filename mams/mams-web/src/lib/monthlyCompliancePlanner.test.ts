@@ -40,6 +40,60 @@ describe('computeMonthlyPlan', () => {
     expect(summary.extraCashHours).toBe(0);
   });
 
+  it('192 h → 2 leave days that are not consecutive', () => {
+    const { summary, days } = plan(192);
+    expect(summary.leaveDays).toBe(2);
+    expect(summary.presentDays).toBe(24);
+    expect(summary.deductedHours).toBe(16);
+
+    const leaveDates = days.filter((d) => d.status === 'leave').map((d) => d.date).sort();
+    expect(leaveDates).toHaveLength(2);
+    const a = Date.parse(`${leaveDates[0]}T00:00:00Z`);
+    const b = Date.parse(`${leaveDates[1]}T00:00:00Z`);
+    expect(Math.abs(b - a)).toBeGreaterThan(24 * 60 * 60 * 1000);
+  });
+
+  it('160 h → leave days are not consecutive when spacing fits', () => {
+    const { days, summary } = plan(160);
+    expect(summary.leaveDays).toBe(6);
+    const leaveDates = days.filter((d) => d.status === 'leave').map((d) => d.date).sort();
+    expect(leaveDates).toHaveLength(6);
+    for (let i = 1; i < leaveDates.length; i++) {
+      const prev = Date.parse(`${leaveDates[i - 1]}T00:00:00Z`);
+      const cur = Date.parse(`${leaveDates[i]}T00:00:00Z`);
+      expect(Math.abs(cur - prev)).toBeGreaterThan(24 * 60 * 60 * 1000);
+    }
+  });
+
+  it('leave placement stays deterministic for the same seed', () => {
+    const a = plan(192);
+    const b = plan(192);
+    expect(a.days.filter((d) => d.status === 'leave').map((d) => d.date)).toEqual(
+      b.days.filter((d) => d.status === 'leave').map((d) => d.date)
+    );
+  });
+
+  it('different hour shortfalls reshuffle leave days (no fixed pattern)', () => {
+    const a = plan(192)
+      .days.filter((d) => d.status === 'leave')
+      .map((d) => d.date)
+      .sort();
+    const b = plan(176)
+      .days.filter((d) => d.status === 'leave')
+      .map((d) => d.date)
+      .sort();
+    // 192 → 2 leave, 176 → 4 leave; sets should not be identical prefixes of a fixed pattern
+    expect(a).toHaveLength(2);
+    expect(b).toHaveLength(4);
+    expect(a.join(',')).not.toBe(b.slice(0, 2).join(','));
+  });
+
+  it('leave weekdays are mixed (not all the same weekday)', () => {
+    const leave = plan(160).days.filter((d) => d.status === 'leave');
+    const weekdays = new Set(leave.map((d) => d.weekday));
+    expect(weekdays.size).toBeGreaterThan(1);
+  });
+
   it('208 h → 26 present, 0 leave, 0 extra', () => {
     const { summary } = plan(208);
     expect(summary.presentDays).toBe(BASELINE_WORKING_DAYS);
@@ -113,7 +167,7 @@ describe('computeMonthlyPlan', () => {
       expect(d.checkIn).toMatch(/^\d{2}:\d{2}:\d{2}$/);
       expect(d.checkOut).toMatch(/^\d{2}:\d{2}:\d{2}$/);
       expect(d.hoursWorked).toBeGreaterThan(0);
-      expect(d.hoursWorkedFormatted).toMatch(/^\d+\.\d{2} h$/);
+      expect(d.hoursWorkedFormatted).toMatch(/^\d+ hr \d+ min$/);
     }
   });
 

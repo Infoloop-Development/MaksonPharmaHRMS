@@ -28,8 +28,8 @@
   --color-brand-primary-light: #2e3f99;
   --color-brand-primary-light-rgb: 46 63 153;
   --color-brand-primary-text: #ffffff;
-  --app-topbar-height: 4rem;
-  --app-main-top-gap: 1.25rem;
+  --app-topbar-height: 3.5rem;
+  --app-main-top-gap: 0.75rem;
   --app-sidebar-width: 15.625rem;
   --dash-stat-card-min-h: 5rem;
   --dash-chart-card-min-h: 17.5rem;
@@ -85,7 +85,7 @@ input, select, textarea {
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-semibold text-sm transition-colors;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-semibold text-sm transition-colors border border-transparent box-border;
   }
   .btn-primary {
     @apply btn bg-primary hover:bg-primary-light disabled:opacity-50;
@@ -998,14 +998,14 @@ html.mams-tour-scroll-lock body {
   left: 0;
   z-index: 25;
   box-sizing: border-box;
-  height: var(--app-topbar-height);
-  min-height: var(--app-topbar-height);
-  max-height: var(--app-topbar-height);
+  height: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px));
+  min-height: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid var(--color-border);
   box-shadow: none;
 }
 .app-topbar-inner {
-  @apply flex items-center justify-between gap-3 h-full w-full px-3 md:px-6;
+  @apply flex items-center justify-between gap-2 sm:gap-3 h-[var(--app-topbar-height)] w-full px-3 sm:px-4 md:px-6;
 }
 .app-topbar-brand {
   @apply flex items-center gap-2 md:gap-3 min-w-0 flex-1;
@@ -1020,10 +1020,15 @@ html.mams-tour-scroll-lock body {
   }
 }
 .app-topbar-menu-btn {
-  @apply w-9 h-9 rounded-md border border-border bg-surface2 hover:bg-surface flex flex-col items-center justify-center gap-1 transition-colors;
+  @apply w-11 h-11 min-w-[44px] min-h-[44px] rounded-lg border border-border bg-surface2 hover:bg-surface active:bg-surface2 flex flex-col items-center justify-center gap-1.5 transition-colors cursor-pointer;
+  touch-action: manipulation;
 }
 .app-topbar-actions {
-  @apply flex items-center gap-3 md:gap-4 shrink-0;
+  @apply flex items-center gap-1.5 sm:gap-2.5 shrink-0;
+}
+.app-topbar-icon-btn {
+  @apply w-11 h-11 min-w-[44px] min-h-[44px] rounded-lg border border-border bg-surface2 hover:bg-surface active:bg-surface2 flex items-center justify-center transition-colors text-text cursor-pointer disabled:opacity-50;
+  touch-action: manipulation;
 }
 .app-topbar-view-badge {
   @apply shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap;
@@ -1041,7 +1046,7 @@ html.mams-tour-scroll-lock body {
   @apply hidden md:inline;
 }
 .app-topbar-clock {
-  @apply text-right leading-tight shrink-0 hidden sm:block pl-4 md:pl-5 border-l border-border;
+  @apply text-right leading-tight shrink-0 hidden sm:block px-1;
 }
 .app-topbar-clock-date {
   @apply text-[10px] text-text-subtle whitespace-nowrap;
@@ -1050,16 +1055,27 @@ html.mams-tour-scroll-lock body {
   @apply font-mono text-xs font-semibold tracking-wide text-text whitespace-nowrap;
 }
 .app-topbar-bell {
-  @apply flex items-center shrink-0 pl-3 md:pl-4 border-l border-border;
+  @apply flex items-center shrink-0 sm:pl-2.5 sm:ml-0.5 sm:border-l sm:border-border;
 }
 .app-topbar-bell .notification-bell-trigger {
-  @apply w-9 h-9 min-w-9 min-h-9 max-w-9 max-h-9 shrink-0 rounded-md border border-border bg-surface2 hover:bg-surface flex items-center justify-center transition-colors text-text;
+  @apply w-11 h-11 min-w-[44px] min-h-[44px] max-w-none max-h-none shrink-0 rounded-lg border border-border bg-surface2 hover:bg-surface active:bg-surface2 flex items-center justify-center transition-colors text-text cursor-pointer;
+  touch-action: manipulation;
+}
+.app-topbar-profile {
+  @apply sm:pl-2.5 sm:ml-0.5 sm:border-l sm:border-border;
+}
+.app-topbar-avatar-btn {
+  @apply w-11 h-11 min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center hover:bg-surface2 active:bg-surface transition-colors cursor-pointer;
+  touch-action: manipulation;
+}
+.app-topbar-avatar {
+  @apply w-8 h-8 rounded-lg bg-primary-bg flex items-center justify-center font-bold text-xs text-primary-on-bg shrink-0 select-none;
 }
 .app-topbar-logo {
   border: 1px solid var(--color-border);
 }
 .app-shell-main {
-  padding-top: calc(var(--app-topbar-height) + var(--app-main-top-gap));
+  padding-top: calc(var(--app-topbar-height) + env(safe-area-inset-top, 0px) + var(--app-main-top-gap));
   flex: 1 1 auto;
 }
 .app-content-column {

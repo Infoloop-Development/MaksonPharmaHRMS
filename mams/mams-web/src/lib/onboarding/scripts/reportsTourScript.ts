@@ -10,7 +10,7 @@ export const reportsTourScript: TourScript = {
           id: 'reports-header',
           title: 'Attendance reports',
           description:
-            'Reports use your view mode: Real (12-hour) or Compliant (8-hour). Hours and OT columns change accordingly.',
+            'Use Daily, Monthly, Department, and Location tabs to review attendance summaries and export Excel.',
           side: 'bottom',
         },
         {

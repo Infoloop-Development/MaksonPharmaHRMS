@@ -55,16 +55,20 @@ function IconSystem({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+const ICON_SM = 'w-[18px] h-[18px]';
+
 const OPTIONS: {
   value: ThemePreference;
   label: string;
   ariaLabel: string;
   icon: ReactNode;
 }[] = [
-  { value: 'light', label: 'Light', ariaLabel: 'Light theme', icon: <IconSun /> },
-  { value: 'dark', label: 'Dark', ariaLabel: 'Dark theme', icon: <IconMoon /> },
-  { value: 'system', label: 'System', ariaLabel: 'System theme', icon: <IconSystem /> },
+  { value: 'light', label: 'Light', ariaLabel: 'Light theme', icon: <IconSun className={ICON_SM} /> },
+  { value: 'dark', label: 'Dark', ariaLabel: 'Dark theme', icon: <IconMoon className={ICON_SM} /> },
+  { value: 'system', label: 'System', ariaLabel: 'System theme', icon: <IconSystem className={ICON_SM} /> },
 ];
+
+const THEME_ORDER: ThemePreference[] = ['light', 'dark', 'system'];
 
 function ThemeSegmentGroup({
   compact,
@@ -107,8 +111,56 @@ function ThemeSegmentGroup({
   );
 }
 
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+/** Single control for narrow toolbars — cycles light → dark → system. */
+function ThemeCycleButton({
+  themePreference,
+  setThemePreference,
+  busy,
+}: {
+  themePreference: ThemePreference;
+  setThemePreference: (value: ThemePreference) => Promise<void>;
+  busy: boolean;
+}) {
+  const current = OPTIONS.find((o) => o.value === themePreference) ?? OPTIONS[0]!;
+  const onCycle = () => {
+    const idx = THEME_ORDER.indexOf(themePreference);
+    const next = THEME_ORDER[(idx + 1) % THEME_ORDER.length]!;
+    void setThemePreference(next);
+  };
+
+  return (
+    <button
+      type="button"
+      className="app-topbar-icon-btn"
+      disabled={busy}
+      aria-label={`${current.ariaLabel}. Tap to change theme.`}
+      title={`${current.label} theme — tap to change`}
+      onClick={onCycle}
+    >
+      {current.icon}
+    </button>
+  );
+}
+
+export function ThemeToggle({
+  compact = false,
+  cycle = false,
+}: {
+  compact?: boolean;
+  /** Mobile-friendly single button that cycles themes. */
+  cycle?: boolean;
+}) {
   const { themePreference, setThemePreference, busy } = useTheme();
+
+  if (cycle) {
+    return (
+      <ThemeCycleButton
+        themePreference={themePreference}
+        setThemePreference={setThemePreference}
+        busy={busy}
+      />
+    );
+  }
 
   return (
     <ThemeSegmentGroup

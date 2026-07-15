@@ -92,9 +92,9 @@ export function Login() {
           <br />
           <code className="auth-inline-code">it.admin@makson-group.com</code>: IT Admin (Admin Console + Recycle bin)
           <br />
-          <code className="auth-inline-code">hr.admin@makson-group.com</code>: HR (real / 12-hour view)
+          <code className="auth-inline-code">hr.admin@makson-group.com</code>: HR Admin
           <br />
-          <code className="auth-inline-code">hr.compliance@makson-group.com</code>: Compliance (8-hour view)
+          <code className="auth-inline-code">hr.compliance@makson-group.com</code>: Compliance Auditor
           <br />
           <span className="text-text-muted">
             First time or login fails? From the <code className="auth-inline-code">mams</code> folder run:{' '}

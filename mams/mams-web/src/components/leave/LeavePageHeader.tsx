@@ -19,11 +19,16 @@ export function LeavePageHeader({
       </div>
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         {tourButton}
-      {canApply && (
-        <button type="button" className="btn-primary" data-tour-id="leave-apply" onClick={onAddLeave}>
-          + Add Leave
-        </button>
-      )}
+        {canApply && (
+          <button
+            type="button"
+            className="btn-primary h-10 min-h-10 whitespace-nowrap"
+            data-tour-id="leave-apply"
+            onClick={onAddLeave}
+          >
+            + Add Leave
+          </button>
+        )}
       </div>
     </div>
   );
