@@ -25,6 +25,7 @@ export function LeaveTabBar({
           <button
             key={t.id}
             type="button"
+            data-tour-id={t.id === 'holidays'? 'leave-holidays-hint': undefined}
             className={`flex-1 md:flex-none px-3 md:px-5 py-3 text-sm font-medium text-center border-b-2 -mb-px transition-colors ${
               tab === t.id
                 ? 'tab-link--active border-b-2 -mb-px'

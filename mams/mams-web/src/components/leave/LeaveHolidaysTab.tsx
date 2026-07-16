@@ -48,6 +48,7 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
   });
 
   const holidayItems = data?.items ?? [];
+  const holidayColWidth = canConfigure ? 'w-[20%]' : 'w-[25%]';
 
   const getSortValue = useCallback((row: (typeof holidayItems)[number], col: string) => {
     if (col === 'name') return row.name;
@@ -79,7 +80,7 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
   return (
     <div>
       {canConfigure && (
-        <div className="card p-4 mb-4 flex flex-wrap gap-2">
+        <div className="p-0.5 mt-12 mb-2 flex flex-wrap gap-3 justify-end">
           <button type="button" className="btn-primary btn-sm" onClick={() => setAddOpen(true)}>+ Add holiday</button>
           <button type="button" className="btn-outline btn-sm" onClick={() => setImportOpen(true)}>Import CSV</button>
         </div>
@@ -122,60 +123,62 @@ export function LeaveHolidaysTab({ canConfigure }: { canConfigure: boolean }) {
         onDelete={(h) => setDeleteTarget({ id: h.id, name: h.name })}
       />
 
-      <div className="card tbl-scroll hidden md:block">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-              {canConfigure && (
-                <th className="px-4 py-3 w-10">
-                  <BulkSelectCheckbox
-                    checked={pageCheck.allSelected && pageIds.length > 0}
-                    indeterminate={pageCheck.someSelected}
-                    onChange={() => bulk.togglePage(pageIds)}
-                    ariaLabel="Select all holidays on this page"
-                  />
-                </th>
-              )}
-              <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'name')} />
-              <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'date')} />
-              <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'type')} />
-              <th className="px-4 py-3">Scope</th>
-              {canConfigure && <th className="px-4 py-3" />}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={canConfigure ? 6 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
-            {sortedRows.map((h) => (
-              <tr key={h.id} className="border-b border-border/60">
+      <div className="card hidden md:block overflow-hidden">
+        <div className="tbl-scroll">
+          <table className="w-full text-sm table-fixed">
+            <thead>
+              <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
                 {canConfigure && (
-                  <td className="px-4 py-3">
+                  <th className="px-4 py-3 w-10">
                     <BulkSelectCheckbox
-                      checked={bulk.isSelected(h.id)}
-                      onChange={() => bulk.toggle(h.id)}
-                      ariaLabel={`Select ${h.name}`}
+                      checked={pageCheck.allSelected && pageIds.length > 0}
+                      indeterminate={pageCheck.someSelected}
+                      onChange={() => bulk.togglePage(pageIds)}
+                      ariaLabel="Select all holidays on this page"
                     />
-                  </td>
+                  </th>
                 )}
-                <td className="px-4 py-3 font-medium">{h.name}</td>
-                <td className="px-4 py-3">{fmtDate(h.date)}</td>
-                <td className="px-4 py-3">{h.type}</td>
-                <td className="px-4 py-3 text-xs text-text-muted">
-                  {h.departments.length || h.locations.length
-                    ? `${h.departments.join(', ') || 'All depts'} / ${h.locations.join(', ') || 'All locs'}`
-                    : 'All employees'}
-                </td>
-                {canConfigure && (
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      <button type="button" className="btn-outline btn-sm" onClick={() => setEditHoliday(h)}>Edit</button>
-                      <button type="button" className="btn-outline btn-sm text-red" onClick={() => setDeleteTarget({ id: h.id, name: h.name })}>Delete</button>
-                    </div>
-                  </td>
-                )}
+                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className={`px-4 py-3 !text-center ${holidayColWidth}`} tooltip={tableColumnTooltip('leave', 'name')} />
+                <SortableTh label="Date" sortKey="date" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className={`px-4 py-3 !text-center ${holidayColWidth}`} tooltip={tableColumnTooltip('leave', 'date')} />
+                <SortableTh label="Type" sortKey="type" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className={`px-4 py-3 !text-center ${holidayColWidth}`} tooltip={tableColumnTooltip('leave', 'type')} />
+                <th className={`px-4 py-3 !text-center ${holidayColWidth}`}>Scope</th>
+                {canConfigure && <th className="px-4 py-3" />}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={canConfigure ? 6 : 4} className="px-4 py-8 text-center text-text-muted">Loading…</td></tr>}
+              {sortedRows.map((h) => (
+                <tr key={h.id} className="border-b border-border/60">
+                  {canConfigure && (
+                    <td className="px-4 py-3">
+                      <BulkSelectCheckbox
+                        checked={bulk.isSelected(h.id)}
+                        onChange={() => bulk.toggle(h.id)}
+                        ariaLabel={`Select ${h.name}`}
+                      />
+                    </td>
+                  )}
+                  <td className="px-4 py-3 font-medium text-center"><span className="inline-block -ml-4">{h.name}</span></td>
+                  <td className="px-4 py-3 text-center"><span className="inline-block -ml-4">{fmtDate(h.date)}</span></td>
+                  <td className="px-4 py-3 text-center"><span className="inline-block -ml-4">{h.type}</span></td>
+                  <td className="px-4 py-3 text-xs text-text-muted text-center">
+                    {h.departments.length || h.locations.length
+                      ? `${h.departments.join(', ') || 'All depts'} / ${h.locations.join(', ') || 'All locs'}`
+                      : 'All employees'}
+                  </td>
+                  {canConfigure && (
+                    <td className={`px-4 py-3 !text-center ${holidayColWidth}`}>
+                      <div className="flex flex-wrap items-center justify-center gap-1">
+                        <button type="button" className="btn-outline btn-sm" onClick={() => setEditHoliday(h)}>Edit</button>
+                        <button type="button" className="btn-outline btn-sm text-red" onClick={() => setDeleteTarget({ id: h.id, name: h.name })}>Delete</button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {addOpen && (
