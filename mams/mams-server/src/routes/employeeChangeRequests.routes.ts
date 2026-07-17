@@ -21,7 +21,6 @@ router.get('/', changeRequestReadGate, async (req, res, next) => {
   try {
     const q = EmployeeChangeRequestListQuerySchema.parse(req.query);
     const filter: Record<string, unknown> = {};
-    if (q.status) filter.status = q.status;
     if (q.changeType) filter.changeType = q.changeType;
     if (q.employeeId) filter.employeeId = q.employeeId;
 
@@ -29,9 +28,12 @@ router.get('/', changeRequestReadGate, async (req, res, next) => {
       filter.initiatedBy = new Types.ObjectId(req.auth!.sub);
     }
 
+    const rowFilter: Record<string, unknown> = { ...filter };
+    if (q.status) rowFilter.status = q.status;
+
     const [total, items, statusCounts] = await Promise.all([
-      EmployeeChangeRequestModel.countDocuments(filter),
-      EmployeeChangeRequestModel.find(filter)
+      EmployeeChangeRequestModel.countDocuments(rowFilter),
+      EmployeeChangeRequestModel.find(rowFilter)
         .populate('employeeId', 'name empCode isDeleted')
         .populate('initiatedBy', 'name email')
         .populate('reviewedBy', 'name email')

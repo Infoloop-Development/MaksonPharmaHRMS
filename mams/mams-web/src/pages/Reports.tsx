@@ -806,7 +806,7 @@ function LocationReport() {
         ))}
       </div>
 
-      <div className="card overflow-hidden hidden md:block">
+      <div className="card mt-10 overflow-hidden hidden md:block">
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px]">
             <thead className="bg-surface2">
@@ -891,8 +891,9 @@ function FilterBar({
     <MobileFilterBar
       activeCount={activeCount}
       onClear={onClear}
-      className="no-print"
+      className="no-print mb-6"
       desktopClassName="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+      noCard
     >
       {children}
     </MobileFilterBar>
