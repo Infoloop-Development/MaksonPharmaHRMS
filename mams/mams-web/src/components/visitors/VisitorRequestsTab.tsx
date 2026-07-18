@@ -189,6 +189,7 @@ export function VisitorRequestsTab({
         activeCount={activeCount}
         onClear={clearFilters}
         desktopClassName="hidden md:flex flex-wrap gap-3 items-center mb-4"
+        noCard
       >
         {filterFields}
       </MobileFilterBar>
