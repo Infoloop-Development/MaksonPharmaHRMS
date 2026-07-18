@@ -461,6 +461,9 @@ input, select, textarea {
   .dash-stat-card .info-tip {
     @apply absolute top-2 right-2 z-[1] w-3 h-3 min-w-3 min-h-3 text-[8px];
   }
+  .dash-stat-card.selected .info-tip {
+    @apply bg-surface;
+  }
   .sortable-th .info-tip {
     @apply ml-1.5 align-top;
     margin-top: -2px;
