@@ -73,8 +73,12 @@ export function fmtIstDateTimeMs(d: Date | string | null): string {
     minute: '2-digit',
     second: '2-digit',
     hour12: true,
-  }).format(date);
+  })
+    .format(date)
+    .replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
   const ms = String(date.getMilliseconds()).padStart(3, '0');
+  const periodMatch = /^(.*?)(\s(AM|PM))$/.exec(base);
+  if (periodMatch) return `${periodMatch[1]}.${ms}${periodMatch[2]}`;
   return `${base}.${ms}`;
 }
 

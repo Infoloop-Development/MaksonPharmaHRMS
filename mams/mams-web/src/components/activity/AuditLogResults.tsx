@@ -119,42 +119,44 @@ export function AuditLogResults({
         ))}
       </div>
 
-      <div className="hidden md:block tbl-scroll max-h-[560px] border border-border rounded-md">
-        <table className="w-full text-sm">
-          <thead className="bg-surface2 sticky top-0">
-            <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-              <SortableTh label="Time" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[200px]" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
-              <SortableTh label="Area" sortKey="eventType" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" tooltip={tableColumnTooltip('audit', 'eventType')} />
-              <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[180px]" tooltip={tableColumnTooltip('audit', 'user')} />
-              <th className="px-3 py-2 font-semibold">Activity</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {sortedRows.map((row) => (
-              <tr key={row.id} className="hover:bg-surface2/40 align-top">
-                <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtIstDateTimeMs(row.occurredAt)}</td>
-                <td className="px-3 py-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
-                    {activityPageBadge(row.eventType, row.payload)}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-xs text-text-muted">
-                  {row.userName ? (
-                    <>
-                      <div className="font-medium text-text">{row.userName}</div>
-                      <div>{row.userRole}</div>
-                    </>
-                  ) : (
-                    EMPTY_CELL
-                  )}
-                </td>
-                <td className="px-3 py-2 text-text">
-                  <ActivityDescription item={row} />
-                </td>
+      <div className="hidden md:block overflow-hidden rounded-md border border-border">
+        <div className="tbl-scroll max-h-[560px]">
+          <table className="w-full text-sm table-fixed">
+            <thead className="bg-surface2 sticky top-0">
+              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+                <SortableTh label="Time" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="!px-3 !py-2 w-[240px]" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
+                <SortableTh label="Area" sortKey="eventType" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="!px-3 !py-2 w-[100px]" tooltip={tableColumnTooltip('audit', 'eventType')} />
+                <SortableTh label="User" sortKey="user" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="!px-3 !py-2 w-[180px]" tooltip={tableColumnTooltip('audit', 'user')} />
+                <th className="!px-3 !py-2 font-semibold">Activity</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {sortedRows.map((row) => (
+                <tr key={row.id} className="hover:bg-surface2/40 align-top">
+                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtIstDateTimeMs(row.occurredAt)}</td>
+                  <td className="px-3 py-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
+                      {activityPageBadge(row.eventType, row.payload)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-text-muted">
+                    {row.userName ? (
+                      <>
+                        <div className="font-medium text-text">{row.userName}</div>
+                        <div>{row.userRole}</div>
+                      </>
+                    ) : (
+                      EMPTY_CELL
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-text">
+                    <ActivityDescription item={row} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   );

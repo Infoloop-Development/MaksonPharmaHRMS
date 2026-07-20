@@ -44,13 +44,14 @@ export function composeHhmmFrom12h(hour12: number, minute: number, period: 'AM' 
 }
 
 function formatInstant(date: Date, format: TimeFormat, withSeconds: boolean): string {
-  return new Intl.DateTimeFormat('en-IN', {
+  const str = new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     hour: '2-digit',
     minute: '2-digit',
     ...(withSeconds ? { second: '2-digit' } : {}),
     hour12: format === '12h',
   }).format(date);
+  return str.replace(/\b(am|pm)\b/gi, (m) => m.toUpperCase());
 }
 
 export function formatIstInstant(d: Date | string | null, format: TimeFormat): string {
@@ -76,6 +77,8 @@ export function formatIstDateTimeMs(d: Date | string | null, format: TimeFormat)
   const date = typeof d === 'string' ? new Date(d) : d;
   const base = formatInstant(date, format, true);
   const ms = String(date.getMilliseconds()).padStart(3, '0');
+  const periodMatch = /^(.*?)(\s(AM|PM))$/.exec(base);
+  if (periodMatch) return `${periodMatch[1]}.${ms}${periodMatch[2]}`;
   return `${base}.${ms}`;
 }
 
