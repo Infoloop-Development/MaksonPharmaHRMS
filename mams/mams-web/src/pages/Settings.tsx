@@ -170,7 +170,7 @@ export function Settings() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">HR Settings</h1>
           <div className="text-sm text-text-muted">
-            Operational shortcuts and shift reference. Organization-wide config is in Admin → Organization.
+            Everyday HR shortcuts and shift reference. For organization-wide configuration, go to Admin → Organization.
           </div>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
@@ -671,26 +671,26 @@ function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: b
     <SectionCard title="Time Shifts">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
           {settings.realShifts.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
+              <span className="text-sm font-medium text-text">{s.label}</span>
+              <span className="text-sm font-semibold tabular-nums text-text-muted">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
             </div>
           ))}
         </div>
         <div className="min-w-0 md:border-l md:border-border md:pl-4">
-          <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
           {settings.complianceShifts.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
+              <span className="text-sm font-medium text-text">{s.label}</span>
+              <span className="text-sm font-semibold tabular-nums text-text-muted">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
             </div>
           ))}
         </div>
       </div>
       <div className="pt-3 border-t border-border">
-        <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
         <div className="flex gap-2 flex-wrap">
           {WEEKDAYS.map((d) => (
             <Badge key={d} tone={settings.weeklyOffDefault.includes(d) ? 'blue' : 'gray'}>{d}</Badge>
