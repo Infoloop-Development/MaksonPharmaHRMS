@@ -65,6 +65,17 @@ export function buildApp() {
     res.json({ status: 'ok', ts: new Date().toISOString() });
   });
 
+  // Root is API-only — the SPA lives on Netlify (PUBLIC_APP_URL).
+  app.get('/', (_req, res) => {
+    res.json({
+      service: 'mams-server',
+      status: 'ok',
+      health: '/api/health',
+      app: env.PUBLIC_APP_URL || null,
+      hint: 'This host is the API. Open the Netlify app URL to use MAMS.',
+    });
+  });
+
   // Public eSSL ADMS receiver - mounted at /iclock to match device expectations.
   // Devices on the local network are not authenticated; serial-number whitelist
   // in the receiver is the primary authn for this surface.
