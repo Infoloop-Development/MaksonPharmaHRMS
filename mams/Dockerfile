@@ -13,6 +13,7 @@ RUN npm install --include=dev
 
 COPY shared/types shared/types
 COPY mams-server mams-server
+COPY tsconfig.base.json ./tsconfig.base.json
 
 RUN npm run build --workspace @mams/types && npm run build --workspace mams-server
 

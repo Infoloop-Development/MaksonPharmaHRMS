@@ -76,13 +76,25 @@ Demo logins after seed (default password `makson2026`):
 
 ### 2.2 Build settings
 
+Pick **one** setup (do not mix):
+
+**Option A — recommended (repo root)**
+
+| Setting | Value |
+|---------|--------|
+| **Root Directory** | *(empty)* |
+| **Config-as-code** | `/railway.toml` |
+| **Dockerfile Path** | `Dockerfile` (repo root) |
+
+**Option B — mams subfolder**
+
 | Setting | Value |
 |---------|--------|
 | **Root Directory** | `mams` |
-| **Dockerfile Path** | `Dockerfile` (relative to root directory) |
-| **Watch Paths** (optional) | `mams/**` |
+| **Config-as-code** | `/mams/railway.toml` |
+| **Dockerfile Path** | `Dockerfile` (inside `mams/`) |
 
-Railway must build from the `mams/` folder so `COPY package.json`, `shared/types`, etc. resolve correctly (same as Render’s `rootDir: mams`).
+If Root Directory is `mams` but Railway uses the repo-root `Dockerfile`, the build can fail with `Cannot read file tsconfig.base.json`.
 
 ### 2.3 Environment variables
 

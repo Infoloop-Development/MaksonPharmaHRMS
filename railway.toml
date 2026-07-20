@@ -1,10 +1,11 @@
 # Railway config at repo root (MaksonPharmaHRMS/railway.toml)
 # Settings → Config-as-code path: /railway.toml
-# Leave Root Directory EMPTY so this Dockerfile is visible.
+# IMPORTANT: Root Directory must be EMPTY (repo root). Do not set it to mams/.
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+watchPatterns = ["mams/**"]
 
 [deploy]
 healthcheckPath = "/api/health"

@@ -1,5 +1,5 @@
-# Prefer repo-root /railway.toml + /Dockerfile for Railway.
-# If Root Directory is set to mams, use this file and dockerfilePath below.
+# Use when Railway Root Directory is set to mams (Settings → Root Directory: mams).
+# Config-as-code path: /mams/railway.toml
 
 [build]
 builder = "DOCKERFILE"
