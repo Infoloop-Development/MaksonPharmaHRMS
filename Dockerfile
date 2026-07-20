@@ -14,9 +14,10 @@ RUN npm install --include=dev
 
 COPY mams/shared/types shared/types
 COPY mams/mams-server mams-server
-COPY mams/tsconfig.base.json ./tsconfig.base.json
+COPY mams/shared/types/tsconfig.docker.json shared/types/tsconfig.docker.json
+COPY mams/mams-server/tsconfig.docker.json mams-server/tsconfig.docker.json
 
-RUN npm run build --workspace @mams/types && npm run build --workspace mams-server
+RUN npm run build:docker --workspace @mams/types && npm run build:docker --workspace mams-server
 
 FROM node-build AS vosk-models
 WORKDIR /app/mams

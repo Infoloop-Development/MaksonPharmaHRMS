@@ -13,9 +13,10 @@ RUN npm install --include=dev
 
 COPY shared/types shared/types
 COPY mams-server mams-server
-COPY tsconfig.base.json ./tsconfig.base.json
+COPY shared/types/tsconfig.docker.json shared/types/tsconfig.docker.json
+COPY mams-server/tsconfig.docker.json mams-server/tsconfig.docker.json
 
-RUN npm run build --workspace @mams/types && npm run build --workspace mams-server
+RUN npm run build:docker --workspace @mams/types && npm run build:docker --workspace mams-server
 
 # Download Vosk models at build time (~165MB total)
 FROM node-build AS vosk-models
