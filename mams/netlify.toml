@@ -7,11 +7,10 @@
   publish = "mams-web/dist"
 
 [build.environment]
-  # Force same-origin /api even if set in Netlify UI (see mams-web/src/api/apiBase.ts).
-  VITE_API_BASE_URL = ""
-
-# Leave VITE_API_BASE_URL unset — browser calls same-origin /api; Netlify proxies to Railway (see [[redirects]] below).
-# Do not set VITE_API_BASE_URL in Netlify UI either, or the SPA will call the API host directly and require CORS.
+  # Call Railway directly until Netlify /api proxy is confirmed off Render.
+  # Leave empty later to use same-origin /api proxy again.
+  VITE_API_BASE_URL = "https://maksonpharmahrms-copy-production.up.railway.app"
+  VITE_DEVICE_API_BASE_URL = "https://maksonpharmahrms-copy-production.up.railway.app"
 
 [[redirects]]
   from = "/api/*"
