@@ -4,6 +4,7 @@ FROM node:20-bookworm AS node-build
 WORKDIR /app/mams
 
 COPY package.json package-lock.json ./
+COPY tsconfig.base.json ./
 COPY shared/types/package.json shared/types/
 COPY mams-server/package.json mams-server/
 COPY mams-web/package.json mams-web/
