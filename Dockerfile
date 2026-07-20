@@ -53,8 +53,10 @@ ENV BUG_REPORT_MEDIA_DIR=/var/data/bug-reports
 ENV BUG_REPORT_TRANSCRIPTION_TEMP_DIR=/tmp/mams-transcription
 
 COPY mams/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Strip Windows CRLF if present — otherwise shebang becomes `bash\r` and the container exits with empty deploy logs.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+  && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3001
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/usr/local/bin/docker-entrypoint.sh"]
