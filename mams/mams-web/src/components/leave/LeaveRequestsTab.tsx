@@ -284,10 +284,15 @@ export function LeaveRequestsTab({
         }
       >
         {filterFields}
-        <div className="hidden md:flex gap-2 lg:ml-auto">
+        <div className="hidden mt-5 md:flex gap-2 lg:ml-auto">
           {exportButton}
           {canApply && (
-            <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              data-tour-id="leave-apply"
+              onClick={onAddLeave}
+            >
               + Add Leave
             </button>
           )}
