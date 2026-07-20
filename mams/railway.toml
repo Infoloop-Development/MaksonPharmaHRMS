@@ -1,5 +1,5 @@
-# Railway — MAMS API (Docker). Path from repo root: /mams/railway.toml
-# In Railway Settings → Config-as-code, set file path to: /mams/railway.toml
+# Prefer repo-root /railway.toml + /Dockerfile for Railway.
+# If Root Directory is set to mams, use this file and dockerfilePath below.
 
 [build]
 builder = "DOCKERFILE"
