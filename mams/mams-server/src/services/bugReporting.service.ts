@@ -403,7 +403,7 @@ export async function patchBugReport(
       doc.phaseId = new Types.ObjectId(parsed.phaseId);
       if (phase.legacyKey) doc.status = phase.legacyKey as BugReportStatus;
       if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
-        if (!Array.isArray(doc.statusHistory)) doc.statusHistory = [];
+        if (!Array.isArray(doc.statusHistory)) doc.set('statusHistory', []);
         doc.statusHistory.push({
           phaseName: phase.label,
           phaseId: new Types.ObjectId(parsed.phaseId),
@@ -419,7 +419,7 @@ export async function patchBugReport(
       doc.status = parsed.status;
       doc.phaseId = new Types.ObjectId(phase.id);
       if (actorUserId && Types.ObjectId.isValid(actorUserId)) {
-        if (!Array.isArray(doc.statusHistory)) doc.statusHistory = [];
+        if (!Array.isArray(doc.statusHistory)) doc.set('statusHistory', []);
         doc.statusHistory.push({
           phaseName: phase.label,
           phaseId: new Types.ObjectId(phase.id),
@@ -452,7 +452,7 @@ export async function patchBugReport(
               ? new Date(`${parsed.deadline}T00:00:00.000Z`)
               : null
             : doc.deadline;
-        if (!Array.isArray(doc.assignmentHistory)) doc.assignmentHistory = [];
+        if (!Array.isArray(doc.assignmentHistory)) doc.set('assignmentHistory', []);
         doc.assignmentHistory.push({
           assignedById: new Types.ObjectId(actorUserId),
           assignedToId: parsed.assigneeId ? new Types.ObjectId(parsed.assigneeId) : null,

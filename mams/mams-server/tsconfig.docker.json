@@ -15,8 +15,10 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
     "rootDir": "src",
-    "declaration": true,
-    "declarationMap": true
+    "types": ["node"],
+    "allowJs": false,
+    "noEmit": false
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["tests/**/*"]
 }
