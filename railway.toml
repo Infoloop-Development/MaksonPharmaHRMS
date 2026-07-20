@@ -8,7 +8,8 @@ dockerfilePath = "Dockerfile"
 watchPatterns = ["mams/**"]
 
 [deploy]
-healthcheckPath = "/api/health"
-healthcheckTimeout = 300
+# Temporarily disabled while diagnosing empty deploy logs / zero instances on trial.
+# healthcheckPath = "/api/health"
+# healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
