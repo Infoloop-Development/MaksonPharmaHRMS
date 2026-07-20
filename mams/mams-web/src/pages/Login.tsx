@@ -13,8 +13,8 @@ import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
 import { safeReturnPath } from '../lib/safeReturnPath';
 
 export function Login() {
-  const [email, setEmail] = useState('org.admin@makson-group.com');
-  const [password, setPassword] = useState('makson2026');
+  const [email, setEmail] = useState('org.admin@infoloop.co');
+  const [password, setPassword] = useState('infoloop2026');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setAuth = useAuth((s) => s.setAuth);
@@ -63,7 +63,7 @@ export function Login() {
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="hr.admin@makson-group.com"
+              placeholder="hr.admin@infoloop.co"
               autoComplete="username"
             />
           </div>
@@ -86,20 +86,15 @@ export function Login() {
 
         <div className="mt-6 p-3 bg-surface2 rounded-md text-[11px] text-text-muted leading-relaxed">
           <strong className="text-text">Demo credentials</strong> (password{' '}
-          <code className="auth-inline-code">makson2026</code>):
+          <code className="auth-inline-code">infoloop2026</code>):
           <br />
-          <code className="auth-inline-code">org.admin@makson-group.com</code>: Admin Console
+          <code className="auth-inline-code">org.admin@infoloop.co</code>: Admin Console
           <br />
-          <code className="auth-inline-code">it.admin@makson-group.com</code>: IT Admin (Admin Console + Recycle bin)
+          <code className="auth-inline-code">it.admin@infoloop.co</code>: IT Admin (Admin Console + Recycle bin)
           <br />
-          <code className="auth-inline-code">hr.admin@makson-group.com</code>: HR Admin
+          <code className="auth-inline-code">hr.admin@infoloop.co</code>: HR Admin
           <br />
-          <code className="auth-inline-code">hr.compliance@makson-group.com</code>: Compliance Auditor
-          <br />
-          <span className="text-text-muted">
-            First time or login fails? From the <code className="auth-inline-code">mams</code> folder run:{' '}
-            <code className="auth-inline-code">npm run seed:users</code>
-          </span>
+          <code className="auth-inline-code">hr.compliance@infoloop.co</code>: Compliance Auditor
         </div>
 
         <div className="text-center mt-6 text-[11px] text-text-muted">
