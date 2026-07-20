@@ -32,6 +32,10 @@ wait_for_vosk() {
 }
 
 start_vosk() {
+  if [ ! -x /opt/vosk-venv/bin/uvicorn ]; then
+    echo "Vosk runtime not present in this image — skipping." >&2
+    return 0
+  fi
   cd /app/mams/mams-server/vosk-service
   /opt/vosk-venv/bin/uvicorn app:app --host "$VOSK_HOST" --port "$VOSK_PORT" &
   VOSK_PID=$!
@@ -49,17 +53,15 @@ start_vosk() {
   fi
 }
 
-# Railway trial / small instances OOM when loading 3 Vosk models at boot.
-# Default: start API only. Set VOSK_ENABLED=true for on-prem / larger instances.
 if [ "${VOSK_ENABLED:-false}" = "true" ]; then
   echo "VOSK_ENABLED=true — starting Vosk transcription sidecar."
   start_vosk
 else
-  echo "VOSK_ENABLED is not true — starting API only (bug-report transcription disabled)."
+  echo "VOSK_ENABLED is not true — starting API only."
 fi
 
 mkdir -p "${BUG_REPORT_MEDIA_DIR:-/var/data/bug-reports}" "${BUG_REPORT_TRANSCRIPTION_TEMP_DIR:-/tmp/mams-transcription}"
 
-echo "Starting mams-server on PORT=${PORT:-3001} ..."
+echo "Starting mams-server (NODE_ENV=${NODE_ENV:-} PORT=${PORT:-3001}) ..."
 cd /app/mams/mams-server
 exec node dist/index.js
