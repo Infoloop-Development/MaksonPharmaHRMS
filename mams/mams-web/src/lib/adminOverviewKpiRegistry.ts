@@ -136,12 +136,33 @@ const METRIC_ACCENTS: Record<AdminOverviewKpiMetricId, Accent> = {
   pending_adjustments: 'amber',
 };
 
+// Status-type metrics can't use a fixed color — "devices online" is only good news
+// when most devices actually are online. Computed from the live values instead of
+// the static map above.
+const STATUS_ACCENTS: Partial<Record<AdminOverviewKpiMetricId, (v: AdminKpiValues) => Accent>> = {
+  devices_online: (v) => {
+    const { devicesOnline, devicesTotal } = v.governance;
+    if (devicesTotal === 0) return 'primary';
+    if (devicesOnline === 0) return 'red';
+    if (devicesOnline < devicesTotal) return 'amber';
+    return 'green';
+  },
+  devices_offline: (v) => {
+    const { devicesOffline, devicesTotal } = v.governance;
+    if (devicesTotal === 0) return 'primary';
+    if (devicesOffline === 0) return 'green';
+    if (devicesOffline === devicesTotal) return 'red';
+    return 'amber';
+  },
+  api_status: (v) => (v.governance.apiOk && v.governance.dbConnected ? 'green' : 'red'),
+};
+
 export function getAdminMetricLabel(id: AdminOverviewKpiMetricId, values: AdminKpiValues): string {
   return METRIC_LABELS[id](values);
 }
 
-export function getAdminMetricAccent(id: AdminOverviewKpiMetricId): Accent {
-  return METRIC_ACCENTS[id];
+export function getAdminMetricAccent(id: AdminOverviewKpiMetricId, values: AdminKpiValues): Accent {
+  return STATUS_ACCENTS[id]?.(values) ?? METRIC_ACCENTS[id];
 }
 
 export function getAdminMetricValue(id: AdminOverviewKpiMetricId, v: AdminKpiValues): string {

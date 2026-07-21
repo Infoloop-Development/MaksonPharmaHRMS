@@ -483,47 +483,45 @@ export function AdminOverview() {
         </div>
       )}
 
-      {isConfiguring && (
-        <span className="sr-only" data-tour-id="admin-overview-configure-shell" aria-hidden />
-      )}
-
       {isEditingCharts && (
-        <div className="flex flex-wrap gap-2 mb-3 items-center" data-tour-id="admin-overview-charts-layout">
-          <span className="text-sm text-text-muted">
-            Charts: {draftWidgetsConfig.widgets.length} / {ADMIN_OVERVIEW_WIDGET_MAX} · up to 4 rows
-          </span>
-          <button
-            type="button"
-            className="btn-outline btn-sm"
-            disabled={draftWidgetsConfig.widgets.length >= ADMIN_OVERVIEW_WIDGET_MAX}
-            onClick={addChart}
-            data-tour-id="admin-overview-add-chart"
-          >
-            + Add chart
-          </button>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={draftWidgetsConfig.showTable}
+        <div data-tour-id="admin-overview-configure-shell">
+          <div className="flex flex-wrap gap-2 mb-3 items-center" data-tour-id="admin-overview-charts-layout">
+            <span className="text-sm text-text-muted">
+              Charts: {draftWidgetsConfig.widgets.length} / {ADMIN_OVERVIEW_WIDGET_MAX} · up to 4 rows
+            </span>
+            <button
+              type="button"
+              className="btn-outline btn-sm"
+              disabled={draftWidgetsConfig.widgets.length >= ADMIN_OVERVIEW_WIDGET_MAX}
+              onClick={addChart}
+              data-tour-id="admin-overview-add-chart"
+            >
+              + Add chart
+            </button>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={draftWidgetsConfig.showTable}
+                onChange={(e) =>
+                  setDraftWidgetsConfig((prev) => ({ ...prev, showTable: e.target.checked }))
+                }
+              />
+              Show data table
+            </label>
+            <select
+              className="input input-sm"
+              value={draftWidgetsConfig.tablePosition}
               onChange={(e) =>
-                setDraftWidgetsConfig((prev) => ({ ...prev, showTable: e.target.checked }))
+                setDraftWidgetsConfig((prev) => ({
+                  ...prev,
+                  tablePosition: e.target.value as 'top' | 'bottom',
+                }))
               }
-            />
-            Show data table
-          </label>
-          <select
-            className="input input-sm"
-            value={draftWidgetsConfig.tablePosition}
-            onChange={(e) =>
-              setDraftWidgetsConfig((prev) => ({
-                ...prev,
-                tablePosition: e.target.value as 'top' | 'bottom',
-              }))
-            }
-          >
-            <option value="bottom">Table below charts</option>
-            <option value="top">Table above charts</option>
-          </select>
+            >
+              <option value="bottom">Table below charts</option>
+              <option value="top">Table above charts</option>
+            </select>
+          </div>
         </div>
       )}
 

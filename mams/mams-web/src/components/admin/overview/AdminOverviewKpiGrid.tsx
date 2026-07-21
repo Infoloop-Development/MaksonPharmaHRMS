@@ -89,7 +89,7 @@ function SortableKpiSlot({
         label={getAdminMetricLabel(metricId, values)}
         value={getAdminMetricValue(metricId, values)}
         sub={getAdminMetricSub(metricId, values)}
-        accent={getAdminMetricAccent(metricId)}
+        accent={getAdminMetricAccent(metricId, values)}
         selected={isAdminMetricSelected(metricId, filterState)}
         onClick={isEditing ? onPickMetric : onCardClick}
         tooltip={
