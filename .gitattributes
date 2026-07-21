@@ -1,0 +1,3 @@
+# Force Unix line endings for shell scripts used in Docker images.
+*.sh text eol=lf
+mams/docker-entrypoint.sh text eol=lf

@@ -1,5 +1,7 @@
-# Railway / monorepo root build context (repo root = MaksonPharmaHRMS).
-# Build context is the Git repository root. All sources live under mams/.
+# Railway slim API image (repo-root build context).
+# Intentionally omits Vosk/ffmpeg Python sidecar — trial instances OOMed / never scheduled with the full image.
+# For on-prem / full transcription, use mams/Dockerfile instead.
+
 FROM node:20-bookworm AS node-build
 
 WORKDIR /app/mams
@@ -19,16 +21,9 @@ COPY mams/mams-server/tsconfig.docker.json mams-server/tsconfig.docker.json
 
 RUN npm run build:docker --workspace @mams/types && npm run build:docker --workspace mams-server
 
-FROM node-build AS vosk-models
-WORKDIR /app/mams
-RUN apt-get update && apt-get install -y --no-install-recommends unzip ca-certificates \
-  && rm -rf /var/lib/apt/lists/* \
-  && node mams-server/scripts/download-vosk-models.mjs
+FROM node:20-bookworm-slim AS runtime
 
-FROM node:20-bookworm AS runtime
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv ffmpeg ca-certificates curl \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/mams
@@ -41,20 +36,16 @@ RUN npm install --omit=dev --workspace @mams/types --workspace mams-server
 
 COPY --from=node-build /app/mams/shared/types/dist shared/types/dist
 COPY --from=node-build /app/mams/mams-server/dist mams-server/dist
-COPY --from=vosk-models /app/mams/mams-server/vosk-models mams-server/vosk-models
-COPY mams/mams-server/vosk-service mams-server/vosk-service
-
-RUN python3 -m venv /opt/vosk-venv \
-  && /opt/vosk-venv/bin/pip install --no-cache-dir -r mams-server/vosk-service/requirements.txt
 
 ENV NODE_ENV=production
-ENV VOSK_MODELS_DIR=/app/mams/mams-server/vosk-models
+ENV VOSK_ENABLED=false
 ENV BUG_REPORT_MEDIA_DIR=/var/data/bug-reports
 ENV BUG_REPORT_TRANSCRIPTION_TEMP_DIR=/tmp/mams-transcription
 
 COPY mams/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+  && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 3001
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/usr/local/bin/docker-entrypoint.sh"]

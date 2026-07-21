@@ -1,7 +1,5 @@
-/** Root URL for API calls. Empty → same-origin `/api` (Netlify or Vite proxy). */
+/** Root URL for API calls. Empty → same-origin `/api` (Netlify proxy). */
 export function apiRootUrl(): string {
-  // Production builds always use the Netlify /api proxy; ignore VITE_API_BASE_URL if set in UI.
-  if (import.meta.env.PROD) return '';
   const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   return fromEnv ? fromEnv.replace(/\/$/, '') : '';
 }
@@ -10,13 +8,15 @@ export function apiBasePath(): string {
   return `${apiRootUrl()}/api`;
 }
 
-/** Render API host for device webhooks (/iclock); not proxied on Netlify. */
-export const PRODUCTION_API_HOST = 'https://mams-api-xvso.onrender.com';
+/** Default public API host for device webhooks (/iclock); not proxied on Netlify. */
+export const PRODUCTION_API_HOST = 'https://maksonpharmahrms-copy-production.up.railway.app';
 
 export function deviceIntegrationRootUrl(): string {
   if (import.meta.env.PROD) {
     const fromEnv = (import.meta.env.VITE_DEVICE_API_BASE_URL as string | undefined)?.trim();
-    return fromEnv ? fromEnv.replace(/\/$/, '') : PRODUCTION_API_HOST;
+    if (fromEnv) return fromEnv.replace(/\/$/, '');
+    const apiRoot = apiRootUrl();
+    return apiRoot || PRODUCTION_API_HOST;
   }
   const fromEnv = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   if (fromEnv) return fromEnv.replace(/\/$/, '');
