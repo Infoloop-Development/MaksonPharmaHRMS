@@ -19,6 +19,7 @@ import { EmployeesAddModal } from './EmployeesAddModal';
 import { EmployeeDeleteModal } from './EmployeeDeleteModal';
 import { useTimeDisplay } from '../store/timeFormat';
 import { Badge } from '../components/ui/Badge';
+import { CollapsibleInfoBox } from '../components/ui/CollapsibleInfoBox';
 
 export function EmployeeDetail() {
   const { id } = useParams();
@@ -43,8 +44,12 @@ export function EmployeeDetail() {
     ? [...ALL_SENSITIVE_UNMASK_FIELDS]
     : grants;
 
+  // These two are never actually masked (see toMaskedEmployee) - no point offering
+  // an Unmask button for a value that's already fully shown.
+  const ALWAYS_VISIBLE_FIELDS: SensitiveUnmaskField[] = ['bankName', 'accountHolderName'];
+
   const canUnmaskField = (field: SensitiveUnmaskField) =>
-    unmaskFeatureOn && effectiveGrants.includes(field);
+    unmaskFeatureOn && !ALWAYS_VISIBLE_FIELDS.includes(field) && effectiveGrants.includes(field);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['employee', id],
@@ -152,10 +157,10 @@ export function EmployeeDetail() {
         {!isCompliant && (
           <Section title="Sensitive (masked by default)">
             {unmaskFeatureOn && (
-              <div className="text-xs text-text-muted mb-3 leading-relaxed">
+              <CollapsibleInfoBox storageKey="mams-employee-unmask-info-collapsed" title="About Unmask">
                 Unmask is only shown for fields your account is allowed to reveal. Enter your login password
                 in the dialog to confirm; every reveal is audit-logged.
-              </div>
+              </CollapsibleInfoBox>
             )}
             {ALL_SENSITIVE_UNMASK_FIELDS.map((f) => (
               <SensitiveRow
@@ -166,6 +171,14 @@ export function EmployeeDetail() {
                 onUnmask={() => {
                   setPasswordError(null);
                   setPendingField(f);
+                }}
+                showMask={canUnmaskField(f) && !!unmasked[f]}
+                onMask={() => {
+                  setUnmasked((u) => {
+                    const next = { ...u };
+                    delete next[f];
+                    return next;
+                  });
                 }}
               />
             ))}
@@ -260,6 +273,8 @@ export function EmployeeDetail() {
       {unmaskFeatureOn && pendingField !== null && (
         <UnmaskPasswordModal
           field={pendingField}
+          employeeName={data.name}
+          employeeCode={data.empCode}
           open
           onClose={() => !unmaskLoading && setPendingField(null)}
           onConfirm={handleUnmaskConfirm}
@@ -284,11 +299,15 @@ function SensitiveRow({
   value,
   showUnmask,
   onUnmask,
+  showMask,
+  onMask,
 }: {
   label: string;
   value: string;
   showUnmask: boolean;
   onUnmask: () => void;
+  showMask?: boolean;
+  onMask?: () => void;
 }) {
   return (
     <div className="flex items-start justify-between py-2 border-b border-border last:border-0 gap-3">
@@ -297,8 +316,13 @@ function SensitiveRow({
         <div className="font-mono text-sm break-all">{value}</div>
       </div>
       {showUnmask && (
-        <button type="button" onClick={onUnmask} className="btn-outline text-xs shrink-0">
+        <button type="button" onClick={onUnmask} className="btn-outline btn-sm shrink-0">
           Unmask
+        </button>
+      )}
+      {showMask && (
+        <button type="button" onClick={onMask} className="btn-outline btn-sm shrink-0">
+          Mask
         </button>
       )}
     </div>
@@ -324,7 +348,7 @@ function Row({ label, value, tight }: { label: string; value: string; tight?: bo
     );
   }
   return (
-    <div className="flex justify-between py-1.5 text-sm gap-4">
+    <div className="flex justify-between py-2.5 border-b border-border last:border-0 text-sm gap-4">
       <span className="text-text-muted shrink-0">{label}</span>
       <span className="font-medium text-right break-all">{value}</span>
     </div>

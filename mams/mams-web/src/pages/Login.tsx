@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
 import { ACTIVITY_QUERY_PREFIX } from '../api/activity';
@@ -10,7 +10,6 @@ import { resetSessionStart } from '../lib/bugReport';
 import { AuthBrandHeader } from '../components/AuthBrandHeader';
 import { PasswordInput } from '../components/ui/PasswordInput';
 import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
-import { safeReturnPath } from '../lib/safeReturnPath';
 
 export function Login() {
   const [email, setEmail] = useState('org.admin@infoloop.co');
@@ -20,7 +19,6 @@ export function Login() {
   const setAuth = useAuth((s) => s.setAuth);
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const location = useLocation();
   const { companyName, companyLogo } = usePublicOrgBranding();
 
   const submit = async (e: React.FormEvent) => {
@@ -39,9 +37,7 @@ export function Login() {
         navigate('/change-password');
         return;
       }
-      const from = location.state as { from?: { pathname?: string; search?: string } } | null;
-      const returnTo = safeReturnPath(from?.from?.pathname, from?.from?.search);
-      navigate(returnTo ?? defaultHomePath(data.user.role));
+      navigate(defaultHomePath(data.user.role));
     } catch (e: any) {
       setErr(e?.message ?? 'Login failed');
     } finally {

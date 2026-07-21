@@ -29,7 +29,6 @@ export * from './adminOverviewStats.js';
 export * from './adminOverviewWidget.js';
 export * from './adminOverviewAnalytics.js';
 export * from './leave.js';
-export * from './regularization.js';
 export * from './visitor.js';
 export * from './visitAccess.js';
 export * from './visitorIntroMedia.js';

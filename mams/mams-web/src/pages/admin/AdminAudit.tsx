@@ -6,6 +6,7 @@ import { usersApi } from '../../api/users';
 import { AuditLogActiveFilters, AuditLogResults } from '../../components/activity/AuditLogResults';
 import { AuditLogTabBar } from '../../components/activity/AuditLogTabBar';
 import { SearchableUserSelect } from '../../components/ui/SearchableUserSelect';
+import { Select } from '../../components/ui/Field';
 import { useToast } from '../../components/ui/Toast';
 import type { AuditLogCategory, Role } from '@mams/types';
 import { ROLE_LABELS } from '@mams/types';
@@ -85,7 +86,7 @@ export function AdminAudit() {
         }}
       />
 
-      <div className="card p-4 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="mt-8 mb-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <label className="text-sm sm:col-span-1">
           <span className="label block mb-1">Search</span>
           <input
@@ -112,8 +113,7 @@ export function AdminAudit() {
         </label>
         <label className="text-sm sm:col-span-1">
           <span className="label block mb-1">Role</span>
-          <select
-            className="input"
+          <Select
             value={role}
             onChange={(e) => {
               setRole(e.target.value);
@@ -126,7 +126,7 @@ export function AdminAudit() {
                 {ROLE_LABELS[r]}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </div>
 

@@ -265,10 +265,12 @@ export function FormBuilder({
           <div>
             <VisitorMultilingualEditor value={multilingual} onChange={setMultilingual} />
 
-            <Field label="Form title">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Office visitor registration" />
-            </Field>
-            <div className="mt-3">
+            <div className="mb-8">
+              <Field label="Form title">
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Office visitor registration" />
+              </Field>
+            </div>
+            <div className="mb-8">
               <Field label="Description">
                 <Textarea
                   value={description}
@@ -291,7 +293,7 @@ export function FormBuilder({
             </div>
 
             {isEdit && (
-              <div className="mt-4 p-3 rounded-md bg-surface2 space-y-2">
+              <div className="mb-8 p-3 rounded-md bg-surface2 space-y-2">
                 <p className="text-sm font-medium">Public link & QR code</p>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input
@@ -314,11 +316,14 @@ export function FormBuilder({
               </div>
             )}
 
-            <p className="text-sm font-semibold mt-4 mb-2">Questions & intro placement</p>
-            <p className="text-xs text-text-muted mb-2">
-              Drag header image and intro video between questions to control where they appear on the public form.
-            </p>
+            <div className="mb-8">
+              <p className="text-sm font-semibold mb-2">Questions & intro placement</p>
+              <p className="text-xs text-text-muted">
+                Drag header image and intro video between questions to control where they appear on the public form.
+              </p>
+            </div>
 
+            <div className="mb-8">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -393,6 +398,7 @@ export function FormBuilder({
                 ) : null}
               </DragOverlay>
             </DndContext>
+            </div>
           </div>
 
           <div className="lg:border-l lg:border-border lg:pl-6">

@@ -111,14 +111,9 @@ export function Leave() {
 
   return (
     <div>
-      <LeavePageHeader
-        canApply={canApply}
-        onAddLeave={openApply}
-        tourButton={<GiveMeATourButton onClick={tour.onReplayTour} />}
-      />
+      <LeavePageHeader tourButton={<GiveMeATourButton onClick={tour.onReplayTour} />} />
       <div data-tour-id="leave-tabs">
         <LeaveTabBar tab={tab} onTabChange={setTab} canConfigure={canConfigure} />
-        {canConfigure && <span className="sr-only" data-tour-id="leave-holidays-hint" aria-hidden="true" />}
       </div>
       {readOnly && <LeaveReadOnlyBanner />}
 

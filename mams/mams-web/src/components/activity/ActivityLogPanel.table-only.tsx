@@ -71,13 +71,13 @@ export function ActivityLogPanel() {
             )}
             {data?.items.map((row) => (
               <tr key={row.id} className="hover:bg-surface2/40">
-                <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
+                <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
                 <td className="px-3 py-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
                     {activityPageBadge(row.eventType, row.payload)}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-text">{formatActivityDescription(row)}</td>
+                <td className="px-3 py-2 text-text !whitespace-normal break-words">{formatActivityDescription(row)}</td>
               </tr>
             ))}
           </tbody>

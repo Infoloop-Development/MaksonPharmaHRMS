@@ -287,20 +287,13 @@ export function AttendanceLog() {
         <DashboardStatCard
           label="OTHER Punches"
           value={stats ? fmtNumber(stats.other) : EMPTY_CELL}
-          sub="non IN/OUT"
+          sub="recorded"
           accent="red"
           selected={activeTile === 'other'}
           onClick={() => clickTile('other')}
           tooltip={STAT_CARD_TOOLTIPS.attendanceLog.other}
         />
       </div>
-
-      {!date && (
-        <p className="text-xs text-text-muted mb-3 -mt-1">
-          Stat counts are for <strong className="text-text">{scopeLabel}</strong> (IST). The table below
-          shows all dates until you filter by date.
-        </p>
-      )}
 
       {isModified && (
         <div className="dash-filter-bar">
@@ -313,7 +306,7 @@ export function AttendanceLog() {
         </div>
       )}
 
-      <div data-tour-id="attendance-filters">
+      <div data-tour-id="attendance-filters" className="mt-5">
       <MobileFilterBar
         search={
           <div className="flex-1 min-w-[200px]" data-tour-id="attendance-filters-search">
@@ -340,6 +333,8 @@ export function AttendanceLog() {
           setPage(1);
         }}
         desktopClassName="hidden md:flex flex-row gap-3 flex-wrap"
+        noCard
+        className="mb-8"
       >
         <div data-tour-id="attendance-filters-date" className="w-full sm:w-auto">
         <input

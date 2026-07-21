@@ -58,7 +58,7 @@ export function ComplianceActivity(){
                 }}
             />
 
-            <div className="card p-4 mb-4">
+            <div className="p-1 mb-6">
                 <label className="text-sm block">
                     <span className="label block mb-1">Search</span>
                     <input

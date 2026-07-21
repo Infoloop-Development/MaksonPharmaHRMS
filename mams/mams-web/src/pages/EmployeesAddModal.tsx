@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EmployeeCreateBodySchema,
@@ -110,8 +110,10 @@ function draftFromEmployee(employee: EmployeeMasked, isCompliant: boolean): Draf
     aadhaar: '',
     bankAccountNumber: '',
     ifsc: '',
-    bankName: '',
-    accountHolderName: '',
+    // Not masked for real view (see toMaskedEmployee), so safe to prefill like any other
+    // regular field. Stays blank for compliant edit, where it's still masked.
+    bankName: isCompliant ? '' : employee.bankName,
+    accountHolderName: isCompliant ? '' : employee.accountHolderName,
     accountType: employee.accountType,
     pfNumber: '',
     esiNumber: '',
@@ -139,34 +141,7 @@ export function EmployeesAddModal({
   const [busy, setBusy] = useState(false);
   const toast = useToast((s) => s.push);
   const qc = useQueryClient();
-  const canUnmask = isEdit;
   const initialDraftRef = useRef<Draft | null>(isEdit && employee ? draftFromEmployee(employee, isCompliant) : null);
-
-  const { data: freshEmployee } = useQuery({
-    queryKey: ['employees', employee?.id, 'edit'],
-    queryFn: () => employeesApi.getOne(employee!.id),
-    enabled: canUnmask,
-    staleTime: 0,
-  });
-
-  useEffect(() => {
-    if (!freshEmployee || freshEmployee.isMasked) return;
-    const sensitiveFields = {
-      pan: freshEmployee.pan,
-      aadhaar: freshEmployee.aadhaar,
-      bankAccountNumber: freshEmployee.bankAccountNumber,
-      ifsc: freshEmployee.ifsc,
-      bankName: freshEmployee.bankName,
-      accountHolderName: freshEmployee.accountHolderName,
-      accountType: freshEmployee.accountType,
-      pfNumber: freshEmployee.pfNumber,
-      esiNumber: freshEmployee.esiNumber,
-    };
-    if (initialDraftRef.current) {
-      initialDraftRef.current = { ...initialDraftRef.current, ...sensitiveFields };
-    }
-    setDraft((prev) => ({ ...prev, ...sensitiveFields }));
-  }, [freshEmployee]);
 
   const { data: nextCodeData, isLoading: nextCodeLoading } = useQuery({
     queryKey: ['employees', 'next-code'],
@@ -218,8 +193,9 @@ export function EmployeesAddModal({
     [draft, step1Payload]
   );
 
-  // For compliance edit: show masked current value as placeholder so auditors can see data exists
-  const mp = isCompliant && isEdit ? employee : undefined;
+  // Show the masked current value as a placeholder (never the real one) so the admin
+  // can see a field has data without it being fetched unmasked into the form.
+  const mp = isEdit ? employee : undefined;
 
   const hasChanges = useMemo(() => {
     if (!isEdit || !initialDraftRef.current) return true;

@@ -5,7 +5,7 @@ import { leaveApi, type LeaveApplicationItem, type LeaveTypeItem } from '../../a
 import type { LeaveSummary } from '../../api/leave';
 import { DashboardStatCard } from '../ui/DashboardStatCard';
 import { Badge } from '../ui/Badge';
-import { Input, Select } from '../ui/Field';
+import { Field, Input, Select } from '../ui/Field';
 import { MobileFilterBar } from '../ui/MobileFilterBar';
 import { countActiveFilters } from '../../lib/countActiveFilters';
 import { EMPTY_CELL, fmtDate } from '../../lib/format';
@@ -183,21 +183,23 @@ export function LeaveRequestsTab({
           <option key={t.id} value={t.id}>{t.name}</option>
         ))}
       </Select>
-      <Input
-        type="date"
-        className="md:max-w-[160px]"
-        value={startDate}
-        onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-        title="From date"
-      />
-      <Input
-        type="date"
-        className="md:max-w-[160px]"
-        value={endDate}
-        min={startDate || undefined}
-        onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-        title="To date"
-      />
+      <Field label="From">
+        <Input
+          type="date"
+          className="md:max-w-[160px]"
+          value={startDate}
+          onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+        />
+      </Field>
+      <Field label="To">
+        <Input
+          type="date"
+          className="md:max-w-[160px]"
+          value={endDate}
+          min={startDate || undefined}
+          onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+        />
+      </Field>
     </>
   );
 
@@ -221,7 +223,11 @@ export function LeaveRequestsTab({
           label="Leaves Today"
           value={String(summary?.leavesToday ?? 0)}
           accent="primary"
-          sub={summary?.leavesTodayNames?.length ? `${summary.leavesTodayNames.length} employee(s)` : 'active today'}
+          sub={
+            summary?.leavesTodayNames?.length
+              ? `${summary.leavesTodayNames.length} employee${summary.leavesTodayNames.length === 1 ? '' : 's'}`
+              : 'active today'
+          }
           selected={activeTile === 'today'}
           onClick={() => clickTile('today')}
           tooltip={
@@ -263,7 +269,7 @@ export function LeaveRequestsTab({
         search={searchField}
         activeCount={activeCount}
         onClear={clearFilters}
-        desktopClassName="hidden md:flex flex-wrap gap-3 items-center"
+        desktopClassName="hidden md:flex flex-wrap gap-3 items-end"
         noCard
         className="mb-3"
         actions={
@@ -278,10 +284,15 @@ export function LeaveRequestsTab({
         }
       >
         {filterFields}
-        <div className="hidden md:flex gap-2 lg:ml-auto">
+        <div className="hidden mt-5 md:flex gap-2 lg:ml-auto">
           {exportButton}
           {canApply && (
-            <button type="button" className="btn-primary btn-sm" onClick={onAddLeave}>
+            <button
+              type="button"
+              className="btn-primary btn-sm"
+              data-tour-id="leave-apply"
+              onClick={onAddLeave}
+            >
               + Add Leave
             </button>
           )}
@@ -299,92 +310,96 @@ export function LeaveRequestsTab({
         onAddLeave={onAddLeave}
       />
 
-      <div className="card tbl-scroll hidden md:block">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
-              <SortableTh label="Employee" sortKey="employee" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'employee')} />
-              <th className="px-4 py-3">Type</th>
-              <SortableTh label="Dates" sortKey="fromDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'fromDate')} />
-              <SortableTh label="Days" sortKey="totalDays" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'totalDays')} />
-              <th className="px-4 py-3">Reason</th>
-              <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'status')} />
-              <th className="py-3 w-24 text-center text-xs font-semibold text-slate-600 dark:text-slate-200">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-text-muted">Loading…</td></tr>
-            )}
-            {!isLoading && items.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-16 text-center">
-                  <div className="flex flex-col items-center gap-3 text-text-muted">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-25">
-                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <p className="text-sm">No leave applications match your filters.{canApply && <> <button type="button" className="text-link underline" onClick={onAddLeave}>Add leave</button></>}</p>
-                  </div>
-                </td>
+      <div className="card hidden md:block overflow-hidden">
+        <div className="tbl-scroll">
+          <table className="w-full text-sm table-fixed">
+            <thead>
+              <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
+                <SortableTh label="Employee" sortKey="employee" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[14.2857%]" tooltip={tableColumnTooltip('leave', 'employee')} />
+                <th className="px-4 py-3 !text-center w-[14.2857%]">Type</th>
+                <SortableTh label="Dates" sortKey="fromDate" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[14.2857%]" tooltip={tableColumnTooltip('leave', 'fromDate')} />
+                <SortableTh label="Days" sortKey="totalDays" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[14.2857%]" tooltip={tableColumnTooltip('leave', 'totalDays')} />
+                <th className="px-4 py-3 !text-center w-[14.2857%]">Reason</th>
+                <SortableTh label="Status" sortKey="status" activeCol={sortBy} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[14.2857%]" tooltip={tableColumnTooltip('leave', 'status')} />
+                <th className="px-4 py-3 !text-center w-[14.2857%] text-xs font-semibold text-slate-600 dark:text-slate-200">Actions</th>
               </tr>
-            )}
-            {items.map((row) => {
-              const emp = row.employeeId;
-              const reasonExpanded = expandedReason === row._id;
-              return (
-                <tr key={row._id} className="border-b border-border/60 hover:bg-surface2/50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary-bg text-primary-on-bg text-xs font-bold flex items-center justify-center shrink-0">
-                        {emp?.name ? employeeInitials(emp.name) : '?'}
-                      </div>
-                      <div>
-                        <div className="font-medium">{emp?.name ?? EMPTY_CELL}</div>
-                        <div className="text-xs font-mono text-text-muted">{emp?.empCode}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">{leaveTypeLabel(row)}</td>
-                  <td className="px-4 py-3 text-xs whitespace-nowrap">
-                    {fmtDate(row.fromDate)}
-                    {row.fromDate !== row.toDate && <> to {fmtDate(row.toDate)}</>}
-                  </td>
-                  <td className="px-4 py-3 font-mono">{row.totalDays}</td>
-                  <td className="px-4 py-3 max-w-[200px]">
-                    <span className={reasonExpanded ? '' : 'line-clamp-2'}>{row.reason}</span>
-                    {row.reason.length > 80 && (
-                      <button
-                        type="button"
-                        className="text-xs text-link ml-1"
-                        onClick={() => setExpandedReason(reasonExpanded ? null : row._id)}
-                      >
-                        {reasonExpanded ? 'Less' : 'More'}
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3"><Badge tone={leaveStatusTone(row.status)}>{row.status}</Badge></td>
-                  <td className="py-3 w-24">
-                    <div className="flex items-center justify-center gap-0.5">
-                      <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-bg transition-colors" title="View" onClick={() => onView(row)}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                      </button>
-                      {canApprove && row.status === 'Pending' && (
-                        <>
-                          <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-green hover:bg-green-bg transition-colors" title="Approve" onClick={() => onApprove(row)}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
-                          </button>
-                          <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-red hover:bg-red/10 transition-colors" title="Reject" onClick={() => onReject(row)}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
-                        </>
-                      )}
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-text-muted">Loading…</td></tr>
+              )}
+              {!isLoading && items.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3 text-text-muted">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-25">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      <p className="text-sm">No leave applications match your filters.{canApply && <> <button type="button" className="text-link underline" onClick={onAddLeave}>Add leave</button></>}</p>
                     </div>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+              {items.map((row) => {
+                const emp = row.employeeId;
+                const reasonExpanded = expandedReason === row._id;
+                return (
+                  <tr key={row._id} className="border-b border-border/60 hover:bg-surface2/50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2 -ml-4">
+                        <div className="w-8 h-8 rounded-full bg-primary-bg text-primary-on-bg text-xs font-bold flex items-center justify-center shrink-0">
+                          {emp?.name ? employeeInitials(emp.name) : '?'}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium">{emp?.name ?? EMPTY_CELL}</div>
+                          <div className="text-xs font-mono text-text-muted">{emp?.empCode}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">{leaveTypeLabel(row)}</td>
+                    <td className="px-4 py-3 text-xs whitespace-nowrap text-center">
+                      <span className="inline-block -ml-4">
+                        {fmtDate(row.fromDate)}
+                        {row.fromDate !== row.toDate && <> to {fmtDate(row.toDate)}</>}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-center"><span className="inline-block -ml-4">{row.totalDays}</span></td>
+                    <td className="px-4 py-3 max-w-[200px] text-center">
+                      <span className={reasonExpanded ? '' : 'line-clamp-2'}>{row.reason}</span>
+                      {row.reason.length > 80 && (
+                        <button
+                          type="button"
+                          className="text-xs text-link ml-1"
+                          onClick={() => setExpandedReason(reasonExpanded ? null : row._id)}
+                        >
+                          {reasonExpanded ? 'Less' : 'More'}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center"><span className="inline-block -ml-4"><Badge tone={leaveStatusTone(row.status)}>{row.status}</Badge></span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-bg transition-colors" title="View" onClick={() => onView(row)}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        {canApprove && row.status === 'Pending' && (
+                          <>
+                            <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-green hover:bg-green-bg transition-colors" title="Approve" onClick={() => onApprove(row)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg>
+                            </button>
+                            <button type="button" className="w-8 h-8 rounded-md flex items-center justify-center text-text-muted hover:text-red hover:bg-red/10 transition-colors" title="Reject" onClick={() => onReject(row)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <TablePagination

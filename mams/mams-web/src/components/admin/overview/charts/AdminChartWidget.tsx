@@ -80,7 +80,7 @@ export function AdminChartWidget({
         )}
         {!showEmpty && result.chart && (result.type === 'donut' || result.type === 'pie') && (
           <div className="flex flex-col md:flex-row items-center justify-center gap-4 h-full">
-            <div className={`relative ${DONUT_SIZE}`}>
+            <div className={`relative ${DONUT_SIZE} shrink-0`}>
               <Doughnut data={result.chart.data} options={result.chart.options} />
               {result.type === 'donut' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -89,6 +89,16 @@ export function AdminChartWidget({
                 </div>
               )}
             </div>
+            {result.type === 'donut' && result.legendItems && (
+              <div className="flex flex-col gap-1">
+                {result.legendItems.map((item) => (
+                  <div key={item.label} className="dash-donut-legend-item">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                    {item.label} ({fmtNumber(item.value)})
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {!showEmpty && result.chart && result.type === 'line' && (

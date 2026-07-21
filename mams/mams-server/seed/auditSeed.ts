@@ -24,7 +24,6 @@ const EVENT_TEMPLATES: Array<{ eventType: string; entityType?: string }> = [
   { eventType: 'admin_overview_widgets_saved' },
   { eventType: 'ui.admin.filter' },
   { eventType: 'leave_application_created', entityType: 'LeaveApplication' },
-  { eventType: 'regularization_submitted', entityType: 'Regularization' },
   { eventType: 'password_changed' },
 ];
 

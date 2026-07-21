@@ -10,7 +10,6 @@ import { EmployeeDetail } from './pages/EmployeeDetail';
 import { AttendanceLog } from './pages/AttendanceLog';
 import { Reports } from './pages/Reports';
 import { Adjustments } from './pages/Adjustments';
-import { Regularization } from './pages/Regularization';
 import { Leave } from './pages/Leave';
 import { Visitors } from './pages/Visitors';
 import { PublicVisitorForm } from './pages/PublicVisitorForm';
@@ -160,7 +159,6 @@ export function App() {
             </RequireAnyPermission>
           }
         />
-        <Route path="regularization" element={<Regularization />} />
         <Route path="leave" element={<Leave />} />
         <Route path="visitors" element={<Visitors />} />
         <Route path="devices" element={<Devices />} />

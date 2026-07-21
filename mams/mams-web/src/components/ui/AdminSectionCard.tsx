@@ -19,7 +19,7 @@ export function AdminSectionCard({
         <h2 className="text-base font-bold text-text">{title}</h2>
         {headerRight}
       </div>
-      <div className="space-y-0 flex-1 min-h-0">{children}</div>
+      <div className="flex-1 min-h-0">{children}</div>
       {footer && (
         <div className="mt-4 pt-4 border-t border-border shrink-0">{footer}</div>
       )}

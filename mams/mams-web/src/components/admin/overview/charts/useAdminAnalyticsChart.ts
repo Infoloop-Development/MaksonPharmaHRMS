@@ -113,6 +113,8 @@ function buildCircularChart(
   const total = values.reduce((a, b) => a + b, 0);
   if (total === 0) return { chart: null, centerValue: 0, centerSub: '', hasData: false };
 
+  const palette = seriesPalette(colors).slice(0, values.length);
+
   return {
     type: variant,
     chart: {
@@ -121,7 +123,7 @@ function buildCircularChart(
         datasets: [
           {
             data: values,
-            backgroundColor: seriesPalette(colors).slice(0, values.length),
+            backgroundColor: palette,
             borderWidth: 0,
             borderRadius: variant === 'pie' ? 4 : 8,
             spacing: variant === 'pie' ? 1 : 2,
@@ -154,6 +156,10 @@ function buildCircularChart(
     centerValue,
     centerSub,
     hasData: true,
+    legendItems:
+      variant === 'donut'
+        ? labels.map((label, i) => ({ label, value: values[i] ?? 0, color: palette[i] ?? colors.navy }))
+        : undefined,
   };
 }
 

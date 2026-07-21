@@ -12,12 +12,6 @@ export const STAT_CARD_TOOLTIPS = {
     offline: 'Devices that failed or have not synced recently.',
     punches24h: 'Raw punch events received from all devices in the last 24 hours.',
   },
-  regularization: {
-    pending: 'Regularization requests awaiting approval.',
-    approved: 'Requests approved in the current filter scope.',
-    rejected: 'Requests rejected in the current filter scope.',
-    total: 'All requests matching current filters.',
-  },
   visitors: {
     pending: 'Visitor requests awaiting approval.',
     approved: 'Approved visitor requests in scope.',

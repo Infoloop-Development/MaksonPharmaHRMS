@@ -17,6 +17,7 @@ import { useTimeDisplay } from '../store/timeFormat';
 import {
   DEFAULT_EXPORT_NAMING,
   EXPORT_NAMING_TOKENS,
+  EXPORT_TYPE_GROUPS,
   EXPORT_TYPE_LABELS,
   PERMISSIONS_BY_ROLE,
   ROLE_PERMISSION_CAP,
@@ -62,8 +63,6 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   'read.compliant': 'Read compliant (8h) attendance data',
   'write.adjust': 'Submit attendance adjustments (pending approval)',
   'approve.adjust': 'Approve/reject adjustments',
-  'write.regularization': 'Submit regularization requests (pending approval)',
-  'approve.regularization': 'Approve/reject regularization requests',
   'unmask.sensitive': 'Unmask PAN, bank, Aadhaar, PF, ESI',
   'manage.users': 'Manage users (legacy)',
   'manage.employees': 'Manage employee records',
@@ -93,7 +92,6 @@ const PERMISSION_LABELS: Record<Permission, string> = {
 const PERMISSION_GROUPS: { label: string; permissions: readonly Permission[] }[] = [
   { label: 'Attendance data', permissions: ['read.real', 'read.compliant'] },
   { label: 'Adjustments', permissions: ['write.adjust', 'approve.adjust'] },
-  { label: 'Regularization', permissions: ['write.regularization', 'approve.regularization'] },
   { label: 'Leave', permissions: ['read.leave', 'write.leave', 'approve.leave', 'manage.leave'] },
   { label: 'Visitors', permissions: ['read.visitors', 'approve.visitors', 'manage.visitors'] },
   { label: 'Sensitive data', permissions: ['unmask.sensitive'] },
@@ -173,7 +171,7 @@ export function Settings() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">HR Settings</h1>
           <div className="text-sm text-text-muted">
-            Operational shortcuts and shift reference. Organization-wide config is in Admin → Organization.
+            Everyday HR shortcuts and shift reference. For organization-wide configuration, go to Admin → Organization.
           </div>
         </div>
         <GiveMeATourButton onClick={tour.onReplayTour} />
@@ -477,10 +475,10 @@ function TimeDisplayCard({ settings, canManage }: { settings: SettingsT; canMana
         ))
       }
     >
-      <p className="text-sm text-text-muted">
-        Applies to all HR and manager users across the app: how times are shown and entered (clocks, attendance, reports, regularization).
+      <p className="text-sm text-text-muted mb-4">
+        Applies to all HR and manager users across the app: how times are shown and entered (clocks, attendance, reports).
       </p>
-      <div className="space-y-2 pt-1">
+      <div className="space-y-2">
         {options.map((opt) => (
           <label
             key={opt}
@@ -568,13 +566,15 @@ function CompanyInfoCard({ settings, canManage }: { settings: SettingsT; canMana
         ))
       }
     >
-      <Field label="Company Name">
-        <Input value={draft.companyName} onChange={(e) => set({ companyName: e.target.value })} disabled={fieldsLocked} />
-      </Field>
-      <Field label="Registered Address">
-        <Textarea value={draft.registeredAddress} onChange={(e) => set({ registeredAddress: e.target.value })} disabled={fieldsLocked} />
-      </Field>
-      <p className="text-xs text-text-muted -mt-1 mb-2">
+      <div className="space-y-3">
+        <Field label="Company Name">
+          <Input value={draft.companyName} onChange={(e) => set({ companyName: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+        <Field label="Registered Address">
+          <Textarea value={draft.registeredAddress} onChange={(e) => set({ registeredAddress: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+      </div>
+      <p className="text-xs text-text-muted mt-2 mb-3">
         Company name and address appear on all report printouts and export headers. Signatory details appear on printed reports and exported files.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -648,21 +648,23 @@ function ComplianceCard({ settings, canManage }: { settings: SettingsT; canManag
         ))
       }
     >
-      <Field label="CIN">
-        <Input value={draft.cin} onChange={(e) => set({ cin: e.target.value })} disabled={fieldsLocked} />
-      </Field>
-      <Field label="GSTIN">
-        <Input value={draft.gstin} onChange={(e) => set({ gstin: e.target.value })} disabled={fieldsLocked} />
-      </Field>
-      <Field label="PF Registration">
-        <Input value={draft.pfRegistrationNumber} onChange={(e) => set({ pfRegistrationNumber: e.target.value })} disabled={fieldsLocked} />
-      </Field>
-      <Field label="ESI Registration">
-        <Input value={draft.esiRegistrationNumber} onChange={(e) => set({ esiRegistrationNumber: e.target.value })} disabled={fieldsLocked} />
-      </Field>
-      <Field label="Factory Licence">
-        <Input value={draft.factoryLicenceNumber} onChange={(e) => set({ factoryLicenceNumber: e.target.value })} disabled={fieldsLocked} />
-      </Field>
+      <div className="space-y-3">
+        <Field label="CIN">
+          <Input value={draft.cin} onChange={(e) => set({ cin: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+        <Field label="GSTIN">
+          <Input value={draft.gstin} onChange={(e) => set({ gstin: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+        <Field label="PF Registration">
+          <Input value={draft.pfRegistrationNumber} onChange={(e) => set({ pfRegistrationNumber: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+        <Field label="ESI Registration">
+          <Input value={draft.esiRegistrationNumber} onChange={(e) => set({ esiRegistrationNumber: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+        <Field label="Factory Licence">
+          <Input value={draft.factoryLicenceNumber} onChange={(e) => set({ factoryLicenceNumber: e.target.value })} disabled={fieldsLocked} />
+        </Field>
+      </div>
     </SectionCard>
   );
 }
@@ -674,26 +676,26 @@ function ShiftsCard({ settings, canManage }: { settings: SettingsT; canManage: b
     <SectionCard title="Time Shifts">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-2">Real shifts (12-hour)</div>
           {settings.realShifts.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
+              <span className="text-sm font-medium text-text">{s.label}</span>
+              <span className="text-sm font-semibold tabular-nums text-text-muted">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
             </div>
           ))}
         </div>
         <div className="min-w-0 md:border-l md:border-border md:pl-4">
-          <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-2">Compliance shifts (8-hour)</div>
           {settings.complianceShifts.map((s) => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="font-medium">{s.label}</span>
-              <span className="font-mono text-sm">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
+              <span className="text-sm font-medium text-text">{s.label}</span>
+              <span className="text-sm font-semibold tabular-nums text-text-muted">{fmtHhmm(s.start)} - {fmtHhmm(s.end)}</span>
             </div>
           ))}
         </div>
       </div>
       <div className="pt-3 border-t border-border">
-        <div className="text-xs uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-2">Weekly off default</div>
         <div className="flex gap-2 flex-wrap">
           {WEEKDAYS.map((d) => (
             <Badge key={d} tone={settings.weeklyOffDefault.includes(d) ? 'blue' : 'gray'}>{d}</Badge>
@@ -728,7 +730,7 @@ function SmartAnchorCard({ settings, canManage }: { settings: SettingsT; canMana
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2">
         <div className="min-w-0">
           <div className="font-medium">Enable Smart Anchor</div>
-          <div className="text-xs text-text-muted">Generate compliance punches within the 8-hour window. Deterministic per (employee, date).</div>
+          <div className="text-xs text-text-muted mt-0.5">Generate compliance punches within the 8-hour window. Deterministic per (employee, date).</div>
         </div>
         <Toggle
           checked={enabled}
@@ -875,6 +877,22 @@ function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canMan
     set({ patterns: { ...draft.patterns, [type]: value } });
   };
 
+  const renderPatternCard = (type: ExportTypeKey) => (
+    <div key={type} className="space-y-2.5 rounded-lg border border-border bg-surface2/40 p-4 min-w-0">
+      <Field label={EXPORT_TYPE_LABELS[type]}>
+        <Input
+          value={draft.patterns[type]}
+          onChange={(e) => setPattern(type, e.target.value)}
+          disabled={fieldsLocked}
+          className="font-mono text-xs"
+        />
+      </Field>
+      <div className="text-xs text-text-muted break-all">
+        Preview: <span className="font-mono text-text">{previewFor(type)}</span>
+      </div>
+    </div>
+  );
+
   return (
     <SectionCard
       title="Export filename formats"
@@ -910,14 +928,15 @@ function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canMan
       }
     >
       {!canManage && (
-        <p className="text-xs text-text-muted -mt-1 mb-1">
+        <p className="text-xs text-text-muted mb-2">
           Read-only: you do not have permission to change export filenames.
         </p>
       )}
-      <p className="text-xs text-text-muted">
-        Configure how downloaded CSV and Excel files are named. Changes apply to the next export only.
+      <p className="text-xs text-text-muted mb-6">
+        Configure how downloaded files are named. Every export below produces an Excel (.xlsx) file. Changes apply
+        to the next export only.
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Field label="Company code (optional override)">
           <Input
             value={draft.companyCode}
@@ -948,37 +967,41 @@ function ExportNamingCard({ settings, canManage }: { settings: SettingsT; canMan
           </label>
         </div>
       </div>
-      <div className="rounded-lg border border-border bg-surface2/60 px-3 py-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-subtle mb-1.5">
-          Available tokens
-        </div>
-        <div className="flex flex-wrap gap-1.5">
+      <div className="mt-6 mb-6 rounded-lg border border-border bg-surface2/60 px-4 py-3">
+        <div className="text-xs font-semibold text-text-muted mb-2">Available tokens</div>
+        <div className="flex flex-wrap gap-2">
           {EXPORT_NAMING_TOKENS.map((token) => (
             <span
               key={token}
-              className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-text-muted"
+              className="text-[11px] font-mono px-2 py-1 rounded bg-surface border border-border text-text-muted"
             >
               {`{${token}}`}
             </span>
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {(Object.keys(EXPORT_TYPE_LABELS) as ExportTypeKey[]).map((type) => (
-          <div key={type} className="space-y-1.5 rounded-lg border border-border bg-surface2/40 p-3 min-w-0">
-            <Field label={EXPORT_TYPE_LABELS[type]}>
-              <Input
-                value={draft.patterns[type]}
-                onChange={(e) => setPattern(type, e.target.value)}
-                disabled={fieldsLocked}
-                className="font-mono text-xs"
-              />
-            </Field>
-            <div className="text-xs text-text-muted break-all">
-              Preview: <span className="font-mono text-text">{previewFor(type)}</span>
+      <div className="text-sm font-bold text-text mb-4">Filename patterns</div>
+      <div className="space-y-8">
+        {EXPORT_TYPE_GROUPS.map((group) => {
+          const hasOrphan = group.types.length % 2 !== 0;
+          const gridTypes = hasOrphan ? group.types.slice(0, -1) : group.types;
+          const orphanType = hasOrphan ? group.types[group.types.length - 1] : null;
+          return (
+            <div key={group.label}>
+              <div className="text-xs font-semibold uppercase tracking-wider text-text-subtle mb-3">
+                {group.label}
+              </div>
+              {gridTypes.length > 0 && (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">{gridTypes.map(renderPatternCard)}</div>
+              )}
+              {orphanType && (
+                <div className={`xl:max-w-[calc(50%-0.5rem)] ${gridTypes.length > 0 ? 'mt-4' : ''}`}>
+                  {renderPatternCard(orphanType)}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </SectionCard>
   );
@@ -1014,7 +1037,7 @@ function ConfidentialityCard({ settings, canManage }: { settings: SettingsT; can
         </>
       )}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="text-sm">Show confidentiality notice on exports</div>
         <Toggle
           checked={draft.confidentialityNoticeEnabled}

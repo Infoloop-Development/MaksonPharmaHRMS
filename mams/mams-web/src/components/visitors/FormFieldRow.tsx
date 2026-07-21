@@ -78,7 +78,7 @@ export function FormFieldRow({
     <div
       ref={setRef}
       style={style}
-      className={`card p-4 mb-0 border-2 transition-colors ${
+      className={`card p-4 mb-0 border-2 transition-colors hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] ${
         selected ? 'border-primary' : 'border-transparent'
       } ${isDragging ? 'form-field-row--dragging' : ''}`}
       onClick={onSelect}
@@ -100,7 +100,7 @@ export function FormFieldRow({
         <div className="flex-1" />
         <button
           type="button"
-          className="text-xs text-red hover:underline"
+          className="btn-outline text-xs shrink-0 text-red"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
@@ -115,20 +115,29 @@ export function FormFieldRow({
           <Field label="Field label">
             <Input value={field.label} onChange={(e) => onChange({ label: e.target.value })} />
           </Field>
-          {field.type !== 'file' && field.type !== 'radio' && field.type !== 'checkbox' && (
-            <Field label="Placeholder">
+          {field.type !== 'file' && field.type !== 'radio' && field.type !== 'checkbox' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Placeholder">
+                <Input
+                  value={field.placeholder ?? ''}
+                  onChange={(e) => onChange({ placeholder: e.target.value || undefined })}
+                />
+              </Field>
+              <Field label="Help text">
+                <Input
+                  value={field.helpText ?? ''}
+                  onChange={(e) => onChange({ helpText: e.target.value || undefined })}
+                />
+              </Field>
+            </div>
+          ) : (
+            <Field label="Help text">
               <Input
-                value={field.placeholder ?? ''}
-                onChange={(e) => onChange({ placeholder: e.target.value || undefined })}
+                value={field.helpText ?? ''}
+                onChange={(e) => onChange({ helpText: e.target.value || undefined })}
               />
             </Field>
           )}
-          <Field label="Help text">
-            <Input
-              value={field.helpText ?? ''}
-              onChange={(e) => onChange({ helpText: e.target.value || undefined })}
-            />
-          </Field>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

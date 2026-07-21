@@ -66,31 +66,33 @@ export function ActivityLogPanel() {
       )}
 
       {!isLoading && data && data.items.length > 0 && (
-        <div className="hidden md:block tbl-scroll max-h-[420px] border border-border rounded-md">
-          <table className="w-full text-sm">
-            <thead className="bg-surface2 sticky top-0">
-              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <SortableTh label="Time (IST)" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[220px]" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
-                <SortableTh label="Area" sortKey="area" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-3 py-2 w-[100px]" tooltip={tableColumnTooltip('audit', 'area')} />
-                <th className="px-3 py-2 font-semibold">Activity</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sortedRows.map((row) => (
-                <tr key={row.id} className="hover:bg-surface2/40">
-                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
-                  <td className="px-3 py-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
-                      {activityPageBadge(row.eventType, row.payload)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-text">
-                    <ActivityDescription item={row} />
-                  </td>
+        <div className="hidden md:block card overflow-hidden">
+          <div className="tbl-scroll max-h-[420px]">
+            <table className="w-full text-sm table-fixed">
+              <thead className="bg-surface2 sticky top-0">
+                <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
+                  <SortableTh label="Time (IST)" sortKey="occurredAt" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="!px-3 !py-2 w-[220px]" tooltip={tableColumnTooltip('audit', 'occurredAt')} />
+                  <SortableTh label="Area" sortKey="area" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="!px-3 !py-2 w-[100px]" tooltip={tableColumnTooltip('audit', 'area')} />
+                  <th className="!px-3 !py-2 font-semibold">Activity</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sortedRows.map((row) => (
+                  <tr key={row.id} className="hover:bg-surface2/40">
+                    <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">{fmtDateTimeMs(row.occurredAt)}</td>
+                    <td className="px-3 py-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
+                        {activityPageBadge(row.eventType, row.payload)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-text !whitespace-normal break-words">
+                      <ActivityDescription item={row} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

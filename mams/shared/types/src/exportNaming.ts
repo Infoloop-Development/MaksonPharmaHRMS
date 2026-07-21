@@ -19,18 +19,38 @@ export const ExportDateFormatSchema = z.enum(['YYYYMMDD', 'DDMMYY']);
 export type ExportDateFormat = z.infer<typeof ExportDateFormatSchema>;
 
 export const EXPORT_TYPE_LABELS: Record<ExportTypeKey, string> = {
-  dailyReportCsv: 'Daily report (Excel)',
-  monthlyReportCsv: 'Monthly summary (Excel)',
-  departmentReportCsv: 'Department report (Excel)',
-  locationReportCsv: 'Location report (Excel)',
-  leaveApplicationsCsv: 'Leave applications (Excel)',
-  dashboardAttendanceXlsx: 'Dashboard attendance (Excel)',
-  adminOverviewAttendanceXlsx: 'Admin overview attendance (Excel)',
-  adminOverviewEmployeesXlsx: 'Admin overview employees (Excel)',
-  adminOverviewUsersXlsx: 'Admin overview users (Excel)',
-  adminOverviewDevicesXlsx: 'Admin overview devices (Excel)',
-  adminOverviewAuditXlsx: 'Admin overview audit (Excel)',
+  dailyReportCsv: 'Daily report',
+  monthlyReportCsv: 'Monthly summary',
+  departmentReportCsv: 'Department report',
+  locationReportCsv: 'Location report',
+  leaveApplicationsCsv: 'Leave applications',
+  dashboardAttendanceXlsx: 'Dashboard attendance',
+  adminOverviewAttendanceXlsx: 'Admin overview attendance',
+  adminOverviewEmployeesXlsx: 'Admin overview employees',
+  adminOverviewUsersXlsx: 'Admin overview users',
+  adminOverviewDevicesXlsx: 'Admin overview devices',
+  adminOverviewAuditXlsx: 'Admin overview audit',
 };
+
+/** Every export type currently produces the same file type; grouped here for the Settings UI. */
+export const EXPORT_TYPE_GROUPS: { label: string; types: ExportTypeKey[] }[] = [
+  {
+    label: 'Reports',
+    types: ['dailyReportCsv', 'monthlyReportCsv', 'departmentReportCsv', 'locationReportCsv'],
+  },
+  { label: 'Leave', types: ['leaveApplicationsCsv'] },
+  { label: 'Dashboard', types: ['dashboardAttendanceXlsx'] },
+  {
+    label: 'Admin overview',
+    types: [
+      'adminOverviewAttendanceXlsx',
+      'adminOverviewEmployeesXlsx',
+      'adminOverviewUsersXlsx',
+      'adminOverviewDevicesXlsx',
+      'adminOverviewAuditXlsx',
+    ],
+  },
+];
 
 export const EXPORT_REPORT_TYPE_CODES: Record<ExportTypeKey, string> = {
   dailyReportCsv: 'DailyAttendance',

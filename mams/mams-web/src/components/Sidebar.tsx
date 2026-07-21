@@ -14,7 +14,6 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
   { to: '/employees', label: 'Employees', icon: 'employees' },
   { to: '/attendance', label: 'Attendance Log', icon: 'attendance' },
   { to: '/adjustments', label: 'Adjustments', icon: 'adjustments' },
-  { to: '/regularization', label: 'Regularization', icon: 'regularization' },
   { to: '/leave', label: 'Leave', icon: 'leave' },
   // Change Requests injected here by buildNav (after Leave, before Reports)
   { to: '/reports', label: 'Reports', icon: 'reports' },
@@ -24,7 +23,7 @@ const BASE_NAV: { to: string; label: string; icon: NavIconName }[] = [
 ];
 
 const AUTOGEN_NAV = { to: '/autogeneration-demo', label: 'Auto Genrated Shift Demo', icon: 'autogen' as const };
-const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/regularization', '/visitors', '/devices', '/autogeneration-demo']);
+const COMPLAINCE_HIDDEN_ROUTES = new Set(['/attendance', '/adjustments', '/visitors', '/devices', '/autogeneration-demo']);
 
 const COMPLIANCE_ATTENDANCE_NAV = {
   to: '/compliance-attendance',
@@ -132,10 +131,12 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
         {user && hasOrgAdminLikeAccess(user.role) && (
           <>
-            <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Administration</div>
+            {!collapsed && (
+              <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Administration</div>
+            )}
             <NavLink
               to="/admin"
-              title={collapsed ? "Admin Console" : undefined}
+              title={collapsed ? "Administration: Admin Console" : undefined}
               className={({ isActive }) =>
                 `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
                   collapsed ? 'lg:justify-center': ''}
@@ -147,7 +148,9 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
               <NavIcon name="settings" />
               {!collapsed && <span className="lg:inline">Admin Console</span>}
             </NavLink>
-            {!collapsed && (
+            {collapsed ? (
+              <div className="my-2 border-t sidebar-divider opacity-40" />
+            ) : (
               <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 pt-3 font-semibold">HR modules</div>
             )}
           </>
@@ -159,7 +162,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             )}
             <NavLink
               to={n.to}
-              title={collapsed ? n.label : undefined}
+              title={collapsed ? (user && hasOrgAdminLikeAccess(user.role) ? `HR: ${n.label}` : n.label) : undefined}
               className={({ isActive }) =>
                 `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
                   collapsed ? 'lg:justify-center' : ''

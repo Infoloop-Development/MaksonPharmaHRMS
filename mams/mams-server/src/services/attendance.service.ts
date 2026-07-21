@@ -5,20 +5,25 @@ import { EmployeeModel, type EmployeeDoc } from '../models/Employee.js';
 import { SettingsModel } from '../models/Settings.js';
 import { LeaveApplicationModel } from '../models/LeaveApplication.js';
 import { decomposeHours, smartAnchorV3 } from './smartAnchor.js';
-import { istNoonUtc, utcToIstDateString, addIstCalendarDays } from '../utils/time.js';
+import { istHourUtc, utcToIstDateString, addIstCalendarDays } from '../utils/time.js';
 import type { ComplianceShift } from '@mams/types';
 
-/**
- * Which "shift day" a raw punch belongs to. Day shift (6AM-6PM) always matches its own
- * calendar date. Night shift (6PM-6AM) crosses midnight - a punch before noon IST
- * belongs to the PREVIOUS calendar day's shift (the one that started the evening
- * before), not its own date. Used both to widen recomputeDerived's raw-punch lookup
- * and to tell the ingestion pipeline which date to recompute when a punch arrives.
- */
+// Cutover hour (IST) per shift, chosen with margin outside that shift's own punch
+// window - even the latest-entry + longest-shift case never lands here.
+const SHIFT_CUTOVER_HOUR: Record<'Day' | 'Night', number> = { Day: 4, Night: 12 };
+
+/** Which "shift day" a punch belongs to - before the cutover, it's yesterday's shift
+ * spilling past midnight, not today's. */
 export function shiftDayFor(timeShift: 'Day' | 'Night', rawTimestamp: Date): string {
   const dateStr = utcToIstDateString(rawTimestamp);
-  if (timeShift !== 'Night') return dateStr;
-  return rawTimestamp < istNoonUtc(dateStr) ? addIstCalendarDays(dateStr, -1) : dateStr;
+  const cutover = istHourUtc(dateStr, SHIFT_CUTOVER_HOUR[timeShift]);
+  return rawTimestamp < cutover ? addIstCalendarDays(dateStr, -1) : dateStr;
+}
+
+/** Raw-punch window for a shift day: [cutover, cutover + 24h). */
+function shiftDayWindow(date: string, timeShift: 'Day' | 'Night'): { start: Date; end: Date } {
+  const start = istHourUtc(date, SHIFT_CUTOVER_HOUR[timeShift]);
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
 }
 
 /**
@@ -53,23 +58,15 @@ export async function recomputeDerived(
     toDate: { $gte: date },
   });
 
-  // Night shift (6PM-6AM) crosses midnight, so its clock-in and clock-out can land on
-  // two different calendar dates - a plain rawDate match would only ever see one of
-  // them. Use a noon-to-noon window instead, wide enough to hold a full night shift
-  // with buffer on both sides, while Day shift keeps the simple single-day window it
-  // never needed to leave.
-  const isNight = employee.timeShift === 'Night';
-  const noon = istNoonUtc(date);
-  const windowStartDate = isNight ? noon : new Date(noon.getTime() - 12 * 60 * 60 * 1000);
-  const windowEndDate = isNight
-    ? new Date(noon.getTime() + 24 * 60 * 60 * 1000)
-    : new Date(noon.getTime() + 12 * 60 * 60 * 1000);
+  // A shift can spill past midnight (Night always; Day rarely, on a late-entry +
+  // long-shift combination) - a plain rawDate match would only ever see one side.
+  const window = shiftDayWindow(date, employee.timeShift === 'Night' ? 'Night' : 'Day');
 
   const raws = onApprovedLeave
     ? []
     : await AttendanceRawModel.find({
         employeeId,
-        rawTimestamp: { $gte: windowStartDate, $lt: windowEndDate },
+        rawTimestamp: { $gte: window.start, $lt: window.end },
       })
         .sort({ rawTimestamp: 1 })
         .lean();

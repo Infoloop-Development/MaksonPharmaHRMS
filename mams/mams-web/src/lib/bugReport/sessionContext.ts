@@ -59,7 +59,6 @@ const ROUTE_MODULE: Record<string, string> = {
   '/compliance-attendance': 'Compliance attendance',
   '/reports': 'Reports',
   '/adjustments': 'Adjustments',
-  '/regularization': 'Regularization',
   '/leave': 'Leave',
   '/visitors': 'Visitors',
   '/devices': 'Devices',

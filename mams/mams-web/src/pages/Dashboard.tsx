@@ -348,6 +348,14 @@ export function Dashboard() {
             <>
               <button
                 type="button"
+                className="btn-outline btn-sm shrink-0"
+                data-tour-id="dashboard-layout-edit"
+                onClick={startEditLayout}
+              >
+                Edit layout
+              </button>
+              <button
+                type="button"
                 className="dash-kpi-edit-btn shrink-0"
                 aria-label="Customize KPI cards"
                 data-tour-id="dashboard-kpi-edit"
@@ -356,14 +364,6 @@ export function Dashboard() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                   <path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </button>
-              <button
-                type="button"
-                className="btn-outline btn-sm shrink-0"
-                data-tour-id="dashboard-layout-edit"
-                onClick={startEditLayout}
-              >
-                Edit layout
               </button>
             </>
           )}

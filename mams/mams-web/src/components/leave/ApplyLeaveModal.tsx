@@ -251,7 +251,7 @@ export function ApplyLeaveModal({
 
           {fromDate && effectiveTo && estimatedDays > 0 && (
             <p className="text-sm text-text-muted mt-2">
-              Estimated span: <strong>{estimatedDays}</strong> calendar day(s) (holidays excluded on save).
+              Estimated span: <strong>{estimatedDays}</strong> calendar day{estimatedDays === 1 ? '' : 's'} (holidays excluded on save).
             </p>
           )}
         </div>

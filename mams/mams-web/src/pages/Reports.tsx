@@ -48,7 +48,7 @@ export function Reports() {
       </div>
 
       <div className="card mb-6 overflow-hidden" data-tour-id="reports-tabs">
-        <div className="flex flex-wrap border-b border-border">
+        <div className="flex flex-wrap border-b border-border" data-tour-id="reports-monthly-hint">
           {[
             ['daily', 'Daily Attendance'],
             ['monthly', 'Monthly Summary'],
@@ -71,7 +71,6 @@ export function Reports() {
               {label}
             </button>
           ))}
-          <span className="sr-only" data-tour-id="reports-monthly-hint" aria-hidden="true" />
         </div>
       </div>
 
@@ -268,8 +267,8 @@ function DailyReport({ isCompliant }: { isCompliant: boolean }) {
       </FilterBar>
       </div>
 
-      <div data-tour-id="reports-results">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4" data-tour-id="reports-results">
         <div className="text-sm text-text-muted flex flex-wrap items-center gap-x-3 gap-y-1 flex-1">
           <span className="font-medium text-text">{isLoading ? 'Loading...' : `${data?.summary.total ?? 0} records`}</span>
           {data && (
@@ -806,7 +805,7 @@ function LocationReport() {
         ))}
       </div>
 
-      <div className="card overflow-hidden hidden md:block">
+      <div className="card mt-10 overflow-hidden hidden md:block">
         <div className="tbl-scroll">
           <table className="w-full text-sm md:min-w-[640px]">
             <thead className="bg-surface2">
@@ -891,8 +890,9 @@ function FilterBar({
     <MobileFilterBar
       activeCount={activeCount}
       onClear={onClear}
-      className="no-print"
+      className="no-print mb-6"
       desktopClassName="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"
+      noCard
     >
       {children}
     </MobileFilterBar>

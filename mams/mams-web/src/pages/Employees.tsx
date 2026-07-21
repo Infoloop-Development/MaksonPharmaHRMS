@@ -134,16 +134,16 @@ export function Employees() {
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0 page-toolbar">
           <GiveMeATourButton onClick={tour.onReplayTour} />
+        {canManage && (
+          <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
+            Import CSV
+          </button>
+        )}
         {canEdit && (
           <div className="flex flex-wrap gap-2" data-tour-id="employees-actions">
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
               Add employee
             </button>
-            {canManage && (
-              <button type="button" className="btn-outline" onClick={() => setImportOpen(true)}>
-                Import CSV
-              </button>
-            )}
           </div>
         )}
         </div>

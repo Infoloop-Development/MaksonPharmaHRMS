@@ -6,6 +6,7 @@ import { useToast } from '../ui/Toast';
 import { Field, Input, Select } from '../ui/Field';
 import { LeaveTypeFormModal } from './LeaveTypeFormModal';
 import { LeaveTypeCardList } from './LeaveTypeCardList';
+import { AdminSectionCard } from '../ui/AdminSectionCard';
 import { SortableTh } from '../ui/SortableTh';
 import { useTableSort } from '../../lib/tableSort';
 import { tableColumnTooltip } from '../../lib/tooltips/tableColumnTooltips';
@@ -56,9 +57,17 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
 
   return (
     <div className="space-y-6">
-      <div className="card p-5">
-        <h3 className="text-base font-bold mb-1">Quota reset policy</h3>
-        <p className="text-sm text-text-muted mb-4">Controls how annual leave entitlements are calculated per employee.</p>
+      <AdminSectionCard
+        title="Quota reset policy"
+        footer={
+          canConfigure && (
+            <button type="button" className="btn-primary btn-sm mt-3" onClick={() => policyMu.mutate()} disabled={policyMu.isPending}>
+              {policyMu.isPending ? 'Saving…' : 'Save policy'}
+            </button>
+          )
+        }
+      >
+        <p className="text-xs text-text-muted -mt-4 mb-7">Controls how annual leave entitlements are calculated per employee.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
           <Field label="Reset cycle">
             <Select value={resetPolicy} disabled={!canConfigure} onChange={(e) => setResetPolicy(e.target.value as LeaveQuotaResetPolicy)}>
@@ -71,18 +80,13 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
             <Input type="number" min={1} max={12} value={fyMonth} disabled={!canConfigure} onChange={(e) => setFyMonth(Number(e.target.value))} />
           </Field>
         </div>
-        {canConfigure && (
-          <button type="button" className="btn-primary btn-sm mt-4" onClick={() => policyMu.mutate()} disabled={policyMu.isPending}>
-            {policyMu.isPending ? 'Saving…' : 'Save policy'}
-          </button>
-        )}
-      </div>
+      </AdminSectionCard>
 
       <div className="card p-5">
         <div className="flex justify-between items-start mb-4 gap-2 flex-wrap">
           <div>
             <h3 className="text-base font-bold">Leave types</h3>
-            <p className="text-sm text-text-muted">Paid leave, casual, sick, LWP, and custom types.</p>
+            <p className="text-sm text-text-muted mb-5">Configure each leave type's default quota, payment status, and half-day eligibility.</p>
           </div>
           {canConfigure && (
             <div className="flex gap-2">
@@ -100,38 +104,40 @@ export function LeaveSettingsTab({ canConfigure }: { canConfigure: boolean }) {
           canConfigure={canConfigure}
           onEdit={setEditType}
         />
-        <div className="tbl-scroll border border-border rounded-md hidden md:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
-                <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'name')} />
-                <SortableTh label="Paid" sortKey="paid" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'paid')} />
-                <SortableTh label="Half day" sortKey="halfDayEligible" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'halfDayEligible')} />
-                <SortableTh label="Default quota" sortKey="annualQuotaDefault" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'annualQuotaDefault')} />
-                <SortableTh label="Active" sortKey="active" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3" tooltip={tableColumnTooltip('leave', 'active')} />
-                {canConfigure && <th className="px-4 py-3" />}
-              </tr>
-            </thead>
-            <tbody>
-              {(types?.items ?? []).length === 0 && (
-                <tr><td colSpan={canConfigure ? 6 : 5} className="px-4 py-8 text-center text-text-muted">No leave types. Seed defaults to get started.</td></tr>
-              )}
-              {sortedTypes.map((t) => (
-                <tr key={t.id} className="border-b border-border/60">
-                  <td className="px-4 py-3 font-medium">{t.name}</td>
-                  <td className="px-4 py-3">{t.paid ? 'Yes' : 'No'}</td>
-                  <td className="px-4 py-3">{t.halfDayEligible ? 'Yes' : 'No'}</td>
-                  <td className="px-4 py-3 font-mono">{t.annualQuotaDefault}</td>
-                  <td className="px-4 py-3">{t.active ? 'Yes' : 'No'}</td>
-                  {canConfigure && (
-                    <td className="px-4 py-3">
-                      <button type="button" className="btn-outline btn-sm" onClick={() => setEditType(t)}>Edit</button>
-                    </td>
-                  )}
+        <div className="border border-border rounded-md hidden md:block overflow-hidden">
+          <div className="tbl-scroll">
+            <table className="w-full text-sm table-fixed">
+              <thead>
+                <tr className="text-left text-xs text-text-subtle border-b bg-surface2/50">
+                  <SortableTh label="Name" sortKey="name" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[20%]" tooltip={tableColumnTooltip('leave', 'name')} />
+                  <SortableTh label="Paid" sortKey="paid" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[20%]" tooltip={tableColumnTooltip('leave', 'paid')} />
+                  <SortableTh label="Half day" sortKey="halfDayEligible" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[20%]" tooltip={tableColumnTooltip('leave', 'halfDayEligible')} />
+                  <SortableTh label="Default quota" sortKey="annualQuotaDefault" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[20%]" tooltip={tableColumnTooltip('leave', 'annualQuotaDefault')} />
+                  <SortableTh label="Active" sortKey="active" activeCol={sortCol} sortArrow={sortArrow} onSort={toggleSort} className="px-4 py-3 !text-center w-[20%]" tooltip={tableColumnTooltip('leave', 'active')} />
+                  {canConfigure && <th className="px-4 py-3" />}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(types?.items ?? []).length === 0 && (
+                  <tr><td colSpan={canConfigure ? 6 : 5} className="px-4 py-8 text-center text-text-muted">No leave types. Seed defaults to get started.</td></tr>
+                )}
+                {sortedTypes.map((t) => (
+                  <tr key={t.id} className="border-b border-border/60">
+                    <td className="px-4 py-3 font-medium text-center"><span className="inline-block -ml-4">{t.name}</span></td>
+                    <td className="px-4 py-3 text-center"><span className="inline-block -ml-4">{t.paid ? 'Yes' : 'No'}</span></td>
+                    <td className="px-4 py-3 text-center"><span className="inline-block -ml-4">{t.halfDayEligible ? 'Yes' : 'No'}</span></td>
+                    <td className="px-4 py-3 font-mono text-center"><span className="inline-block -ml-4">{t.annualQuotaDefault}</span></td>
+                    <td className="px-4 py-3 text-center"><span className="inline-block -ml-4">{t.active ? 'Yes' : 'No'}</span></td>
+                    {canConfigure && (
+                      <td className="px-4 py-3 text-center">
+                        <button type="button" className="btn-outline btn-sm" onClick={() => setEditType(t)}>Edit</button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ export function GiveMeATourButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      className="btn-outline h-10 min-h-10 shrink-0 whitespace-nowrap"
+      className="btn-outline btn-sm shrink-0 whitespace-nowrap"
       aria-label="Give me a tour of this page"
       onClick={onClick}
     >
