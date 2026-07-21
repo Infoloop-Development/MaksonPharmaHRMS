@@ -1,7 +1,7 @@
 import type { ActivityListItem, AuditLogCategory } from '@mams/types';
 import { AUDIT_LOG_CATEGORIES, ROLE_LABELS, type Role } from '@mams/types';
 import { useCallback } from 'react';
-import { EMPTY_CELL, fmtIstDateTimeMs } from '../../lib/format';
+import { EMPTY_CELL, fmtIstDate, fmtIstDateTimeMs, fmtIstTimeMs } from '../../lib/format';
 import { activityPageBadge } from '../../lib/activityLabels';
 import { ActivityDescription } from './ActivityDescription';
 import { SortableTh } from '../ui/SortableTh';
@@ -133,7 +133,10 @@ export function AuditLogResults({
             <tbody className="divide-y divide-border">
               {sortedRows.map((row) => (
                 <tr key={row.id} className="hover:bg-surface2/40 align-top">
-                  <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">{fmtIstDateTimeMs(row.occurredAt)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="text-[11px] text-text-muted">{fmtIstDate(row.occurredAt)}</div>
+                    <div className="text-xs font-medium tabular-nums">{fmtIstTimeMs(row.occurredAt)}</div>
+                  </td>
                   <td className="px-3 py-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded bg-surface2 text-text-muted">
                       {activityPageBadge(row.eventType, row.payload)}
@@ -149,7 +152,7 @@ export function AuditLogResults({
                       EMPTY_CELL
                     )}
                   </td>
-                  <td className="px-3 py-2 text-text">
+                  <td className="px-3 py-2 text-text !whitespace-normal break-words">
                     <ActivityDescription item={row} />
                   </td>
                 </tr>

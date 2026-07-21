@@ -12,7 +12,7 @@ export function ActivityDescription({ item }: { item: ActivityListItem }) {
           aria-hidden
         />
       )}
-      <span>{formatActivityDescription(item)}</span>
+      <span className="min-w-0">{formatActivityDescription(item)}</span>
     </span>
   );
 }
