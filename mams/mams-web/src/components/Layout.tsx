@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -78,9 +78,15 @@ export function Layout() {
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
       <div
         className={`min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+        style={{ '--app-sidebar-width': sidebarCollapsed ? '76px' : '15.625rem' } as CSSProperties}
       >
         {useAdminSidebar ? (
-          <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
+          <AdminSidebar
+            open={sidebarOpen}
+            onClose={closeSidebar}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={toggleSidebarCollapsed}
+          />
         ) : (
           <Sidebar
             open={sidebarOpen}
@@ -103,7 +109,7 @@ export function Layout() {
           }${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
         >
           <TopBar onOpenMenu={openSidebar} />
-          <main className="app-shell-main px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden min-w-0">
+          <main className="app-shell-main px-4 pb-12 md:px-6 md:pb-16 flex-1 overflow-x-hidden min-w-0">
             <Outlet />
           </main>
           <MobileBottomNav />

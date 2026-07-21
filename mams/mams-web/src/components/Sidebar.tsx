@@ -131,10 +131,12 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
       <nav className="sidebar-nav-scroll flex-1 py-4 px-3 overflow-y-auto">
         {user && hasOrgAdminLikeAccess(user.role) && (
           <>
-            <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Administration</div>
+            {!collapsed && (
+              <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 font-semibold">Administration</div>
+            )}
             <NavLink
               to="/admin"
-              title={collapsed ? "Admin Console" : undefined}
+              title={collapsed ? "Administration: Admin Console" : undefined}
               className={({ isActive }) =>
                 `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
                   collapsed ? 'lg:justify-center': ''}
@@ -146,7 +148,9 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
               <NavIcon name="settings" />
               {!collapsed && <span className="lg:inline">Admin Console</span>}
             </NavLink>
-            {!collapsed && (
+            {collapsed ? (
+              <div className="my-2 border-t sidebar-divider opacity-40" />
+            ) : (
               <div className="text-[10px] uppercase tracking-[2px] sidebar-muted px-3 pb-2 pt-3 font-semibold">HR modules</div>
             )}
           </>
@@ -158,7 +162,7 @@ export function Sidebar({ open, onClose,collapsed,onToggleCollapsed }: { open: b
             )}
             <NavLink
               to={n.to}
-              title={collapsed ? n.label : undefined}
+              title={collapsed ? (user && hasOrgAdminLikeAccess(user.role) ? `HR: ${n.label}` : n.label) : undefined}
               className={({ isActive }) =>
                 `sidebar-nav-link flex items-center gap-3 px-4 py-3 lg:py-2.5 rounded-md text-[13px] font-medium mb-0.5 transition touch-target ${
                   collapsed ? 'lg:justify-center' : ''

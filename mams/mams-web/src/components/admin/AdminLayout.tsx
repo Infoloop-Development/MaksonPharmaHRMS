@@ -10,7 +10,7 @@ import { settingsApi } from '../../api/settings';
 import { TimeFormatProvider } from '../../store/timeFormat';
 import { BugReportMobileTrigger } from '../bugReport/BugReportSidebarFooter';
 import { hasMobileBottomNav } from '../../lib/mobileBottomNav';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type CSSProperties } from 'react';
 
 export function AdminLayout() {
   const user = useAuth((s) => s.user);
@@ -18,6 +18,8 @@ export function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const openSidebar = useCallback(() => setSidebarOpen(true), []);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const toggleSidebarCollapsed = useCallback(() => setSidebarCollapsed((v) => !v), []);
 
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -50,8 +52,14 @@ export function AdminLayout() {
     <TimeFormatProvider format={settings?.timeFormat ?? '12h'}>
       <div
         className={`min-h-screen overflow-x-hidden bg-bg${showMobileBottomNav ? ' has-mobile-bottom-nav' : ''}`}
+        style={{ '--app-sidebar-width': sidebarCollapsed ? '76px' : '15.625rem' } as CSSProperties}
       >
-        <AdminSidebar open={sidebarOpen} onClose={closeSidebar} />
+        <AdminSidebar
+          open={sidebarOpen}
+          onClose={closeSidebar}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebarCollapsed}
+        />
         {sidebarOpen && (
           <button
             type="button"
@@ -66,7 +74,7 @@ export function AdminLayout() {
           }`}
         >
           <TopBar onOpenMenu={openSidebar} />
-          <main className="app-shell-main px-4 pb-4 md:px-6 md:pb-6 flex-1 overflow-x-hidden min-w-0">
+          <main className="app-shell-main px-4 pb-12 md:px-6 md:pb-16 flex-1 overflow-x-hidden min-w-0">
             <Outlet />
           </main>
           <MobileBottomNav />

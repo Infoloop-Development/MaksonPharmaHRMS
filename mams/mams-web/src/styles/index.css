@@ -1303,7 +1303,7 @@ html.mams-tour-scroll-lock body {
 
 @media (min-width: 1024px) {
   .has-mobile-bottom-nav main {
-    padding-bottom: inherit;
+    padding-bottom: 4rem;
   }
 }
 
