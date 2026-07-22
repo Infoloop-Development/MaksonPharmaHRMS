@@ -1,5 +1,6 @@
 # Netlify — MAMS web app (SPA) only.
-# API (mams-server) runs on Railway; MongoDB on Atlas.
+# API (mams-server) runs on Render; MongoDB on Atlas.
+# Use this config on the production-render branch / Render-backed Netlify sites.
 
 [build]
   base = "mams"
@@ -7,14 +8,13 @@
   publish = "mams-web/dist"
 
 [build.environment]
-  # Call Railway directly until Netlify /api proxy is confirmed off Render.
-  # Leave empty later to use same-origin /api proxy again.
-  VITE_API_BASE_URL = "https://maksonpharmahrms-copy-production.up.railway.app"
-  VITE_DEVICE_API_BASE_URL = "https://maksonpharmahrms-copy-production.up.railway.app"
+  # Empty = same-origin /api, proxied to Render below.
+  VITE_API_BASE_URL = ""
+  VITE_DEVICE_API_BASE_URL = "https://mams-api-xvso.onrender.com"
 
 [[redirects]]
   from = "/api/*"
-  to = "https://maksonpharmahrms-copy-production.up.railway.app/api/:splat"
+  to = "https://mams-api-xvso.onrender.com/api/:splat"
   status = 200
   force = true
 
