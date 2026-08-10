@@ -43,6 +43,13 @@ export function composeHhmmFrom12h(hour12: number, minute: number, period: 'AM' 
   return `${String(hour24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+function toValidDate(d: Date | string | null | undefined): Date | null {
+  if (d == null || d === '') return null;
+  const date = typeof d === 'string' ? new Date(d) : d;
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
 function formatInstant(date: Date, format: TimeFormat, withSeconds: boolean): string {
   const str = new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
@@ -55,14 +62,14 @@ function formatInstant(date: Date, format: TimeFormat, withSeconds: boolean): st
 }
 
 export function formatIstInstant(d: Date | string | null, format: TimeFormat): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   return formatInstant(date, format, true);
 }
 
 export function formatIstInstantNoSeconds(d: Date | string | null, format: TimeFormat): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   const str = new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     hour: 'numeric',
@@ -73,8 +80,8 @@ export function formatIstInstantNoSeconds(d: Date | string | null, format: TimeF
 }
 
 export function formatIstDateTimeMs(d: Date | string | null, format: TimeFormat): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   const base = formatInstant(date, format, true);
   const ms = String(date.getMilliseconds()).padStart(3, '0');
   const periodMatch = /^(.*?)(\s(AM|PM))$/.exec(base);

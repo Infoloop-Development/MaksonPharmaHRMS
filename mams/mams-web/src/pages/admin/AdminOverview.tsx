@@ -385,21 +385,24 @@ export function AdminOverview() {
 
   return (
     <div className="2xl:max-w-[1600px] 2xl:mx-auto">
-      <div className="mb-3 flex items-start justify-between gap-2 sm:gap-3" data-tour-id="admin-overview-header">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold">Admin Overview</h1>
-          <p className="text-sm text-text-muted mt-1">
+      <div
+        className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+        data-tour-id="admin-overview-header"
+      >
+        <div className="min-w-0 w-full sm:flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold break-words">Admin Overview</h1>
+          <p className="text-sm text-text-muted mt-1 max-w-prose leading-relaxed">
             Welcome, {user?.name}. Platform governance for{' '}
             {user?.role === 'org.admin' ? 'your organization' : 'delegated admin areas'}.
           </p>
           <div className="text-xs text-text-muted mt-1">As of {fmtDate(asOfDate)}</div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 mt-0.5">
-          <GiveMeATourButton onClick={tour.onReplayTour} />
+        <div className="flex w-full flex-wrap items-stretch gap-2 sm:mt-0.5 sm:w-auto sm:shrink-0 sm:items-center sm:justify-end">
+          <GiveMeATourButton onClick={tour.onReplayTour} className="min-h-11 flex-1 sm:min-h-0 sm:flex-none" />
           {!isConfiguring && (
             <button
               type="button"
-              className="btn-outline btn-sm shrink-0"
+              className="btn-outline btn-sm min-h-11 flex-1 whitespace-nowrap sm:min-h-0 sm:flex-none sm:shrink-0"
               data-tour-id="admin-overview-configure-btn"
               onClick={() => setConfigureMode('charts')}
             >
@@ -411,13 +414,13 @@ export function AdminOverview() {
 
       {isConfiguring && (
         <div
-          className="card p-3 mb-4 flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center"
+          className="card p-3 mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
           data-tour-id="admin-overview-configure-toolbar"
         >
-          <span className="text-sm font-semibold mr-auto">Configure overview</span>
+          <span className="text-sm font-semibold sm:mr-auto">Configure overview</span>
           <button
             type="button"
-            className={`btn-sm ${configureMode === 'kpi' ? 'btn-primary' : 'btn-outline'}`}
+            className={`btn-sm min-h-11 sm:min-h-0 ${configureMode === 'kpi' ? 'btn-primary' : 'btn-outline'}`}
             data-tour-id="admin-overview-tab-kpi"
             onClick={() => setConfigureMode('kpi')}
           >
@@ -425,7 +428,7 @@ export function AdminOverview() {
           </button>
           <button
             type="button"
-            className={`btn-sm ${configureMode === 'charts' ? 'btn-primary' : 'btn-outline'}`}
+            className={`btn-sm min-h-11 sm:min-h-0 ${configureMode === 'charts' ? 'btn-primary' : 'btn-outline'}`}
             data-tour-id="admin-overview-tab-charts"
             onClick={() => setConfigureMode('charts')}
           >
@@ -433,7 +436,7 @@ export function AdminOverview() {
           </button>
           <button
             type="button"
-            className={`btn-sm ${configureMode === 'table' ? 'btn-primary' : 'btn-outline'}`}
+            className={`btn-sm min-h-11 sm:min-h-0 ${configureMode === 'table' ? 'btn-primary' : 'btn-outline'}`}
             data-tour-id="admin-overview-tab-table"
             onClick={() => setConfigureMode('table')}
           >
@@ -441,7 +444,7 @@ export function AdminOverview() {
           </button>
           <button
             type="button"
-            className="btn-outline btn-sm"
+            className="btn-outline btn-sm min-h-11 sm:min-h-0"
             data-tour-id="admin-overview-configure-cancel"
             onClick={cancelConfigure}
           >

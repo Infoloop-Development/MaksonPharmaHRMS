@@ -1,13 +1,19 @@
 import { useAuth } from '../../store/auth';
 
-export function GiveMeATourButton({ onClick }: { onClick: () => void }) {
+export function GiveMeATourButton({
+  onClick,
+  className = '',
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
   const viewMode = useAuth((s) => s.user?.viewMode);
   if (viewMode === 'compliant') return null;
 
   return (
     <button
       type="button"
-      className="btn-outline btn-sm shrink-0 whitespace-nowrap"
+      className={`btn-outline btn-sm shrink-0 whitespace-nowrap ${className}`.trim()}
       aria-label="Give me a tour of this page"
       onClick={onClick}
     >

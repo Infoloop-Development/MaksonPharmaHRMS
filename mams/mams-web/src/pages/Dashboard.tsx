@@ -337,18 +337,21 @@ export function Dashboard() {
 
   return (
     <div className="2xl:max-w-[1600px] 2xl:mx-auto">
-      <div className="mb-6 flex items-start justify-between gap-2 sm:gap-3" data-tour-id="dashboard-header">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
-          <div className="text-sm text-text-muted">As of {fmtDate(s.asOfDate)}</div>
-      </div>
-        <div className="flex items-center gap-2 shrink-0 mt-0.5">
-          <GiveMeATourButton onClick={tour.onReplayTour} />
+      <div
+        className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+        data-tour-id="dashboard-header"
+      >
+        <div className="min-w-0 w-full sm:flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold break-words">Dashboard</h1>
+          <div className="text-sm text-text-muted mt-1">As of {fmtDate(s.asOfDate)}</div>
+        </div>
+        <div className="flex w-full flex-wrap items-stretch gap-2 sm:mt-0.5 sm:w-auto sm:shrink-0 sm:items-center sm:justify-end">
+          <GiveMeATourButton onClick={tour.onReplayTour} className="min-h-11 flex-1 sm:min-h-0 sm:flex-none" />
           {!isCompliant && !isEditingKpi && !isEditingLayout && (
             <>
               <button
                 type="button"
-                className="btn-outline btn-sm shrink-0"
+                className="btn-outline btn-sm min-h-11 flex-1 whitespace-nowrap sm:min-h-0 sm:flex-none sm:shrink-0"
                 data-tour-id="dashboard-layout-edit"
                 onClick={startEditLayout}
               >

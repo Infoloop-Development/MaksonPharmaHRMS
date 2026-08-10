@@ -6,14 +6,21 @@ const IST = 'Asia/Kolkata';
 /** Shown when a table cell or field has no value. */
 export const EMPTY_CELL = 'N/A';
 
+function toValidDate(d: Date | string | null | undefined): Date | null {
+  if (d == null || d === '') return null;
+  const date = typeof d === 'string' ? new Date(d) : d;
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
 export function displayOrEmpty(value: unknown): string {
   if (value == null || value === '') return EMPTY_CELL;
   return String(value);
 }
 
 export function fmtIstDate(d: Date | string | null): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     day: '2-digit',
@@ -23,8 +30,8 @@ export function fmtIstDate(d: Date | string | null): string {
 }
 
 export function fmtIstTime(d: Date | string | null): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     hour: '2-digit',
@@ -62,8 +69,8 @@ export function fmtIstTopBarDate(d: Date): string {
 
 /** Date + time with milliseconds in IST (Activity log). */
 export function fmtIstDateTimeMs(d: Date | string | null): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   const base = new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     day: '2-digit',
@@ -84,8 +91,8 @@ export function fmtIstDateTimeMs(d: Date | string | null): string {
 
 /** Time with milliseconds, IST, no date part. Pairs with fmtIstDate for 2-line table cells. */
 export function fmtIstTimeMs(d: Date | string | null): string {
-  if (!d) return '-';
-  const date = typeof d === 'string' ? new Date(d) : d;
+  const date = toValidDate(d);
+  if (!date) return '-';
   const base = new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     hour: '2-digit',
@@ -101,21 +108,25 @@ export function fmtIstTimeMs(d: Date | string | null): string {
   return `${base}.${ms}`;
 }
 
-export function fmtDate(yyyymmdd: string): string {
-  if (!yyyymmdd) return '-';
-  const date = new Date(`${yyyymmdd}T12:00:00+05:30`);
-  return new Intl.DateTimeFormat('en-IN', {
-    timeZone: IST,
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(date);
+/**
+ * Format a calendar date for display.
+ * Accepts YYYY-MM-DD or any parseable ISO datetime (submittedAt, etc.).
+ */
+export function fmtDate(value: string | Date | null | undefined): string {
+  if (value == null || value === '') return '-';
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return fmtIstDate(`${value}T12:00:00+05:30`);
+  }
+  return fmtIstDate(value);
 }
 
 /** Full weekday name from YYYY-MM-DD in IST (e.g. Monday, Friday). */
 export function fmtWeekdayFull(yyyymmdd: string): string {
   if (!yyyymmdd) return '-';
-  const date = new Date(`${yyyymmdd}T12:00:00+05:30`);
+  const date = toValidDate(
+    /^\d{4}-\d{2}-\d{2}$/.test(yyyymmdd) ? `${yyyymmdd}T12:00:00+05:30` : yyyymmdd
+  );
+  if (!date) return '-';
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     weekday: 'long',
@@ -125,7 +136,10 @@ export function fmtWeekdayFull(yyyymmdd: string): string {
 /** Short weekday from YYYY-MM-DD in IST (e.g. Mon, Tue). */
 export function fmtWeekdayShort(yyyymmdd: string): string {
   if (!yyyymmdd) return '-';
-  const date = new Date(`${yyyymmdd}T12:00:00+05:30`);
+  const date = toValidDate(
+    /^\d{4}-\d{2}-\d{2}$/.test(yyyymmdd) ? `${yyyymmdd}T12:00:00+05:30` : yyyymmdd
+  );
+  if (!date) return '-';
   return new Intl.DateTimeFormat('en-IN', {
     timeZone: IST,
     weekday: 'short',

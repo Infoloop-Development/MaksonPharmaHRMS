@@ -116,14 +116,21 @@ export function InfoTip({
 
   return (
     <Tooltip content={content} side={side}>
-      <button
-        type="button"
+      <span
+        role="button"
+        tabIndex={0}
         className={`info-tip ${className}`.trim()}
         aria-label={label}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
       >
         <span aria-hidden>i</span>
-      </button>
+      </span>
     </Tooltip>
   );
 }
