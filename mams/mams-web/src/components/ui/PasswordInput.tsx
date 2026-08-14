@@ -12,7 +12,7 @@ export function PasswordRevealToggle({
       type="button"
       tabIndex={-1}
       onClick={onToggle}
-      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-bg transition-colors"
+      className="absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 min-w-[44px] min-h-[44px] rounded-md flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-bg transition-colors"
       aria-label={visible ? 'Hide password' : 'Show password'}
       aria-pressed={visible}
     >
@@ -39,7 +39,7 @@ export function PasswordInput({
 
   return (
     <div className="relative w-full">
-      <input {...props} type={visible ? 'text' : 'password'} className={`${className} pr-10`} />
+      <input {...props} type={visible ? 'text' : 'password'} className={`${className} pr-12`} />
       <PasswordRevealToggle visible={visible} onToggle={() => setVisible((v) => !v)} />
     </div>
   );

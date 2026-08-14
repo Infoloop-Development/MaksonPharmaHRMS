@@ -38,7 +38,11 @@ function KanbanColumn({
 
   return (
     <div
-      className={`flex flex-1 flex-col ${expanded ? 'min-w-[280px] max-w-none' : 'min-w-[260px] max-w-[320px]'}`}
+      className={`flex flex-1 flex-col ${
+        expanded
+          ? 'min-w-0 w-full md:min-w-[280px] max-w-none'
+          : 'min-w-0 w-full md:min-w-[260px] md:max-w-[320px]'
+      }`}
     >
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         <h2 className="text-sm font-semibold">{column.label}</h2>
@@ -140,7 +144,7 @@ export function BugReportKanbanBoard({
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div
-        className={`scrollbar-hidden flex gap-3 overflow-x-auto pb-2 ${
+        className={`scrollbar-hidden flex flex-col md:flex-row gap-3 overflow-x-auto pb-2 ${
           expanded ? 'flex-1 min-h-0 items-stretch' : 'pb-4'
         }`}
       >

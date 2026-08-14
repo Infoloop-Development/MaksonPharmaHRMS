@@ -143,7 +143,7 @@ export function BugReportDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-lg shadow-floating w-[80vw] max-w-[80vw] max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-surface rounded-lg shadow-floating w-full max-w-full sm:w-[80vw] sm:max-w-[80vw] max-h-[100dvh] sm:max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Bug report details"
@@ -177,7 +177,7 @@ export function BugReportDetailModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-8 h-8 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0"
+                className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0"
                 aria-label="Close"
               >
                 ✕

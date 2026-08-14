@@ -309,7 +309,7 @@ export function AttendanceLog() {
       <div data-tour-id="attendance-filters" className="mt-5">
       <MobileFilterBar
         search={
-          <div className="flex-1 min-w-[200px]" data-tour-id="attendance-filters-search">
+          <div className="flex-1 min-w-0" data-tour-id="attendance-filters-search">
           <input
             className="input w-full"
             placeholder="Search by name, employee code, biometric ID..."

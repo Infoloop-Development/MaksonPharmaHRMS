@@ -33,7 +33,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <input
         ref={ref}
         {...props}
-        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition ${props.className ?? ''}`}
+        className={`w-full px-3 py-2 border border-border rounded-md text-base md:text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition min-h-[44px] md:min-h-0 ${props.className ?? ''}`}
       />
     );
   }
@@ -45,7 +45,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
       <textarea
         ref={ref}
         {...props}
-        className={`w-full px-3 py-2 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-y min-h-[80px] ${props.className ?? ''}`}
+        className={`w-full px-3 py-2 border border-border rounded-md text-base md:text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition resize-y min-h-[80px] ${props.className ?? ''}`}
       />
     );
   }
@@ -58,7 +58,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
         <select
           ref={ref}
           {...props}
-          className="w-full appearance-none px-3 py-2 pr-8 border border-border rounded-md text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+          className="w-full appearance-none px-3 py-2 pr-8 border border-border rounded-md text-base md:text-sm bg-surface2 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition min-h-[44px] md:min-h-0"
         >
           {children}
         </select>
@@ -93,7 +93,7 @@ export function Toggle({
       aria-label={ariaLabel ?? label}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`flex items-center gap-2 group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`flex items-center gap-2 group min-h-[44px] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <span
         className={`toggle-track w-10 h-6 rounded-full relative shrink-0 transition-colors ${

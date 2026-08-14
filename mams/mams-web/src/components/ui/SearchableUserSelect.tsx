@@ -85,7 +85,7 @@ export function SearchableUserSelect({
       </button>
 
       {open && (
-        <div className="absolute z-40 mt-1 w-full min-w-[280px] rounded-md border border-border bg-surface shadow-floating overflow-hidden">
+        <div className="absolute z-40 mt-1 w-full min-w-0 max-w-[calc(100vw-2rem)] sm:min-w-[280px] rounded-md border border-border bg-surface shadow-floating overflow-hidden">
           <div className="p-2 border-b border-border bg-surface2">
             <input
               ref={searchRef}

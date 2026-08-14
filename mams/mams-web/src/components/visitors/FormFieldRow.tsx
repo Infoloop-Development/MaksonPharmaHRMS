@@ -100,7 +100,7 @@ export function FormFieldRow({
         <div className="flex-1" />
         <button
           type="button"
-          className="btn-outline text-xs shrink-0 text-red"
+          className="btn-outline btn-sm shrink-0 text-red min-h-[44px]"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
@@ -152,12 +152,12 @@ export function FormFieldRow({
                 {(field.options ?? []).map((opt, i) => (
                   <div key={i} className="flex gap-2">
                     <Input value={opt} onChange={(e) => updateOption(i, e.target.value)} />
-                    <button type="button" className="btn-outline text-xs shrink-0" onClick={() => removeOption(i)}>
+                    <button type="button" className="btn-outline btn-sm shrink-0 min-h-[44px]" onClick={() => removeOption(i)}>
                       ×
                     </button>
                   </div>
                 ))}
-                <button type="button" className="btn-outline text-xs" onClick={addOption}>
+                <button type="button" className="btn-outline btn-sm min-h-[44px]" onClick={addOption}>
                   Add option
                 </button>
               </div>

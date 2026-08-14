@@ -14,7 +14,7 @@ const SIZE_MAP = {
   md: 'max-w-xl',
   lg: 'max-w-3xl',
   xl: 'max-w-5xl',
-  board: 'max-w-[80vw] w-[80vw]',
+  board: 'w-full max-w-full sm:max-w-[80vw] sm:w-[80vw]',
 };
 
 export function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
@@ -44,7 +44,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
           <h2 className="text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-md hover:bg-surface2 text-text-muted flex items-center justify-center shrink-0"
             aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -52,7 +52,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
             </svg>
           </button>
         </div>
-        <div className="px-8 sm:px-10 py-8 overflow-y-auto flex-1">{children}</div>
+        <div className="px-4 sm:px-8 py-6 sm:py-8 overflow-y-auto flex-1">{children}</div>
         {footer && (
           <div className="px-4 sm:px-6 py-4 border-t border-border bg-surface2 rounded-b-lg flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sticky bottom-0 [&_.btn]:w-full sm:[&_.btn]:w-auto">
             {footer}

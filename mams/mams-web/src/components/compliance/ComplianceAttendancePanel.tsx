@@ -236,7 +236,7 @@ export function ComplianceAttendancePanel({
 
       <MobileFilterBar
         search={
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-0">
             <input
               className="input w-full"
               placeholder="Search employee, code, department…"

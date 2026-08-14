@@ -76,6 +76,14 @@ export function Tooltip({
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
+        onClick={(e) => {
+          // Tap to toggle on coarse pointers (touch); hover still works on desktop
+          if (window.matchMedia('(hover: none), (pointer: coarse)').matches) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }
+        }}
         aria-describedby={open ? id : undefined}
       >
         {children}

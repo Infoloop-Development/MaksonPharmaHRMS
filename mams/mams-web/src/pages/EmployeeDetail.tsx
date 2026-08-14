@@ -195,7 +195,7 @@ export function EmployeeDetail() {
                 key = {d}
                 type = "button"
                 onClick={() => setDays(d)}
-                className={`px-3 py-1 text-sm rounded-md transition ${
+                className={`min-h-[44px] px-4 py-2 text-sm rounded-md transition ${
                   days === d
                     ? 'bg-white shadow-sm font-semibold text-text'
                     : 'text-text-muted hover:text-text'
@@ -316,12 +316,12 @@ function SensitiveRow({
         <div className="font-mono text-sm break-all">{value}</div>
       </div>
       {showUnmask && (
-        <button type="button" onClick={onUnmask} className="btn-outline btn-sm shrink-0">
+        <button type="button" onClick={onUnmask} className="btn-outline btn-sm shrink-0 min-h-[44px]">
           Unmask
         </button>
       )}
       {showMask && (
-        <button type="button" onClick={onMask} className="btn-outline btn-sm shrink-0">
+        <button type="button" onClick={onMask} className="btn-outline btn-sm shrink-0 min-h-[44px]">
           Mask
         </button>
       )}

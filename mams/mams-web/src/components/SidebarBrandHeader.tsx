@@ -70,7 +70,7 @@ export function SidebarBrandHeader({
       {onClose && (
         <button
           type="button"
-          className="sidebar-icon-btn lg:hidden w-8 h-8 rounded-md flex items-center justify-center shrink-0 touch-target"
+          className="sidebar-icon-btn lg:hidden min-h-11 min-w-11 rounded-md flex items-center justify-center shrink-0"
           aria-label="Close menu"
           onClick={onClose}
         >

@@ -104,7 +104,7 @@ export function EmployeeChangeRequests() {
           ))}
         </div>
       ) : (
-        <div className="mb-6 max-w-[220px]">
+        <div className="mb-6 max-w-none sm:max-w-[220px]">
           <DashboardStatCard
             label="Total Updates"
             value={String(data?.total ?? 0)}
@@ -116,8 +116,57 @@ export function EmployeeChangeRequests() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="card overflow-hidden">
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden mb-4">
+        {isLoading && <div className="card p-6 text-center text-text-muted text-sm">Loading…</div>}
+        {error && <div className="card p-6 text-center text-red text-sm">Failed to load.</div>}
+        {!isLoading && items.length === 0 && (
+          <div className="card p-6 text-center text-text-muted text-sm">No requests found.</div>
+        )}
+        {items.map((req) => (
+          <div key={req._id} className="card p-4">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <div className="font-semibold text-text">{employeeDisplayName(req)}</div>
+                <div className="font-mono text-xs text-text-muted">{employeeDisplayCode(req)}</div>
+              </div>
+              <Badge tone={TYPE_TONE[req.changeType]}>
+                {req.changeType.charAt(0).toUpperCase() + req.changeType.slice(1)}
+              </Badge>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs mb-3">
+              <div>
+                <dt className="text-text-subtle uppercase tracking-wider">Status</dt>
+                <dd>
+                  <Badge tone={canApprove ? STATUS_TONE[req.status] : 'green'}>
+                    {canApprove ? req.status : 'Processed'}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-text-subtle uppercase tracking-wider">Date</dt>
+                <dd className="text-text-muted">
+                  {req.initiatedAt ? fmtDate(req.initiatedAt.slice(0, 10)) : '—'}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-text-subtle uppercase tracking-wider">Submitted by</dt>
+                <dd className="text-text-muted">{req.initiatedBy?.name ?? '—'}</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              className="btn-outline btn-sm w-full"
+              onClick={() => setReviewRequest(req)}
+            >
+              {canApprove && req.status === 'Flagged' ? 'Review' : 'View'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="card overflow-hidden hidden md:block">
         <div className="tbl-scroll">
           <table className="w-full text-sm">
             <thead className="bg-surface2">
@@ -349,7 +398,7 @@ function ReviewModal({
     >
       <div className="space-y-5 text-sm">
         {/* Meta grid */}
-        <div className="grid grid-cols-3 gap-6 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-sm">
           <div>
             <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Employee</div>
             <div className="font-medium">{employeeDisplayName(request)}</div>

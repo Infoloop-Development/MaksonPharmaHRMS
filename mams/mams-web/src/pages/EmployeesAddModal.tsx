@@ -404,14 +404,17 @@ export function EmployeesAddModal({
       footer={footer}
     >
       <div className="space-y-6 text-sm">
-        <div className="flex gap-2 border-b border-border pb-4">
+        <div className="flex flex-col sm:flex-row gap-2 border-b border-border pb-4">
           <div
             className={`flex-1 rounded-lg px-4 py-3 border-2 transition-colors ${
               step === 1 ? 'border-primary bg-primary-bg' : 'border-border bg-surface2'
             }`}
           >
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Step 1</div>
-            <div className="font-semibold text-text">Assignment and profile</div>
+            <div className="font-semibold text-text">
+              <span className="sm:hidden">Profile</span>
+              <span className="hidden sm:inline">Assignment and profile</span>
+            </div>
           </div>
           <div
             className={`flex-1 rounded-lg px-4 py-3 border-2 transition-colors ${
@@ -419,7 +422,10 @@ export function EmployeesAddModal({
             }`}
           >
             <div className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Step 2</div>
-            <div className="font-semibold text-text">Sensitive and bank</div>
+            <div className="font-semibold text-text">
+              <span className="sm:hidden">Sensitive</span>
+              <span className="hidden sm:inline">Sensitive and bank</span>
+            </div>
           </div>
         </div>
 

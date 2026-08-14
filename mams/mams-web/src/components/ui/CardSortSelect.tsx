@@ -16,7 +16,7 @@ export function CardSortSelect({
 }) {
   return (
     <select
-      className={`input btn-sm w-auto min-w-[140px] ${className}`.trim()}
+      className={`input btn-sm w-full min-w-0 md:w-auto md:min-w-[140px] ${className}`.trim()}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       aria-label="Sort by"

@@ -37,7 +37,30 @@ export function AdminSecurity() {
       <div className="card p-5">
         <h2 className="font-semibold mb-4">Active accounts</h2>
         {isLoading && <div className="text-text-muted text-sm">Loading users…</div>}
-        <div className="tbl-scroll">
+
+        <div className="space-y-3 md:hidden">
+          {sortedRows.map((u) => (
+            <div key={u._id} className="rounded-lg border border-border p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <div className="font-medium">{u.name}</div>
+                  <div className="text-xs text-text-muted break-all">{u.email}</div>
+                </div>
+                <Badge tone="blue">{u.role}</Badge>
+              </div>
+              <p className="text-xs text-text-muted mb-3">
+                Last login: {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never'}
+              </p>
+              {canManageSecurity && u.isActive && (
+                <button type="button" className="btn-outline btn-sm w-full" onClick={() => setRevokeTarget(u)}>
+                  Revoke sessions
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="tbl-scroll hidden md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-text-muted">

@@ -453,7 +453,7 @@ export function AdminOverview() {
           {configureMode === 'kpi' && (
             <button
               type="button"
-              className="btn-primary btn-sm"
+              className="btn-primary btn-sm min-h-11 sm:min-h-0"
               data-tour-id="admin-overview-save-kpi"
               disabled={!kpiChanged || saveKpiMutation.isPending}
               onClick={() => saveKpiMutation.mutate({ slots: draftKpiSlots })}
@@ -464,7 +464,7 @@ export function AdminOverview() {
           {configureMode === 'charts' && (
             <button
               type="button"
-              className="btn-primary btn-sm"
+              className="btn-primary btn-sm min-h-11 sm:min-h-0"
               data-tour-id="admin-overview-save-charts"
               disabled={!widgetsChanged || saveWidgetsMutation.isPending}
               onClick={() => saveWidgetsMutation.mutate(draftWidgetsConfig)}
@@ -475,7 +475,7 @@ export function AdminOverview() {
           {configureMode === 'table' && (
             <button
               type="button"
-              className="btn-primary btn-sm"
+              className="btn-primary btn-sm min-h-11 sm:min-h-0"
               data-tour-id="admin-overview-save-table"
               disabled={!tableChanged || saveTableMutation.isPending}
               onClick={() => saveTableMutation.mutate(draftTableConfig)}

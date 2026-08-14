@@ -167,7 +167,54 @@ export function FormResponsesPanel({
         />
       </div>
 
-      <div className="card tbl-scroll overflow-x-auto">
+      <div className="space-y-3 md:hidden">
+        {isLoading && <div className="card p-6 text-center text-text-muted text-sm">Loading responses…</div>}
+        {!isLoading && items.length === 0 && (
+          <div className="card p-6 text-center text-text-muted text-sm">No responses yet.</div>
+        )}
+        {!isLoading &&
+          sortedRows.map((item) => (
+            <div key={item._id} className="card p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div>
+                  <div className="text-xs text-text-muted">{fmtIstDate(item.submittedAt)}</div>
+                  <div className="text-xs text-text-muted">{fmtIstTime(item.submittedAt)}</div>
+                </div>
+                <Badge tone={visitorStatusTone(item.status)}>{item.status}</Badge>
+              </div>
+              <dl className="space-y-1.5 text-xs mb-3">
+                <div>
+                  <dt className="text-text-subtle uppercase tracking-wider">Valid until</dt>
+                  <dd className="text-text-muted">
+                    {item.status === 'Approved' && item.visitValidUntil
+                      ? fmtDateTimeMs(item.visitValidUntil)
+                      : EMPTY_CELL}
+                  </dd>
+                </div>
+                {fieldColumns.slice(0, 4).map((f) => (
+                  <div key={f.id}>
+                    <dt className="text-text-subtle uppercase tracking-wider">{f.label}</dt>
+                    <dd className="truncate" title={cellValue(item, f)}>
+                      {cellValue(item, f)}
+                    </dd>
+                  </div>
+                ))}
+                {fieldColumns.length > 4 && (
+                  <p className="text-text-muted">+{fieldColumns.length - 4} more fields</p>
+                )}
+              </dl>
+              <button
+                type="button"
+                className="btn-outline btn-sm w-full"
+                onClick={() => onViewRequest(item._id)}
+              >
+                View
+              </button>
+            </div>
+          ))}
+      </div>
+
+      <div className="card tbl-scroll overflow-x-auto hidden md:block">
         <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-left text-xs text-text-subtle border-b border-border bg-surface2/50">
@@ -220,7 +267,7 @@ export function FormResponsesPanel({
                   <td className="px-3 py-2">
                     <button
                       type="button"
-                      className="text-link text-xs font-medium hover:underline"
+                      className="text-link text-xs font-medium hover:underline min-h-[44px] px-2"
                       onClick={() => onViewRequest(item._id)}
                     >
                       View

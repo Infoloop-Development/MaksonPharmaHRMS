@@ -116,29 +116,29 @@ function DeviceCard({
 
       {canManage && (
         <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-border">
-          <div className="flex gap-2">
-            <button type="button" className="btn-outline flex-1 min-h-[40px] text-xs" onClick={() => onTest(d._id)}>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="btn-outline min-h-[44px] text-xs" onClick={() => onTest(d._id)}>
               Test
             </button>
             <button
               type="button"
-              className="btn-outline flex-1 min-h-[40px] text-xs"
+              className="btn-outline min-h-[44px] text-xs"
               onClick={() => onSync(d._id)}
               disabled={!!syncing[d._id]}
             >
               {syncing[d._id] ? '…' : 'Sync'}
             </button>
-            <button type="button" className="btn-outline flex-1 min-h-[40px] text-xs" onClick={() => onEdit(d)}>
+            <button type="button" className="btn-outline min-h-[44px] text-xs" onClick={() => onEdit(d)}>
               Edit
             </button>
+            <button
+              type="button"
+              className="btn-outline min-h-[44px] text-xs text-red border-red/30 hover:bg-red/5"
+              onClick={() => onDelete(d)}
+            >
+              Delete
+            </button>
           </div>
-          <button
-            type="button"
-            className="btn-outline min-h-[40px] text-xs text-red border-red/30 hover:bg-red/5 w-full"
-            onClick={() => onDelete(d)}
-          >
-            Delete
-          </button>
         </div>
       )}
     </div>

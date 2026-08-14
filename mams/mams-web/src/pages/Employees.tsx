@@ -150,7 +150,7 @@ export function Employees() {
       </div>
 
       {!isCompliant && flaggedRequests && flaggedRequests.counts.Flagged > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-md border border-amber bg-amber-bg px-4 py-3 text-sm text-amber">
           <span className="font-semibold">
             {flaggedRequests.counts.Flagged} compliance action{flaggedRequests.counts.Flagged !== 1 ? 's' : ''}{' '}
             {flaggedRequests.counts.Flagged !== 1 ? 'need' : 'needs'} your review.

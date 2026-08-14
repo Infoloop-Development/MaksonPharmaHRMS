@@ -1,8 +1,8 @@
 import type { VisitorTab } from './visitorsUtils';
 
-const TABS: { id: VisitorTab; label: string }[] = [
-  { id: 'requests', label: 'Visitor Requests' },
-  { id: 'forms', label: 'Forms' },
+const TABS: { id: VisitorTab; label: string; shortLabel: string }[] = [
+  { id: 'requests', label: 'Visitor Requests', shortLabel: 'Requests' },
+  { id: 'forms', label: 'Forms', shortLabel: 'Forms' },
 ];
 
 export function VisitorsTabBar({
@@ -38,7 +38,14 @@ export function VisitorsTabBar({
             }`}
             onClick={() => onTabChange(t.id)}
           >
-            {t.label}
+            {t.shortLabel !== t.label ? (
+              <>
+                <span className="md:hidden">{t.shortLabel}</span>
+                <span className="hidden md:inline">{t.label}</span>
+              </>
+            ) : (
+              t.label
+            )}
           </button>
         ))}
       </div>

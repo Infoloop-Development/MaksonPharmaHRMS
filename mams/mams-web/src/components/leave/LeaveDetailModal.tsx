@@ -70,7 +70,7 @@ export function LeaveDetailModal({
           </div>
 
           {/* Employee + Leave type */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
             <div>
               <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Employee</div>
               <div className="font-medium">{data.employeeId?.name ?? EMPTY_CELL}</div>
@@ -83,7 +83,7 @@ export function LeaveDetailModal({
           </div>
 
           {/* Dates + Total days */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
             <div>
               <div className="text-xs font-semibold text-text-subtle uppercase tracking-wider mb-1">Dates</div>
               <div className="font-medium">

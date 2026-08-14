@@ -48,13 +48,13 @@ export function Reports() {
       </div>
 
       <div className="card mb-6 overflow-hidden" data-tour-id="reports-tabs">
-        <div className="flex flex-wrap border-b border-border" data-tour-id="reports-monthly-hint">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap border-b border-border" data-tour-id="reports-monthly-hint">
           {[
-            ['daily', 'Daily Attendance'],
-            ['monthly', 'Monthly Summary'],
-            ['department', 'Department-wise'],
-            ['location', 'Location-wise'],
-          ].map(([key, label]) => (
+            ['daily', 'Daily', 'Daily Attendance'],
+            ['monthly', 'Monthly', 'Monthly Summary'],
+            ['department', 'Dept', 'Department-wise'],
+            ['location', 'Location', 'Location-wise'],
+          ].map(([key, shortLabel, label]) => (
             <button
               key={key}
               onClick={() => {
@@ -62,13 +62,14 @@ export function Reports() {
                 setTab(next);
                 logReportsAction('ui.reports.filter', { tab: next });
               }}
-              className={`px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`flex-1 md:flex-none px-3 md:px-5 py-3 text-sm font-medium border-b-2 -mb-px transition-colors min-h-[44px] ${
                 tab === key
                   ? 'tab-link--active'
                   : 'border-transparent text-text-muted hover:text-text hover:bg-surface2'
               }`}
             >
-              {label}
+              <span className="md:hidden">{shortLabel}</span>
+              <span className="hidden md:inline">{label}</span>
             </button>
           ))}
         </div>
