@@ -1,0 +1,77 @@
+# ==============================================================================
+# MAMS Full-Stack Docker Compose Orchestration (Backend + Frontend + MongoDB)
+# ==============================================================================
+
+services:
+  mongo:
+    image: mongo:7.0-jammy
+    container_name: mams-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: mams_prod
+    volumes:
+      - mams_mongo_data:/data/db
+    networks:
+      - mams-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mams-api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+      - path: mams/.env.onprem
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      TZ: Asia/Kolkata
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/mams_prod}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-mams_jwt_access_secret_production_key_32_bytes_min}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-mams_jwt_refresh_secret_production_key_32_bytes_min}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8089}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:8089}
+      BUG_REPORT_MEDIA_DIR: /var/data/bug-reports
+      BUG_REPORT_TRANSCRIPTION_TEMP_DIR: /tmp/mams-transcription
+    volumes:
+      - mams_bug_reports:/var/data/bug-reports
+    expose:
+      - "3001"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - mams-network
+
+  web:
+    build:
+      context: ./mams
+      dockerfile: mams-web/Dockerfile
+    container_name: mams-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8089}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - mams-network
+
+volumes:
+  mams_mongo_data:
+  mams_bug_reports:
+
+networks:
+  mams-network:
+    driver: bridge

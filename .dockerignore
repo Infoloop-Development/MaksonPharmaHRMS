@@ -1,0 +1,38 @@
+# ==============================================================================
+# .dockerignore - Root Build Context Exclusion
+# ==============================================================================
+
+# Git & Agent artifacts
+**/.git
+**/.github
+**/.claude
+**/.gemini
+**/.vscode
+**/.idea
+
+# Dependencies & Build Outputs
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+**/.cache
+**/*.log
+**/*.tsbuildinfo
+**/coverage
+**/.DS_Store
+**/Thumbs.db
+
+# Documentation & Non-Runtime Assets
+tech-docs/
+final-docs/
+legal-docs/
+docs/
+mockup/
+mockup-vite/
+repo-templates/
+scripts/package-handoff.sh
+
+# Environment Files (Keep .env.example)
+**/.env
+**/.env.*
+!**/.env.example

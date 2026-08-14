@@ -1,0 +1,23 @@
+# ==============================================================================
+# .dockerignore - MAMS Directory Context Exclusion
+# ==============================================================================
+
+.git
+.github
+node_modules
+**/node_modules
+dist
+**/dist
+.cache
+*.log
+coverage
+.DS_Store
+Thumbs.db
+
+docs/
+ops/
+scripts/
+
+.env
+.env.*
+!.env.example
