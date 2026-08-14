@@ -1,0 +1,52 @@
+# On-prem stack: API (full image + Vosk) + web (nginx SPA).
+# Cloud Netlify/Render/Railway stay untouched until you cut over traffic.
+#
+# From mams/:
+#   1. Copy mams-server/.env.example → .env.onprem and fill secrets
+#   2. Set CORS_ORIGIN / PUBLIC_APP_URL to http://YOUR_HOST:8089 (no trailing slash)
+#   3. docker compose -f docker-compose.onprem.yml --env-file .env.onprem up -d --build
+#
+# Public entry: http://YOUR_HOST:8089  (browsers + eSSL Server Port 8089)
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mams-api
+    restart: unless-stopped
+    env_file:
+      - .env.onprem
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      TZ: Asia/Kolkata
+      BUG_REPORT_MEDIA_DIR: /var/data/bug-reports
+      BUG_REPORT_TRANSCRIPTION_TEMP_DIR: /tmp/mams-transcription
+      VOSK_SERVICE_URL: http://127.0.0.1:8765
+      VOSK_MODELS_DIR: /app/mams/mams-server/vosk-models
+    volumes:
+      - mams_bug_reports:/var/data/bug-reports
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  web:
+    build:
+      context: .
+      dockerfile: mams-web/Dockerfile
+    container_name: mams-web
+    restart: unless-stopped
+    ports:
+      - "8089:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mams_bug_reports:

@@ -17,10 +17,11 @@
 7. [Environment variables](#7-environment-variables)
 8. [Database](#8-database)
 9. [Process managers & PaaS](#9-process-managers--paas)
-10. [Third-party integrations](#10-third-party-integrations)
-11. [CORS & reverse proxy](#11-cors--reverse-proxy)
-12. [Production checklist](#12-production-checklist)
-13. [Command cheat sheet](#13-command-cheat-sheet)
+10. [On-prem Docker (web + API)](#10-on-prem-docker-web--api)
+11. [Third-party integrations](#11-third-party-integrations)
+12. [CORS & reverse proxy](#12-cors--reverse-proxy)
+13. [Production checklist](#13-production-checklist)
+14. [Command cheat sheet](#14-command-cheat-sheet)
 
 ---
 
@@ -366,9 +367,10 @@ npm run seed:compliance-today --workspace mams-server
 |----------|------|--------|
 | PM2 | `mams/ops/pm2/ecosystem.config.cjs` | Present (`mams-server` + `mams-vosk`) |
 | Docker (slim) | `Dockerfile` (repo root) | Present |
-| Docker (full) | `mams/Dockerfile` | Present |
+| Docker (full API) | `mams/Dockerfile` | Present |
+| Docker (web SPA) | `mams/mams-web/Dockerfile` | Present |
 | Entrypoint | `mams/docker-entrypoint.sh` | Present |
-| docker-compose | — | **Not present** |
+| docker-compose (on-prem) | `mams/docker-compose.onprem.yml` | Present |
 | systemd units | — | **Not present** |
 | Railway | `railway.toml`, `mams/railway.toml` | Docker + health `/api/health` |
 | Render | `mams/render.yaml` | Docker web service blueprint |
@@ -386,7 +388,64 @@ Confirm live URLs and secrets in the PaaS dashboards — do not commit credentia
 
 ---
 
-## 10. Third-party integrations
+## 10. On-prem Docker (web + API)
+
+Standard split: **API container** (`mams/Dockerfile`) + **web container** (nginx SPA). They are **not** one image. Cloud Netlify/Render/Railway can keep running until cutover.
+
+| Service | Image | Public port |
+|---------|-------|-------------|
+| `api` | `mams/Dockerfile` (full + Vosk) | internal `3001` only |
+| `web` | `mams/mams-web/Dockerfile` | **8089 → 80** (browsers + eSSL Server Port) |
+
+nginx ([`mams/mams-web/nginx.conf`](mams/mams-web/nginx.conf)) proxies `/api/`, `/iclock`, and `/integrations/hanvon` to `api:3001`. SPA uses empty `VITE_API_BASE_URL` / `VITE_DEVICE_API_BASE_URL` (same-origin).
+
+### Build & run
+
+```bash
+cd mams
+
+# 1. Env file for API secrets (do not commit)
+cp mams-server/.env.example .env.onprem
+# Edit .env.onprem:
+#   NODE_ENV=production
+#   MONGO_URI=...
+#   JWT_ACCESS_SECRET=...
+#   JWT_REFRESH_SECRET=...
+#   CORS_ORIGIN=http://YOUR_HOST:8089
+#   PUBLIC_APP_URL=http://YOUR_HOST:8089
+# (no trailing slash)
+
+# 2. Start both containers
+docker compose -f docker-compose.onprem.yml --env-file .env.onprem up -d --build
+
+# 3. Health
+curl -s http://YOUR_HOST:8089/api/health
+```
+
+Optional: set `VOSK_ENABLED=true` in `.env.onprem` if bug-report transcription is required on this host.
+
+### Zero-downtime cutover
+
+1. Keep Netlify + Render/Railway running.
+2. Bring up compose on a **separate** on-prem host; validate login, attendance, `GET /api/health`.
+3. Point eSSL **Server Address** to the on-prem host; keep **Server Port = 8089**.
+4. Point users to `http://YOUR_HOST:8089` (or update DNS).
+5. Only after stable, decommission cloud hosting.
+
+**Rollback:** revert browser URL and device Server Address to the previous cloud hosts — old stack is untouched.
+
+### Stop / update
+
+```bash
+cd mams
+docker compose -f docker-compose.onprem.yml --env-file .env.onprem pull   # if using registry images
+docker compose -f docker-compose.onprem.yml --env-file .env.onprem up -d --build
+docker compose -f docker-compose.onprem.yml down   # stops containers; volume mams_bug_reports is kept
+```
+
+---
+
+## 11. Third-party integrations
 
 | Integration | Type | Config |
 |-------------|------|--------|
@@ -405,7 +464,7 @@ Confirm live URLs and secrets in the PaaS dashboards — do not commit credentia
 
 ---
 
-## 11. CORS & reverse proxy
+## 12. CORS & reverse proxy
 
 ### CORS (API — `mams-server/src/app.ts`)
 
@@ -435,7 +494,7 @@ Device traffic should target the **API host** (or a dedicated `VITE_DEVICE_API_B
 
 ---
 
-## 12. Production checklist
+## 13. Production checklist
 
 1. [ ] Node **20.18.x** (or ≥20) and npm ≥10 on build/API hosts  
 2. [ ] `npm ci` from `mams/` using `package-lock.json`  
@@ -444,15 +503,16 @@ Device traffic should target the **API host** (or a dedicated `VITE_DEVICE_API_B
 5. [ ] `CORS_ORIGIN` + `PUBLIC_APP_URL` match the live SPA origin  
 6. [ ] Persistent volume for `BUG_REPORT_MEDIA_DIR` (and optionally `REPORT_MEDIA_DIR`)  
 7. [ ] API build/start: `npm run build:server` + `npm run start:server` **or** Docker  
-8. [ ] SPA build with correct `VITE_*` (or Netlify proxy)  
+8. [ ] SPA build with correct `VITE_*` (or Netlify / on-prem nginx proxy with empty `VITE_*`)  
 9. [ ] Healthcheck: `GET /api/health` returns 200  
 10. [ ] SMTP only if needed (`MAIL_ENABLED` + `SMTP_HOST`)  
 11. [ ] Vosk only on **full** image with `VOSK_ENABLED=true`  
 12. [ ] Never run full `npm run seed` on live customer DB without approval  
+13. [ ] On-prem: `docker compose -f docker-compose.onprem.yml` with `.env.onprem`; public port **8089** 
 
 ---
 
-## 13. Command cheat sheet
+## 14. Command cheat sheet
 
 ```bash
 # --- versions ---
@@ -479,6 +539,12 @@ npm run build --workspace mams-web
 # --- health ---
 curl -s https://YOUR-API-HOST/api/health
 
+# --- on-prem Docker (web + API on :8089) ---
+cd mams
+cp mams-server/.env.example .env.onprem   # then edit secrets + CORS/PUBLIC_APP_URL
+docker compose -f docker-compose.onprem.yml --env-file .env.onprem up -d --build
+curl -s http://YOUR_HOST:8089/api/health
+
 # --- seeds (non-prod) ---
 npm run seed:users
 # npm run seed   # DESTRUCTIVE full seed
@@ -498,7 +564,10 @@ npm run seed:users
 | Mail env | `mams/mams-server/src/config/mail.ts` |
 | PM2 | `mams/ops/pm2/ecosystem.config.cjs` |
 | Docker slim | `Dockerfile` |
-| Docker full | `mams/Dockerfile` |
+| Docker full API | `mams/Dockerfile` |
+| Docker web SPA | `mams/mams-web/Dockerfile` |
+| Web nginx | `mams/mams-web/nginx.conf` |
+| On-prem compose | `mams/docker-compose.onprem.yml` |
 | Netlify | `mams/netlify.toml` |
 | Render | `mams/render.yaml` |
 | Railway | `railway.toml`, `mams/railway.toml` |
