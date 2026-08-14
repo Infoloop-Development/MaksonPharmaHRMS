@@ -12,8 +12,8 @@ import { PasswordInput } from '../components/ui/PasswordInput';
 import { usePublicOrgBranding } from '../hooks/usePublicOrgBranding';
 
 export function Login() {
-  const [email, setEmail] = useState('org.admin@infoloop.co');
-  const [password, setPassword] = useState('infoloop2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const setAuth = useAuth((s) => s.setAuth);
@@ -59,7 +59,7 @@ export function Login() {
               className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="hr.admin@infoloop.co"
+              placeholder="you@company.com"
               autoComplete="username"
             />
           </div>
@@ -79,19 +79,6 @@ export function Login() {
             {busy ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="mt-6 p-3 bg-surface2 rounded-md text-[11px] text-text-muted leading-relaxed">
-          <strong className="text-text">Demo credentials</strong> (password{' '}
-          <code className="auth-inline-code">infoloop2026</code>):
-          <br />
-          <code className="auth-inline-code">org.admin@infoloop.co</code>: Admin Console
-          <br />
-          <code className="auth-inline-code">it.admin@infoloop.co</code>: IT Admin (Admin Console + Recycle bin)
-          <br />
-          <code className="auth-inline-code">hr.admin@infoloop.co</code>: HR Admin
-          <br />
-          <code className="auth-inline-code">hr.compliance@infoloop.co</code>: Compliance Auditor
-        </div>
 
         <div className="text-center mt-6 text-[11px] text-text-muted">
           Powered by{' '}
