@@ -50,7 +50,7 @@ export function Login() {
       <div className="bg-surface rounded-2xl p-6 sm:p-12 w-full max-w-[420px] shadow-2xl border border-border">
         <AuthBrandHeader companyName={companyName} companyLogo={companyLogo} />
         <h1 className="text-2xl font-bold text-text mb-1">Attendance Management</h1>
-        <p className="text-text-muted text-sm mb-7">Sign in to continue</p>
+        <p className="text-text-muted text-sm mb-7">Login to continue</p>
 
         <form onSubmit={submit} className="space-y-5">
           <div>
